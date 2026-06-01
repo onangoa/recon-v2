@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  role      String     // "superadmin" or "contractor"
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  contractor Contractor?
+  sessions   Session[]
+}
+
+model Session {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+
+  @@index([userId])
+}
+
+model Contractor {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String
+  location    String     // Nairobi, Kisumu, Mombasa, etc.
+  phoneNumber String
+  licenseNo   String
+  subscriptionPlanId String
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  safetyScore Float      @default(0)
+  projects    Project[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([subscriptionPlanId])
+}
+
+model SubscriptionPlan {
+  id          String     @id @default(cuid())
+  name        String     @unique // "Basic", "Professional", "Enterprise"
+  price       Float
+  maxProjects Int
+  maxTeamMembers Int
+  features    String     // JSON string of features
+  contractors Contractor[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Project {
+  id            String     @id @default(cuid())
+  contractorId  String
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  location      String     // Kenyan location
+  status        String     // "active", "completed", "paused"
+  startDate     DateTime
+  endDate       DateTime?
+  budget        Float
+  spent         Float      @default(0)
+  sites         Site[]
+  tasks         Task[]
+  materials     Material[]
+  equipment     Equipment[]
+  documents     Document[]
+  visitors      Visitor[]
+  metrics       Metric[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([contractorId])
+  @@index([status])
+}
+
+model Site {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  location  String
+  coordinates String? // lat,lng format
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String   // "pending", "in-progress", "completed"
+  priority    String   // "low", "medium", "high"
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Material {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  category    String   // "cement", "steel", "timber", "bricks", "sand", "water"
+  quantity    Float
+  unit        String   // "bags", "tons", "cubic meters", "pieces"
+  unitCost    Float
+  totalCost   Float
+  supplier    String?
+  status      String   // "pending", "ordered", "received"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Equipment {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String   // "Excavator", "Crane", "Concrete Mixer", etc.
+  type        String
+  serialNo    String?
+  rentalCost  Float?
+  dailyRate   Float?
+  status      String   // "in-use", "idle", "maintenance"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // "contract", "invoice", "report", "permit", "insurance"
+  fileUrl     String
+  uploadedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  imageUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Visitor {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  company     String?
+  purpose     String   // "inspection", "meeting", "delivery", "other"
+  checkInTime DateTime
+  checkOutTime DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model Metric {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        String   // "safety", "progress", "cost", "quality"
+  value       Float
+  unit        String   // "%", "KES", "days", etc.
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([type])
+}
