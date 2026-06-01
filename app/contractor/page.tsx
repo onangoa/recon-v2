@@ -1,7 +1,48 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area 
+} from 'recharts';
+import { 
+  Package, 
+  Hammer, 
+  ClipboardList, 
+  Users, 
+  TrendingUp, 
+  TrendingDown,
+  Activity,
+  Calendar,
+  Clock,
+  ArrowRight
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle,
+  CardFooter
+} from '@/components/ui/card';
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent, 
+  ChartLegend, 
+  ChartLegendContent 
+} from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardData {
   inventory: number;
@@ -15,16 +56,17 @@ interface ActivityItem {
   action: string;
   timestamp: string;
   user: string;
+  type: 'create' | 'update' | 'delete' | 'info';
 }
 
 const attendanceData = [
-  { date: 'Sun 1 Jan', 'Overtime Hours': 0.4, 'Attained Hours': 1.8, 'Late Hours': 0.1, 'Leave Hours': 0.2 },
-  { date: 'Mon 2 Jan', 'Overtime Hours': 0.2, 'Attained Hours': 1.9, 'Late Hours': 0, 'Leave Hours': 0 },
-  { date: 'Tue 3 Jan', 'Overtime Hours': 0.5, 'Attained Hours': 1.7, 'Late Hours': 0.2, 'Leave Hours': 0.1 },
-  { date: 'Wed 4 Jan', 'Overtime Hours': 0.3, 'Attained Hours': 1.8, 'Late Hours': 0, 'Leave Hours': 0 },
-  { date: 'Thu 5 Jan', 'Overtime Hours': 0.4, 'Attained Hours': 1.9, 'Late Hours': 0.1, 'Leave Hours': 0 },
-  { date: 'Fri 6 Jan', 'Overtime Hours': 0.6, 'Attained Hours': 1.6, 'Late Hours': 0.3, 'Leave Hours': 0.2 },
-  { date: 'Sat 7 Jan', 'Overtime Hours': 0, 'Attained Hours': 0, 'Late Hours': 0, 'Leave Hours': 2 },
+  { date: 'Sun 1 Jan', overtime: 0.4, attained: 1.8, late: 0.1, leave: 0.2 },
+  { date: 'Mon 2 Jan', overtime: 0.2, attained: 1.9, late: 0, leave: 0 },
+  { date: 'Tue 3 Jan', overtime: 0.5, attained: 1.7, late: 0.2, leave: 0.1 },
+  { date: 'Wed 4 Jan', overtime: 0.3, attained: 1.8, late: 0, leave: 0 },
+  { date: 'Thu 5 Jan', overtime: 0.4, attained: 1.9, late: 0.1, leave: 0 },
+  { date: 'Fri 6 Jan', overtime: 0.6, attained: 1.6, late: 0.3, leave: 0.2 },
+  { date: 'Sat 7 Jan', overtime: 0, attained: 0, late: 0, leave: 2 },
 ];
 
 const workersData = [
@@ -38,19 +80,35 @@ const workersData = [
 ];
 
 const walletData = [
-  { month: 'Jan', Credits: 2.0, Debits: 1.2 },
-  { month: 'Feb', Credits: 1.8, Debits: 0.9 },
-  { month: 'Mar', Credits: 2.2, Debits: 1.4 },
-  { month: 'Apr', Credits: 1.9, Debits: 1.1 },
-  { month: 'May', Credits: 2.4, Debits: 1.3 },
-  { month: 'Jun', Credits: 2.1, Debits: 1.0 },
-  { month: 'Jul', Credits: 2.0, Debits: 1.2 },
-  { month: 'Aug', Credits: 2.3, Debits: 1.5 },
-  { month: 'Sep', Credits: 2.2, Debits: 1.1 },
-  { month: 'Oct', Credits: 2.5, Debits: 1.4 },
-  { month: 'Nov', Credits: 2.4, Debits: 1.3 },
-  { month: 'Dec', Credits: 2.6, Debits: 1.6 },
+  { month: 'Jan', credits: 2.0, debits: 1.2 },
+  { month: 'Feb', credits: 1.8, debits: 0.9 },
+  { month: 'Mar', credits: 2.2, debits: 1.4 },
+  { month: 'Apr', credits: 1.9, debits: 1.1 },
+  { month: 'May', credits: 2.4, debits: 1.3 },
+  { month: 'Jun', credits: 2.1, debits: 1.0 },
+  { month: 'Jul', credits: 2.0, debits: 1.2 },
+  { month: 'Aug', credits: 2.3, debits: 1.5 },
+  { month: 'Sep', credits: 2.2, debits: 1.1 },
+  { month: 'Oct', credits: 2.5, debits: 1.4 },
+  { month: 'Nov', credits: 2.4, debits: 1.3 },
+  { month: 'Dec', credits: 2.6, debits: 1.6 },
 ];
+
+const attendanceConfig = {
+  overtime: { label: 'Overtime', color: '#8B4513' },
+  attained: { label: 'Attained', color: '#10b981' },
+  late: { label: 'Late', color: '#f97316' },
+  leave: { label: 'Leave', color: '#ef4444' },
+};
+
+const workersConfig = {
+  count: { label: 'Workers Present', color: '#10b981' },
+};
+
+const walletConfig = {
+  credits: { label: 'Credits', color: '#10b981' },
+  debits: { label: 'Debits', color: '#ef4444' },
+};
 
 export default function ContractorDashboard() {
   const [data, setData] = useState<DashboardData>({
@@ -65,7 +123,7 @@ export default function ContractorDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [materialsRes, equipmentRes, ordersRes, visitorsRes] = await Promise.all([
+        const [materialsRes, tasksRes, contractorsRes, visitorsRes] = await Promise.all([
           fetch('/api/materials'),
           fetch('/api/tasks'),
           fetch('/api/contractors'),
@@ -73,25 +131,22 @@ export default function ContractorDashboard() {
         ]);
 
         const materials = await materialsRes.json();
-        const equipment = await equipmentRes.json();
-        const orders = await ordersRes.json();
+        const tasks = await tasksRes.json();
+        const contractors = await contractorsRes.json();
         const visitors = await visitorsRes.json();
 
         setData({
           inventory: Array.isArray(materials) ? materials.length : 0,
-          machines: Array.isArray(equipment) ? equipment.length : 0,
-          purchaseOrders: Array.isArray(orders) ? orders.length : 0,
+          machines: Array.isArray(tasks) ? tasks.length : 0,
+          purchaseOrders: Array.isArray(contractors) ? contractors.length : 0,
           workers: Array.isArray(visitors) ? visitors.length : 0,
         });
 
-        // Mock activities
         setActivities([
-          {
-            id: '1',
-            action: 'created company test a',
-            timestamp: '3 months ago',
-            user: 'Antwon',
-          },
+          { id: '1', action: 'received 50 bags of cement', timestamp: '2 hours ago', user: 'Antwon', type: 'create' },
+          { id: '2', action: 'updated task "Excavation" status', timestamp: '4 hours ago', user: 'James', type: 'update' },
+          { id: '3', action: 'added new visitor log', timestamp: '5 hours ago', user: 'Antwon', type: 'create' },
+          { id: '4', action: 'deleted outdated report', timestamp: '1 day ago', user: 'System', type: 'delete' },
         ]);
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -103,121 +158,248 @@ export default function ContractorDashboard() {
     fetchData();
   }, []);
 
-  const MetricCard = ({ label, value, icon, bgColor }: any) => (
-    <div className={`rounded-lg p-6 text-white ${bgColor}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm opacity-90">{label}</p>
-          <p className="mt-2 text-4xl font-bold">{loading ? '...' : value}</p>
-          <p className="mt-2 text-xs opacity-75">▶ View more</p>
+  const MetricCard = ({ label, value, icon: Icon, trend, trendValue, colorClass }: any) => (
+    <Card className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <h3 className="text-3xl font-bold tracking-tight">
+                {loading ? <Skeleton className="h-9 w-12" /> : value}
+              </h3>
+              {!loading && trend && (
+                <span className={`flex items-center text-xs font-semibold ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                  {trend === 'up' ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                  {trendValue}%
+                </span>
+              )}
+            </div>
+          </div>
+          <div className={`p-3 rounded-2xl ${colorClass}`}>
+            <Icon className="w-6 h-6" />
+          </div>
         </div>
-        <div className="text-5xl opacity-70">{icon}</div>
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter className="px-6 py-3 bg-muted/30 flex justify-between items-center group cursor-pointer hover:bg-muted/50">
+        <span className="text-xs font-medium text-muted-foreground">View detailed report</span>
+        <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+      </CardFooter>
+    </Card>
   );
 
   return (
-    <div className="space-y-6">
-      {/* Metric Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <MetricCard label="Inventory" value={data.inventory} icon="📦" bgColor="bg-green-100 text-green-900" />
-        <MetricCard label="Machines" value={data.machines} icon="⚙️" bgColor="bg-blue-100 text-blue-900" />
-        <MetricCard label="Purchase Orders" value={data.purchaseOrders} icon="🛒" bgColor="bg-orange-100 text-orange-900" />
-        <MetricCard label="Workers" value={data.workers} icon="👥" bgColor="bg-sky-100 text-sky-900" />
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Overview</h1>
+        <p className="text-muted-foreground">Real-time performance and resource monitoring for Karen Plains Road Project.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard 
+          label="Inventory" 
+          value={data.inventory} 
+          icon={Package} 
+          trend="up" 
+          trendValue={12} 
+          colorClass="bg-brown-100 text-brown-900 bg-primary/10 text-primary" 
+        />
+        <MetricCard 
+          label="Machines" 
+          value={data.machines} 
+          icon={Hammer} 
+          trend="down" 
+          trendValue={2.4} 
+          colorClass="bg-blue-100 text-blue-900" 
+        />
+        <MetricCard 
+          label="Orders" 
+          value={data.purchaseOrders} 
+          icon={ClipboardList} 
+          trend="up" 
+          trendValue={8.5} 
+          colorClass="bg-orange-100 text-orange-900" 
+        />
+        <MetricCard 
+          label="Workers" 
+          value={data.workers} 
+          icon={Users} 
+          trend="up" 
+          trendValue={5} 
+          colorClass="bg-emerald-100 text-emerald-900" 
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Attendance Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Attendance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={attendanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="Overtime Hours" stackId="a" fill="#6366f1" />
-              <Bar dataKey="Attained Hours" stackId="a" fill="#10b981" />
-              <Bar dataKey="Late Hours" stackId="a" fill="#f97316" />
-              <Bar dataKey="Leave Hours" stackId="a" fill="#ef4444" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <Card className="shadow-md border-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl font-bold">Attendance & Hours</CardTitle>
+              <CardDescription>Weekly breakdown of labour hours</CardDescription>
+            </div>
+            <Badge variant="outline" className="font-medium">Last 7 Days</Badge>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer config={attendanceConfig} className="aspect-[16/9] w-full">
+              <BarChart data={attendanceData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickMargin={10}
+                  fontSize={10}
+                />
+                <YAxis axisLine={false} tickLine={false} fontSize={10} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="overtime" stackId="a" fill="var(--color-overtime)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="attained" stackId="a" fill="var(--color-attained)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="late" stackId="a" fill="var(--color-late)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="leave" stackId="a" fill="var(--color-leave)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
         {/* Workers Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Workers</h3>
-          <div className="mb-4 flex gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-sm text-gray-600">Present</span>
+        <Card className="shadow-md border-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl font-bold">Workforce Trend</CardTitle>
+              <CardDescription>Daily worker count on site</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-sm text-gray-600">Absent</span>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={workersData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+            <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200">Live Status</Badge>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer config={workersConfig} className="aspect-[16/9] w-full">
+              <LineChart data={workersData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickMargin={10}
+                  fontSize={10}
+                />
+                <YAxis axisLine={false} tickLine={false} fontSize={10} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="var(--color-count)" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, fill: "var(--color-count)", strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Wallet Credits & Debits */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Wallet Credits & Debits</h3>
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Date Between</label>
-            <input
-              type="text"
-              placeholder="Date between"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400"
-            />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={walletData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="Credits" stackId="1" fill="#10b981" />
-              <Area type="monotone" dataKey="Debits" stackId="1" fill="#ef4444" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Wallet Area Chart */}
+        <Card className="lg:col-span-2 shadow-md border-none">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-xl font-bold text-primary">Financial Flow</CardTitle>
+                <CardDescription>Monthly credits vs debits</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="h-8 text-xs font-semibold">Download CSV</Button>
+                <Button size="sm" className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-white">View Ledger</Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={walletConfig} className="aspect-[21/9] w-full">
+              <AreaChart data={walletData}>
+                <defs>
+                  <linearGradient id="fillCredits" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-credits)" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="var(--color-credits)" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="fillDebits" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-debits)" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="var(--color-debits)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.5} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickMargin={10}
+                />
+                <YAxis axisLine={false} tickLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="credits" 
+                  stroke="var(--color-credits)" 
+                  fillOpacity={1} 
+                  fill="url(#fillCredits)" 
+                  strokeWidth={2}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="debits" 
+                  stroke="var(--color-debits)" 
+                  fillOpacity={1} 
+                  fill="url(#fillDebits)" 
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
         {/* Recent Activities */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
-            <span className="text-2xl">📊</span>
-          </div>
-          <div className="space-y-4">
-            {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-gray-200 last:border-0">
-                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900">
-                    <span className="font-medium">{activity.user}</span> {activity.action}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
+        <Card className="shadow-md border-none">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                Recent Logs
+              </CardTitle>
+              <Badge variant="secondary" className="text-[10px] uppercase">Live Updates</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border">
+              {activities.map((activity) => (
+                <div key={activity.id} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                    activity.type === 'create' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 
+                    activity.type === 'update' ? 'bg-blue-500' : 
+                    activity.type === 'delete' ? 'bg-red-500' : 'bg-gray-400'
+                  }`}></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground leading-tight">
+                      <span className="font-bold text-primary">{activity.user}</span> {activity.action}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="flex items-center text-[10px] text-muted-foreground">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {activity.timestamp}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <button className="mt-4 px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
-            View all
-          </button>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+          <CardFooter className="p-4 bg-muted/20">
+            <Button variant="ghost" className="w-full text-xs font-semibold text-muted-foreground hover:text-primary">
+              View Activity Timeline
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

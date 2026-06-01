@@ -2,7 +2,47 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Package, 
+  Handshake, 
+  Wallet, 
+  Upload, 
+  Settings, 
+  Hammer, 
+  ClipboardList, 
+  Truck, 
+  Construction, 
+  FileText, 
+  DoorOpen, 
+  Coins, 
+  Users, 
+  BarChart3,
+  Search,
+  Bell,
+  MessageSquare,
+  LogOut,
+  ChevronRight,
+  HardHat
+} from 'lucide-react';
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarGroupLabel, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem, 
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset
+} from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ContractorLayout({
   children,
@@ -11,7 +51,6 @@ export default function ContractorLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -20,21 +59,21 @@ export default function ContractorLayout({
   };
 
   const navItems = [
-    { label: 'Dashboard', href: '/contractor', icon: '🏠' },
-    { label: 'Inventory', href: '/contractor/inventory', icon: '📦' },
-    { label: 'Suppliers', href: '/contractor/suppliers', icon: '🤝' },
-    { label: 'Wallets', href: '/contractor/wallets', icon: '💳' },
-    { label: 'Site Uploads', href: '/contractor/uploads', icon: '📤' },
-    { label: 'Machines & Equipment', href: '/contractor/equipment', icon: '⚙️' },
-    { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: '📋' },
-    { label: 'Material Deliveries', href: '/contractor/deliveries', icon: '🚚' },
-    { label: 'Labour Management', href: '/contractor/labour', icon: '👷' },
-    { label: 'Licenses', href: '/contractor/licenses', icon: '📜' },
-    { label: 'Visitor Management', href: '/contractor/visitors', icon: '🚪' },
-    { label: 'Payroll', href: '/contractor/payroll', icon: '💰' },
-    { label: 'Staff', href: '/contractor/staff', icon: '👥' },
-    { label: 'Reports', href: '/contractor/reports', icon: '📊' },
-    { label: 'Settings', href: '/contractor/settings', icon: '⚙️' },
+    { label: 'Dashboard', href: '/contractor', icon: LayoutDashboard },
+    { label: 'Inventory', href: '/contractor/inventory', icon: Package },
+    { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake },
+    { label: 'Wallets', href: '/contractor/wallets', icon: Wallet },
+    { label: 'Site Uploads', href: '/contractor/uploads', icon: Upload },
+    { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer },
+    { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList },
+    { label: 'Material Deliveries', href: '/contractor/deliveries', icon: Truck },
+    { label: 'Labour Management', href: '/contractor/labour', icon: Construction },
+    { label: 'Licenses', href: '/contractor/licenses', icon: FileText },
+    { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen },
+    { label: 'Payroll', href: '/contractor/payroll', icon: Coins },
+    { label: 'Staff', href: '/contractor/staff', icon: Users },
+    { label: 'Reports', href: '/contractor/reports', icon: BarChart3 },
+    { label: 'Settings', href: '/contractor/settings', icon: Settings },
   ];
 
   const isActive = (href: string) => {
@@ -42,96 +81,108 @@ export default function ContractorLayout({
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-56 border-r border-border bg-white flex flex-col">
-        {/* Project Header */}
-        <div className="bg-primary px-4 py-4 text-white">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📋</span>
-            <div className="flex-1">
-              <p className="text-xs opacity-90">Current Project</p>
-              <p className="font-semibold text-sm">Karen plains Road Project</p>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        <Sidebar variant="inset" className="border-r border-border">
+          <SidebarHeader className="p-0 overflow-hidden">
+            <div className="bg-primary px-4 py-6 text-primary-foreground">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary-foreground/20 p-2 rounded-lg">
+                  <HardHat className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">Active Project</p>
+                  <p className="font-bold text-sm truncate">Karen Plains Road</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </SidebarHeader>
 
-        {/* Search */}
-        <div className="border-b border-border px-3 py-3">
-          <input
-            type="text"
-            placeholder="Search Menu..."
-            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+          <SidebarContent className="px-2 py-4">
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-2 mb-2">Main Menu</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={isActive(item.href)}
+                        tooltip={item.label}
+                        className={isActive(item.href) ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary" : ""}
+                      >
+                        <Link href={item.href}>
+                          <item.icon className={isActive(item.href) ? "text-primary" : "text-muted-foreground"} />
+                          <span className="font-medium">{item.label}</span>
+                          {item.label === 'Inventory' && <ChevronRight className="ml-auto w-4 h-4 opacity-50" />}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors mb-1 ${
-                isActive(item.href)
-                  ? 'bg-orange-50 text-primary border-l-4 border-primary font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+          <SidebarFooter className="p-4 border-t border-border">
+            <Button 
+              variant="destructive" 
+              className="w-full justify-start gap-2 h-9" 
+              onClick={handleLogout}
             >
-              <span className="text-base">{item.icon}</span>
-              <span>{item.label}</span>
-              {item.label === 'Inventory' && <span className="ml-auto text-xs">›</span>}
-            </Link>
-          ))}
-        </nav>
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
 
-        {/* Logout Button */}
-        <div className="border-t border-border p-3">
-          <button
-            onClick={handleLogout}
-            className="w-full rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
+        <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
             <div className="flex items-center gap-4 flex-1">
-              <div className="relative w-96">
-                <input
+              <SidebarTrigger className="-ml-1" />
+              <div className="relative w-full max-w-md hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
                   type="text"
-                  placeholder="Search (CTRL + K)"
-                  className="w-full rounded-md border border-gray-300 bg-gray-50 px-4 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Search project, materials, staff..."
+                  className="w-full pl-10 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-9"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <button className="text-gray-500 hover:text-gray-700">
-                <span className="text-xl">🔔</span>
-              </button>
-              <button className="text-gray-500 hover:text-gray-700">
-                <span className="text-xl">💬</span>
-              </button>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-700">Hi</span>
-                <span className="font-semibold text-gray-900">Antwon</span>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background"></span>
+                </Button>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <MessageSquare className="w-5 h-5" />
+                </Button>
               </div>
-              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
-                A
+              
+              <div className="h-6 w-px bg-border mx-2"></div>
+              
+              <div className="flex items-center gap-3 pl-2">
+                <div className="flex flex-col items-end text-sm hidden sm:flex">
+                  <span className="font-semibold leading-none">Antwon</span>
+                  <span className="text-xs text-muted-foreground mt-1 uppercase tracking-tighter">Site Contractor</span>
+                </div>
+                <Avatar className="h-9 w-9 border-2 border-primary/20">
+                  <AvatarImage src="/placeholder-user.jpg" />
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold">A</AvatarFallback>
+                </Avatar>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto bg-gray-50 p-6">
-          {children}
-        </main>
+          <main className="flex-1 overflow-auto bg-muted/10 p-4 lg:p-8">
+            <div className="mx-auto max-w-7xl">
+              {children}
+            </div>
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

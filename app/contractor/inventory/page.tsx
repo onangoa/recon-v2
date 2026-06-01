@@ -1,106 +1,169 @@
 'use client';
 
 import Link from 'next/link';
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  RotateCcw, 
+  Trash2, 
+  Settings2, 
+  ChevronRight,
+  Filter,
+  MoreVertical,
+  ArrowUpDown
+} from 'lucide-react';
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 export default function InventoryPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <div className="text-sm text-gray-600">
-        <span>Home</span> <span className="mx-2">/</span> <span className="font-medium">Inventory</span>
-      </div>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Inventory</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-        <Link
-          href="/contractor/inventory/create"
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
-        >
-          +
-        </Link>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Inventory Management</h1>
+          <p className="text-muted-foreground mt-1">Track and manage site materials and equipment stock levels.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="gap-2">
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+          </Button>
+          <Button asChild className="gap-2 bg-primary hover:bg-primary/90">
+            <Link href="/contractor/inventory/create">
+              <Plus className="w-4 h-4" />
+              <span>Add Item</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <select className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
-          <option>Select category</option>
-          <option>Materials</option>
-          <option>Equipment</option>
-          <option>Tools</option>
-        </select>
-        <select className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
-          <option>Select supplier</option>
-          <option>Supplier 1</option>
-          <option>Supplier 2</option>
-        </select>
-        <select className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
-          <option>Select stock status</option>
-          <option>In Stock</option>
-          <option>Low Stock</option>
-          <option>Out of Stock</option>
-        </select>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        <button className="flex items-center gap-2 rounded-md border border-red-300 text-red-600 px-4 py-2 text-sm hover:bg-red-50">
-          🗑 Deleted selected
-        </button>
-        <button className="flex items-center gap-2 rounded-md border border-gray-300 text-gray-700 px-4 py-2 text-sm hover:bg-gray-50">
-          💾 Save Column Visibility
-        </button>
-      </div>
-
-      {/* Search and Filter Button */}
-      <div className="flex gap-2 items-center justify-end">
-        <input
-          type="text"
-          placeholder="Search"
-          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary w-48"
-        />
-        <button className="rounded-md bg-gray-500 text-white px-4 py-2 text-sm hover:bg-gray-600">↻</button>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50">
-            <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-700 w-8">
-                <input type="checkbox" className="rounded" />
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">ID</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">NAME</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">SKU</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">CATEGORY</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">CURRENT STOCK</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">UNIT PRICE</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">STATUS</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan={9} className="py-12 px-4 text-center">
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <div className="text-5xl">📦</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">No Inventory Items Found</h3>
-                    <p className="text-sm text-gray-600 mt-1">Get started by creating your first inventory item.</p>
+      <Card className="border-none shadow-md">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search inventory..."
+                  className="pl-10 bg-muted/50 border-none h-9"
+                />
+              </div>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <RotateCcw className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="text-destructive gap-2 h-9">
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Delete Selected</span>
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2 h-9">
+                <Settings2 className="w-4 h-4 text-muted-foreground" />
+                <span className="hidden sm:inline">Columns</span>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead className="w-[50px]">
+                  <input type="checkbox" className="rounded border-muted-foreground/30 accent-primary" />
+                </TableHead>
+                <TableHead className="font-bold">
+                  <div className="flex items-center gap-2">
+                    Item Name
+                    <ArrowUpDown className="w-3 h-3" />
                   </div>
-                  <Link
-                    href="/contractor/inventory/create"
-                    className="mt-4 flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
-                  >
-                    + Create Inventory Item
-                  </Link>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                </TableHead>
+                <TableHead className="font-bold text-center">SKU</TableHead>
+                <TableHead className="font-bold">Category</TableHead>
+                <TableHead className="font-bold text-right">Stock Level</TableHead>
+                <TableHead className="font-bold text-right">Unit Price</TableHead>
+                <TableHead className="font-bold text-center">Status</TableHead>
+                <TableHead className="text-right w-[80px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Empty State */}
+              <TableRow>
+                <TableCell colSpan={8} className="h-[300px] text-center">
+                  <div className="flex flex-col items-center justify-center gap-4 py-8">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Package className="w-8 h-8 text-primary opacity-60" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">No Inventory Items Found</h3>
+                      <p className="text-sm text-muted-foreground max-w-[300px] mx-auto mt-1">
+                        Your inventory list is currently empty. Start by adding new materials or equipment.
+                      </p>
+                    </div>
+                    <Button asChild variant="outline" className="mt-2">
+                      <Link href="/contractor/inventory/create">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create First Item
+                      </Link>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
