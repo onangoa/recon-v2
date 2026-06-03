@@ -1,198 +1,186 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { 
+  MapPin, 
+  Plus, 
+  Search, 
+  RotateCcw, 
+  Construction, 
+  Building2, 
+  MoreVertical,
+  ExternalLink,
+  Pencil,
+  Trash2,
+  Calendar,
+  Navigation,
+  Globe
+} from 'lucide-react';
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { useSite } from '@/hooks/use-site';
 
-interface Project {
-  id: string;
-  name: string;
-  location: string;
-  status: string;
-  budget: number;
-  spent: number;
-  startDate: string;
-  endDate?: string;
-}
-
-export default function ContractorProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await fetch('/api/projects');
-        const data = await res.json();
-        setProjects(data);
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500/10 text-green-600 border-green-200';
-      case 'completed':
-        return 'bg-blue-500/10 text-blue-600 border-blue-200';
-      case 'paused':
-        return 'bg-amber-500/10 text-amber-600 border-amber-200';
-      default:
-        return 'bg-primary/10 text-primary';
-    }
-  };
+export default function SitesManagementPage() {
+  const { sites, activeSite, setActiveSite } = useSite();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Site Management</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">My Projects</h2>
-          <p className="mt-2 text-muted-foreground">
-            View and manage all your construction projects
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Project Sites</h1>
+          <p className="text-muted-foreground mt-1 text-sm italic">Oversee all active, pending, and completed construction locations.</p>
         </div>
-        <button className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90">
-          + New Project
-        </button>
+        <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
+          <Link href="/contractor/projects/create">
+            <Plus className="size-4" /> Add New Site
+          </Link>
+        </Button>
       </div>
 
-      {/* Projects Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading projects...</p>
-        </div>
-      ) : projects.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">No projects found</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="rounded-lg border border-border bg-card p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground">{project.name}</h3>
-                  <p className="text-sm text-muted-foreground">{project.location}</p>
-                </div>
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium border ${getStatusColor(project.status)}`}>
-                  {project.status}
-                </span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-md bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Navigation className="size-5 text-primary" />
               </div>
-
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Budget</p>
-                  <p className="font-medium text-foreground">
-                    KES {project.budget.toLocaleString()}
-                  </p>
-                </div>
-
-                <div>
-                  <div className="mb-1 flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Budget Used</p>
-                    <p className="text-xs font-medium text-foreground">
-                      {((project.spent / project.budget) * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                  <div className="h-2 rounded-full bg-secondary">
-                    <div
-                      className="h-2 rounded-full bg-primary"
-                      style={{ width: `${Math.min((project.spent / project.budget) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => setSelectedProject(project)}
-                    className="flex-1 rounded-md bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20"
-                  >
-                    View Details
-                  </button>
-                  <button className="flex-1 rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-secondary/30">
-                    Edit
-                  </button>
-                </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Sites</p>
+                <h4 className="text-xl font-black">{sites.length}</h4>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Project Details Modal */}
-      {selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-96 w-full max-w-2xl overflow-auto rounded-lg bg-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-foreground">
-                {selectedProject.name}
-              </h3>
-              <button
-                onClick={() => setSelectedProject(null)}
-                className="text-2xl text-muted-foreground hover:text-foreground"
-              >
-                ×
-              </button>
+      <Card className="border-none shadow-md overflow-hidden">
+        <CardHeader className="pb-3 border-b bg-muted/20">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Filter by name or location..."
+                className="pl-8 bg-background border-none h-9 text-xs"
+              />
             </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium text-foreground">{selectedProject.location}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium text-foreground">{selectedProject.status}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Budget</p>
-                  <p className="font-medium text-foreground">
-                    KES {selectedProject.budget.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Amount Spent</p>
-                  <p className="font-medium text-foreground">
-                    KES {selectedProject.spent.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium text-foreground">
-                    {new Date(selectedProject.startDate).toLocaleDateString()}
-                  </p>
-                </div>
-                {selectedProject.endDate && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">End Date</p>
-                    <p className="font-medium text-foreground">
-                      {new Date(selectedProject.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button className="flex-1 rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90">
-                  Edit Project
-                </button>
-                <button className="flex-1 rounded-md border border-border px-4 py-2 font-medium hover:bg-secondary/30">
-                  View Tasks
-                </button>
-              </div>
-            </div>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <RotateCcw className="size-4 text-muted-foreground" />
+            </Button>
           </div>
-        </div>
-      )}
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead className="font-bold text-xs uppercase">Site Identity</TableHead>
+                <TableHead className="font-bold text-xs uppercase">Location</TableHead>
+                <TableHead className="font-bold text-xs uppercase text-center">Category</TableHead>
+                <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
+                <TableHead className="text-right w-[120px] font-bold text-xs uppercase">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sites.map((site) => (
+                <TableRow key={site.id} className={`hover:bg-muted/20 transition-colors ${activeSite?.id === site.id ? 'bg-primary/5' : ''}`}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${activeSite?.id === site.id ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'}`}>
+                        {site.name.includes('Road') ? <Construction className="size-4" /> : <Building2 className="size-4" />}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-foreground">{site.name}</span>
+                        {activeSite?.id === site.id && <span className="text-[9px] font-black text-primary uppercase">Current Active</span>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3" />
+                      {site.location}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="text-[10px] py-0 border-primary/20 text-primary/70">{site.plan}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[10px] uppercase font-bold px-2 py-0">Active</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {activeSite?.id !== site.id && (
+                        <Button variant="ghost" size="sm" className="text-[10px] h-7 font-bold text-primary px-2" onClick={() => setActiveSite(site)}>
+                          Activate
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="size-4 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem className="gap-2">
+                            <ExternalLink className="size-4" /> View Dashboard
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2">
+                            <Pencil className="size-4" /> Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-destructive">
+                            <Trash2 className="size-4" /> Decommission
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

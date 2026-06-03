@@ -11,7 +11,9 @@ import {
   ChevronRight,
   Filter,
   MoreVertical,
-  ArrowUpDown
+  ArrowUpDown,
+  FolderPlus,
+  Layers
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -76,11 +78,13 @@ export default function InventoryPage() {
           <p className="text-muted-foreground mt-1">Track and manage site materials and equipment stock levels.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            <span>Filters</span>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/contractor/inventory/categories">
+              <Layers className="w-4 h-4" />
+              <span>Manage Categories</span>
+            </Link>
           </Button>
-          <Button asChild className="gap-2 bg-primary hover:bg-primary/90">
+          <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
             <Link href="/contractor/inventory/create">
               <Plus className="w-4 h-4" />
               <span>Add Item</span>

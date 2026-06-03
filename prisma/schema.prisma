@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
@@ -124,7 +125,9 @@ model Material {
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name        String
-  category    String   // "cement", "steel", "timber", "bricks", "sand", "water"
+  category    String   // Fallback string
+  categoryId  String?
+  categoryRel InventoryCategory? @relation(fields: [categoryId], references: [id])
   quantity    Float
   unit        String   // "bags", "tons", "cubic meters", "pieces"
   unitCost    Float
@@ -135,6 +138,21 @@ model Material {
   updatedAt   DateTime @updatedAt
 
   @@index([projectId])
+  @@index([categoryId])
+}
+
+model InventoryCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      InventoryCategory? @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
+  children    InventoryCategory[] @relation("SubCategories")
+  materials   Material[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([parentId])
 }
 
 model Equipment {

@@ -1,7 +1,60 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { 
+  ArrowLeft, 
+  Save, 
+  X, 
+  ClipboardList, 
+  Plus, 
+  Trash2, 
+  FileText, 
+  Building2, 
+  HardHat, 
+  Calendar, 
+  Flag,
+  ShoppingCart,
+  Calculator,
+  Truck
+} from 'lucide-react';
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription,
+  CardFooter
+} from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 
 interface OrderItem {
   id: string;
@@ -11,6 +64,7 @@ interface OrderItem {
 }
 
 export default function CreatePurchaseOrder() {
+  const router = useRouter();
   const [supplier, setSupplier] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [priority, setPriority] = useState('Low');
@@ -21,7 +75,7 @@ export default function CreatePurchaseOrder() {
 
   const addItem = () => {
     setItems([...items, {
-      id: String(items.length + 1),
+      id: Math.random().toString(36).substr(2, 9),
       item: '',
       quantity: 1,
       unitPrice: 0
@@ -42,209 +96,217 @@ export default function CreatePurchaseOrder() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Creating purchase order:', { supplier, deliveryDate, priority, notes, items });
-  };
-
-  const handleCancel = () => {
-    window.history.back();
   };
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb and Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Link href="/contractor" className="text-primary hover:underline">Home</Link>
-          <span>›</span>
-          <Link href="/contractor/purchase-orders" className="text-primary hover:underline">Purchase Orders</Link>
-          <span>›</span>
-          <span className="text-gray-900">Create</span>
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor/purchase-orders">Purchase Orders</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Create Order</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-10 w-10 border border-muted-foreground/10 hover:bg-muted"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">New Purchase Order</h1>
+            <p className="text-muted-foreground mt-1 text-sm italic">Generate procurement request for site supplies</p>
+          </div>
         </div>
-        <Link
-          href="/contractor/purchase-orders"
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          ← Back to List
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => router.back()}>
+            <X className="w-4 h-4" />
+            <span>Cancel</span>
+          </Button>
+          <Button className="gap-2 bg-primary hover:bg-primary/90 text-white" onClick={handleSubmit}>
+            <ShoppingCart className="w-4 h-4" />
+            <span>Draft PO</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Purchase Order</h2>
-
-          <div className="space-y-6">
-            {/* Supplier and Site */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">SUPPLIER</label>
-                <select
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Select Supplier</option>
-                  <option value="BuildMart">BuildMart Supplies</option>
-                  <option value="Steel">Steel & Co</option>
-                  <option value="Cement">Cement Industries</option>
-                </select>
+      <div className="space-y-8">
+        {/* Order Details Card */}
+        <Card className="border-none shadow-md overflow-hidden">
+          <CardHeader className="bg-muted/20 border-b">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              PO Context & Logistics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="w-3 h-3 text-muted-foreground" /> Target Supplier *
+                </Label>
+                <Select value={supplier} onValueChange={setSupplier}>
+                  <SelectTrigger className="bg-muted/30 border-none h-10 focus-visible:ring-primary">
+                    <SelectValue placeholder="Choose Supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BuildMart">BuildMart Supplies</SelectItem>
+                    <SelectItem value="Steel">Steel & Co</SelectItem>
+                    <SelectItem value="Cement">Cement Industries</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">SITE *</label>
-                <input
-                  type="text"
-                  value="Karen plains Road Project"
-                  disabled
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm bg-gray-100"
-                />
-              </div>
-            </div>
-
-            {/* Delivery Date and Priority */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">DELIVERY DATE</label>
-                <input
-                  type="text"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  placeholder="mm/dd/yyyy"
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">PRIORITY *</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <HardHat className="w-3 h-3 text-muted-foreground" /> Delivery Location
+                </Label>
+                <Input defaultValue="Karen Plains Road Project" disabled className="bg-muted/10 border-none h-10 italic" />
               </div>
             </div>
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">NOTES</label>
-              <textarea
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Calendar className="w-3 h-3 text-muted-foreground" /> Requested Delivery Date
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="YYYY-MM-DD" 
+                    className="pl-10 bg-muted/30 border-none h-10" 
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Flag className="w-3 h-3 text-muted-foreground" /> Order Priority
+                </Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger className="bg-muted/30 border-none h-10 focus-visible:ring-primary">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Standard (Low)</SelectItem>
+                    <SelectItem value="Medium">Expedited (Medium)</SelectItem>
+                    <SelectItem value="High">Urgent (High)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Special Instructions / Notes</Label>
+              <Textarea 
+                placeholder="Include delivery time windows, offloading requirements, or specific brands..." 
+                className="bg-muted/30 border-none min-h-[100px]"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Order Items */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Items</h3>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Inventory Item</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Quantity</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Unit Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+        {/* Line Items Card */}
+        <Card className="border-none shadow-md overflow-hidden">
+          <CardHeader className="bg-muted/20 border-b flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Truck className="w-5 h-5 text-primary" />
+              Materials & Services
+            </CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2 border-primary/20 text-primary hover:bg-primary/5">
+              <Plus className="w-4 h-4" /> Add Line Item
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-muted/10">
+                <TableRow>
+                  <TableHead className="font-bold text-xs uppercase">Inventory Item</TableHead>
+                  <TableHead className="font-bold text-xs uppercase text-center w-[150px]">Quantity</TableHead>
+                  <TableHead className="font-bold text-xs uppercase text-right w-[180px]">Unit Price (KES)</TableHead>
+                  <TableHead className="font-bold text-xs uppercase text-right w-[180px]">Total</TableHead>
+                  <TableHead className="text-right w-[60px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-3">
-                      <select
-                        value={item.item}
-                        onChange={(e) => updateItem(item.id, 'item', e.target.value)}
-                        className="rounded-md border border-gray-300 px-3 py-2 text-sm w-full"
-                      >
-                        <option value="">Select Inventory Item</option>
-                        <option value="Cement">Cement (50kg bags)</option>
-                        <option value="Steel">Steel Rods</option>
-                        <option value="Bricks">Bricks (1000pcs)</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value))}
-                        min="1"
-                        className="rounded-md border border-gray-300 px-3 py-2 text-sm w-full"
+                  <TableRow key={item.id} className="hover:bg-muted/5">
+                    <TableCell>
+                      <Select value={item.item} onValueChange={(val) => updateItem(item.id, 'item', val)}>
+                        <SelectTrigger className="bg-transparent border-none focus:ring-0 px-0 h-auto font-medium">
+                          <SelectValue placeholder="Select Material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Cement">Cement (50kg bags)</SelectItem>
+                          <SelectItem value="Steel">Steel Rods (12mm)</SelectItem>
+                          <SelectItem value="Bricks">Machine Cut Bricks</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Input 
+                        type="number" 
+                        value={item.quantity} 
+                        onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value))}
+                        className="h-8 bg-muted/30 border-none text-center font-bold"
                       />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        value={item.unitPrice}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Input 
+                        type="number" 
+                        value={item.unitPrice} 
                         onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value))}
-                        min="0"
-                        step="0.01"
-                        className="rounded-md border border-gray-300 px-3 py-2 text-sm w-full bg-gray-50"
-                        placeholder="0"
+                        className="h-8 bg-muted/30 border-none text-right font-mono"
                       />
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {(item.quantity * item.unitPrice).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-sm">
+                      KES {(item.quantity * item.unitPrice).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-8 w-8 text-destructive/40 hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          <button
-            type="button"
-            onClick={addItem}
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm"
-          >
-            + Add Item
-          </button>
-        </div>
-
-        {/* Total Amount */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-gray-700">TOTAL AMOUNT</span>
-            <input
-              type="text"
-              value={`/= ${totalAmount.toFixed(2)}`}
-              disabled
-              className="w-48 rounded-md border border-gray-300 px-4 py-2 text-sm bg-gray-50"
-            />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-center">
-          <button
-            type="submit"
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-md font-medium flex items-center gap-2"
-          >
-            📋 Create Purchase Order
-          </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-md font-medium flex items-center gap-2"
-          >
-            ◯ Cancel
-          </button>
-        </div>
-      </form>
+              </TableBody>
+            </Table>
+          </CardContent>
+          <CardFooter className="bg-primary/5 border-t justify-end p-6">
+            <div className="flex items-center gap-8">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated Total</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-medium text-muted-foreground italic">KES</span>
+                  <span className="text-3xl font-black tracking-tighter text-primary">
+                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold h-14 px-8 shadow-xl" onClick={handleSubmit}>
+                Generate Purchase Order
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 }

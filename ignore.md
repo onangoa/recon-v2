@@ -1,0 +1,2 @@
+Ignored build scripts: @prisma/client@5.22.0, @prisma/engines@5.22.0, better-sqlite3@12.10.0, esbuild@0.28.0, prisma@5.22.0, sharp@0.34.5.   │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
