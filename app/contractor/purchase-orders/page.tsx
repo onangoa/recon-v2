@@ -14,7 +14,13 @@ import {
   Eye,
   ArrowUpDown,
   Filter,
-  Download
+  Download,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  PackageCheck
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -48,33 +54,150 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface PurchaseOrder {
   id: string;
-  supplier: string;
-  totalAmount: number;
+  orderNumber: string;
+  supplier: {
+    id: string;
+    name: string;
+  };
+  total: number;
   status: string;
-  date: string;
-  itemsCount: number;
+  orderDate: string;
+  items: any[];
 }
 
 export default function PurchaseOrdersList() {
+  const router = useRouter();
+  const { toast } = useToast();
+  
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
+  // Delete states
+  const [orderToDelete, setOrderToDelete] = useState<PurchaseOrder | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/purchase-orders?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      if (!response.ok) throw new Error('Failed to fetch purchase orders');
+      const data = await response.json();
+      setOrders(data.purchaseOrders);
+      setTotalPages(data.pagination.pages);
+      setTotalCount(data.pagination.total);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Mock data
-    setTimeout(() => {
-      setOrders([
-        { id: 'PO-2026-001', supplier: 'BuildMart Supplies', totalAmount: 45000, status: 'Completed', date: '2026-05-15', itemsCount: 12 },
-        { id: 'PO-2026-002', supplier: 'Steel & Co', totalAmount: 125000, status: 'Pending', date: '2026-05-20', itemsCount: 5 },
-        { id: 'PO-2026-003', supplier: 'Cement Industries', totalAmount: 85000, status: 'Completed', date: '2026-05-25', itemsCount: 20 },
-        { id: 'PO-2026-004', supplier: 'Nairobi Glass Works', totalAmount: 62000, status: 'Cancelled', date: '2026-05-28', itemsCount: 8 },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      if (currentPage !== 1) setCurrentPage(1);
+      else fetchOrders();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [currentPage]);
+
+  const handleDelete = async () => {
+    if (!orderToDelete) return;
+    
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/purchase-orders/${orderToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Deleted",
+          description: "Purchase order has been removed",
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+        setIsDeleteDialogOpen(false);
+        if (orders.length === 1 && currentPage > 1) {
+          setCurrentPage(prev => prev - 1);
+        } else {
+          fetchOrders();
+        }
+      } else {
+        throw new Error('Failed to delete purchase order');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const markAsDelivered = async (id: string) => {
+    try {
+      const response = await fetch(`/api/purchase-orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'delivered' }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Updated",
+          description: "Order marked as delivered and inventory updated",
+          variant: "success",
+        });
+        fetchOrders();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update order');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -95,14 +218,14 @@ export default function PurchaseOrdersList() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Procurement & POs</h1>
-          <p className="text-muted-foreground mt-1">Generate and track official purchase orders for materials and services.</p>
+          <p className="text-muted-foreground mt-1 text-sm italic">Generate and track official purchase orders for materials and services.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2 h-10">
             <Download className="w-4 h-4" />
             <span>Export</span>
           </Button>
-          <Button asChild className="gap-2 bg-primary hover:bg-primary/90">
+          <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white h-10 shadow-sm">
             <Link href="/contractor/purchase-orders/create">
               <Plus className="w-4 h-4" />
               <span>New Purchase Order</span>
@@ -112,78 +235,86 @@ export default function PurchaseOrdersList() {
       </div>
 
       <Card className="border-none shadow-md overflow-hidden">
-        <CardHeader className="pb-3 border-b bg-muted/20">
+        <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by supplier or PO#..."
-                  className="pl-10 bg-background border-none h-9 text-sm"
-                />
-              </div>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-              </Button>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by supplier or PO#..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
+              />
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 hover:bg-background hover:text-primary transition-colors"
+              onClick={fetchOrders}
+              disabled={isLoading}
+            >
+              <RotateCcw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">PO Number & Supplier</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Items</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Total Amount</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Date</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
-                <TableHead className="text-right w-[80px] font-bold text-xs uppercase tracking-wider">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-10 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-10 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : orders.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground italic">Loading purchase orders...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-destructive">
+              <AlertCircle className="h-8 w-8" />
+              <p className="text-sm font-medium">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchOrders} className="mt-2 text-destructive hover:text-destructive">
+                Try Again
+              </Button>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+              <ClipboardList className="h-8 w-8 opacity-20" />
+              <p className="text-sm italic">No purchase orders found.</p>
+              <Button asChild variant="link" className="text-primary p-0">
+                <Link href="/contractor/purchase-orders/create">Create your first PO</Link>
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <ClipboardList className="w-8 h-8 text-muted-foreground opacity-20" />
-                      <p className="text-muted-foreground font-medium">No purchase orders found</p>
-                    </div>
-                  </TableCell>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">PO Number & Supplier</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Items</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Total Amount</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Date</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
+                  <TableHead className="text-right w-[100px] font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
-              ) : (
-                orders.map((order) => (
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
                   <TableRow key={order.id} className="group hover:bg-muted/20 transition-colors">
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-bold text-primary text-xs uppercase tracking-tighter">{order.id}</span>
-                        <span className="font-semibold text-foreground">{order.supplier}</span>
+                        <span className="font-bold text-primary text-xs uppercase tracking-tighter">{order.orderNumber}</span>
+                        <span className="font-semibold text-foreground">{order.supplier.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center font-medium">
-                      {order.itemsCount}
+                    <TableCell className="text-center font-bold text-sm">
+                      {order.items.length}
                     </TableCell>
-                    <TableCell className="text-right font-mono font-bold">
-                      KES {order.totalAmount.toLocaleString()}
+                    <TableCell className="text-right font-mono font-bold text-sm">
+                      KES {order.total.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
-                      {order.date}
+                      {new Date(order.orderDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary" className={`
-                        ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
-                          order.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
-                          'bg-red-50 text-red-700 border-red-100'}
+                        text-[10px] font-black uppercase px-2 py-0 border-none
+                        ${order.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-600' : 
+                          order.status === 'pending' ? 'bg-amber-500/10 text-amber-600' : 
+                          'bg-red-500/10 text-red-600'}
                       `}>
                         {order.status}
                       </Badge>
@@ -195,26 +326,117 @@ export default function PurchaseOrdersList() {
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem className="gap-2">
-                            <Eye className="w-4 h-4" /> View Details
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onClick={() => router.push(`/contractor/purchase-orders/edit/${order.id}`)}
+                          >
+                            <Pencil className="size-4" /> Edit Order
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2">
+                          {order.status !== 'delivered' && (
+                            <DropdownMenuItem 
+                              className="gap-2 cursor-pointer text-emerald-600"
+                              onClick={() => markAsDelivered(order.id)}
+                            >
+                              <PackageCheck className="size-4" /> Mark Delivered
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="gap-2 cursor-pointer">
                             <Download className="w-4 h-4" /> Download PDF
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 text-destructive">
-                            <Trash2 className="w-4 h-4" /> Delete PO
+                          <DropdownMenuItem 
+                            className="gap-2 text-destructive cursor-pointer"
+                            onClick={() => {
+                              setOrderToDelete(order);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="size-4" /> Delete Order
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-muted/5">
+            <p className="text-sm text-muted-foreground italic">
+              Showing <span className="font-bold">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold">{Math.min(currentPage * limit, totalCount)}</span> of <span className="font-bold">{totalCount}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(p)}
+                    disabled={isLoading}
+                    className={`h-8 w-8 p-0 ${currentPage === p ? 'bg-primary text-white' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Delete Purchase Order
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete PO <span className="font-bold text-foreground">"{orderToDelete?.orderNumber}"</span>? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Delete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

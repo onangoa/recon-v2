@@ -29,7 +29,6 @@ export default function CreateSitePage() {
     name: '',
     location: '',
     description: '',
-    coordinates: '',
     category: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,7 +66,6 @@ export default function CreateSitePage() {
           name: formData.name,
           location: formData.location,
           description: formData.description,
-          coordinates: formData.coordinates,
         }),
       });
 
@@ -171,7 +169,7 @@ export default function CreateSitePage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
             <select 
-              value={formData.category}
+              value={formData.category || ''}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -182,43 +180,6 @@ export default function CreateSitePage() {
               <option value="commercial">Commercial</option>
               <option value="industrial">Industrial</option>
             </select>
-          </div>
-
-          {/* Start Date and End Date Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Start Date</label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">End Date</label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Coordinates Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Coordinates</label>
-            <input
-              type="text"
-              value={formData.coordinates}
-              onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
-              placeholder="e.g. -1.286389, 36.817222"
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
           </div>
 
           {/* Description Field */}

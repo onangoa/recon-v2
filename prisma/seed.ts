@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './generated/client';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +13,6 @@ async function main() {
     await prisma.material.deleteMany({});
     await prisma.task.deleteMany({});
     await prisma.site.deleteMany({});
-    await prisma.project.deleteMany({});
     await prisma.contractor.deleteMany({});
     await prisma.session.deleteMany({});
     await prisma.user.deleteMany({});
@@ -26,9 +25,9 @@ async function main() {
       data: {
         name: 'Basic',
         price: 2999,
-        maxProjects: 5,
+        maxSites: 5,
         maxTeamMembers: 3,
-        features: 'Up to 5 projects,Basic reporting,Email support',
+        features: 'Up to 5 sites,Basic reporting,Email support',
       },
     });
 
@@ -36,9 +35,9 @@ async function main() {
       data: {
         name: 'Professional',
         price: 7999,
-        maxProjects: 50,
+        maxSites: 50,
         maxTeamMembers: 15,
-        features: 'Unlimited projects,Advanced reporting,Priority support,Team management',
+        features: 'Unlimited sites,Advanced reporting,Priority support,Team management',
       },
     });
 
@@ -46,9 +45,9 @@ async function main() {
       data: {
         name: 'Enterprise',
         price: 19999,
-        maxProjects: 999,
+        maxSites: 999,
         maxTeamMembers: 999,
-        features: 'Unlimited projects,Custom reporting,24/7 support,Advanced features',
+        features: 'Unlimited sites,Custom reporting,24/7 support,Advanced features',
       },
     });
 
@@ -96,7 +95,7 @@ async function main() {
       const user = await prisma.user.create({
         data: {
           email: data.email,
-          password: 'hashed_contractor_password',
+          password: '12345678',
           role: 'contractor',
           name: data.name,
         },
@@ -119,69 +118,58 @@ async function main() {
 
     console.log('Created contractors');
 
-    // Create projects for each contractor
-    const projects = [];
-    const projectData = [
+    // Create sites for each contractor
+    const sites = [];
+    const siteData = [
       {
         name: 'Galaxy Mall Extension',
         location: 'Nairobi CBD',
-        budget: 50000000,
-        startDate: new Date('2024-01-15'),
-        endDate: new Date('2024-12-31'),
+        description: 'Professional commercial development project',
       },
       {
         name: 'Westlands Office Complex',
         location: 'Nairobi',
-        budget: 75000000,
-        startDate: new Date('2024-02-01'),
-        endDate: new Date('2025-03-31'),
+        description: 'Modern office building development',
       },
       {
         name: 'Lakeside Residential',
         location: 'Kisumu',
-        budget: 35000000,
-        startDate: new Date('2024-03-01'),
-        endDate: new Date('2025-02-28'),
+        description: 'Residential housing development',
+      },
+      {
+        name: 'Beachfront Resort',
+        location: 'Mombasa',
+        description: 'Luxury resort construction',
+      },
+      {
+        name: 'Industrial Park',
+        location: 'Nairobi',
+        description: 'Industrial complex development',
+      },
+      {
+        name: 'Shopping Center',
+        location: 'Kisumu',
+        description: 'Commercial retail space',
       },
     ];
 
-    for (let i = 0; i < projectData.length; i++) {
-      const project = await prisma.project.create({
+    for (let i = 0; i < siteData.length; i++) {
+      const site = await prisma.site.create({
         data: {
           contractorId: contractors[i % contractors.length].id,
-          name: projectData[i].name,
-          description: `Professional ${projectData[i].name} development project`,
-          location: projectData[i].location,
-          budget: projectData[i].budget,
-          status: 'active',
-          startDate: projectData[i].startDate,
-          endDate: projectData[i].endDate,
+          name: siteData[i].name,
+          location: siteData[i].location,
+          description: siteData[i].description,
         },
       });
 
-      projects.push(project);
-    }
-
-    console.log('Created projects');
-
-    // Create sites for each project
-    for (const project of projects) {
-      for (let i = 1; i <= 2; i++) {
-        await prisma.site.create({
-          data: {
-            projectId: project.id,
-            name: `${project.name} - Site ${i}`,
-            location: `${project.location}, Site ${i}`,
-            description: `Site ${i} for ${project.name}`,
-          },
-        });
-      }
+      sites.push(site);
     }
 
     console.log('Created sites');
 
-    // Create tasks for each project
-    for (const project of projects) {
+    // Create tasks for each site
+    for (const site of sites) {
       const taskNames = ['Foundation', 'Framing', 'Roofing', 'Interior', 'Finishing'];
       const statuses = ['completed', 'completed', 'in-progress', 'pending', 'pending'];
       const priorities = ['high', 'high', 'medium', 'medium', 'low'];
@@ -189,9 +177,9 @@ async function main() {
       for (let i = 0; i < taskNames.length; i++) {
         await prisma.task.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             title: taskNames[i],
-            description: `${taskNames[i]} phase of ${project.name}`,
+            description: `${taskNames[i]} phase of ${site.name}`,
             status: statuses[i],
             priority: priorities[i],
             dueDate: new Date(Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000),
@@ -202,8 +190,8 @@ async function main() {
 
     console.log('Created tasks');
 
-    // Create materials for each project
-    for (const project of projects) {
+    // Create materials for each site
+    for (const site of sites) {
       const materials = [
         { name: 'Cement (50kg)', category: 'cement', quantity: 1000, unit: 'bags', unitCost: 800 },
         { name: 'Sand', category: 'sand', quantity: 500, unit: 'cubic meters', unitCost: 3000 },
@@ -215,9 +203,8 @@ async function main() {
         const totalCost = material.quantity * material.unitCost;
         await prisma.material.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             name: material.name,
-            category: material.category,
             quantity: material.quantity,
             unit: material.unit,
             unitCost: material.unitCost,
@@ -231,8 +218,8 @@ async function main() {
 
     console.log('Created materials');
 
-    // Create equipment for each project
-    for (const project of projects) {
+    // Create equipment for each site
+    for (const site of sites) {
       const equipment = [
         { name: 'Excavator CAT 320', type: 'Heavy Machinery', dailyRate: 25000 },
         { name: 'Concrete Mixer', type: 'Machinery', dailyRate: 5000 },
@@ -243,7 +230,7 @@ async function main() {
       for (const equip of equipment) {
         await prisma.equipment.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             name: equip.name,
             type: equip.type,
             dailyRate: equip.dailyRate,
@@ -255,8 +242,8 @@ async function main() {
 
     console.log('Created equipment');
 
-    // Create documents for each project
-    for (const project of projects) {
+    // Create documents for each site
+    for (const site of sites) {
       const documents = [
         { name: 'Project Charter', type: 'contract' },
         { name: 'Site Safety Plan', type: 'report' },
@@ -267,7 +254,7 @@ async function main() {
       for (const doc of documents) {
         await prisma.document.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             name: doc.name,
             type: doc.type,
             fileUrl: `/documents/${doc.name.replace(/\s+/g, '-').toLowerCase()}.pdf`,
@@ -278,26 +265,26 @@ async function main() {
 
     console.log('Created documents');
 
-    // Create photos for each project
-    for (const project of projects) {
+    // Create photos for each site
+    for (const site of sites) {
       await prisma.photo.create({
         data: {
-          projectId: project.id,
-          imageUrl: `/images/project-${project.id}.jpg`,
-          caption: `Progress photo for ${project.name}`,
+          projectId: site.id,
+          imageUrl: `/images/site-${site.id}.jpg`,
+          caption: `Progress photo for ${site.name}`,
         },
       });
     }
 
     console.log('Created photos');
 
-    // Create visitors for each project
-    for (const project of projects) {
+    // Create visitors for each site
+    for (const site of sites) {
       for (let i = 0; i < 3; i++) {
         const purposes = ['inspection', 'meeting', 'delivery', 'other'];
         await prisma.visitor.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             name: `Visitor ${i + 1}`,
             company: `Company ${i + 1}`,
             purpose: purposes[i % purposes.length],
@@ -310,13 +297,13 @@ async function main() {
 
     console.log('Created visitors');
 
-    // Create metrics for each project
-    for (const project of projects) {
+    // Create metrics for each site
+    for (const site of sites) {
       const metricTypes = ['safety', 'progress', 'cost', 'quality'];
       for (const type of metricTypes) {
         await prisma.metric.create({
           data: {
-            projectId: project.id,
+            siteId: site.id,
             type: type,
             value: type === 'progress' ? Math.random() * 100 : 85 + Math.random() * 15,
             unit: type === 'cost' ? 'KES' : '%',

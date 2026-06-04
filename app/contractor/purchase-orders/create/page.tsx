@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
-  Trash2
+  Trash2,
+  Package
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -23,17 +24,26 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface OrderItem {
   id: string;
   description: string;
   quantity: number;
   unitPrice: number;
+  materialId?: string;
 }
 
 interface Supplier {
   id: string;
   name: string;
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  unitCost: number;
+  unit: string;
 }
 
 export default function CreatePurchaseOrder() {
@@ -53,21 +63,31 @@ export default function CreatePurchaseOrder() {
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
-    const fetchSuppliers = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/suppliers?limit=100');
-        const data = await response.json();
-        if (data.suppliers && Array.isArray(data.suppliers)) {
-          setSuppliers(data.suppliers);
+        const [suppliersRes, inventoryRes] = await Promise.all([
+          fetch('/api/suppliers?limit=100'),
+          fetch('/api/inventory?limit=1000')
+        ]);
+        
+        const suppliersData = await suppliersRes.json();
+        if (suppliersData.suppliers && Array.isArray(suppliersData.suppliers)) {
+          setSuppliers(suppliersData.suppliers);
+        }
+
+        const inventoryData = await inventoryRes.json();
+        if (inventoryData.inventory && Array.isArray(inventoryData.inventory)) {
+          setInventoryItems(inventoryData.inventory);
         }
       } catch (error) {
-        console.error('Failed to fetch suppliers:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
 
-    fetchSuppliers();
+    fetchData();
   }, []);
 
   const addItem = () => {
@@ -84,6 +104,21 @@ export default function CreatePurchaseOrder() {
   };
 
   const updateItem = (id: string, field: string, value: any) => {
+    if (field === 'materialId') {
+      const selectedItem = inventoryItems.find(i => i.id === value);
+      if (selectedItem) {
+        setItems(items.map(item =>
+          item.id === id ? { 
+            ...item, 
+            materialId: value, 
+            description: selectedItem.name,
+            unitPrice: selectedItem.unitCost
+          } : item
+        ));
+        return;
+      }
+    }
+    
     setItems(items.map(item =>
       item.id === id ? { ...item, [field]: value } : item
     ));
@@ -152,11 +187,6 @@ export default function CreatePurchaseOrder() {
         title: "Error",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <AlertCircle className="h-5 w-5 text-white" />
-          </div>
-        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -184,202 +214,234 @@ export default function CreatePurchaseOrder() {
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Purchase Order</h1>
-          <p className="text-sm text-gray-500">Create a new purchase order for supplies.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => router.back()}
+            className="h-10 w-10 border border-muted-foreground/10"
+          >
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Create Purchase Order</h1>
+            <p className="text-muted-foreground mt-1 text-sm italic">Generate a new official PO for your site materials.</p>
+          </div>
         </div>
       </div>
 
-      {/* Simplified Form */}
-      <div className="rounded-lg border border-gray-200 bg-white p-8">
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
-          {/* Order Number and Supplier Row */}
-          <div className="grid grid-cols-2 gap-6">
+      {/* Form */}
+      <Card className="border-none shadow-md overflow-hidden">
+        <CardContent className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl">
+            {/* Order Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-muted/20 rounded-xl border border-muted-foreground/5">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Order Number</label>
+                  <input
+                    type="text"
+                    value={formData.orderNumber}
+                    onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                    placeholder="e.g. PO-2026-001"
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Supplier *</label>
+                  <select 
+                    value={formData.supplierId}
+                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary shadow-sm"
+                  >
+                    <option value="">Select Supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Order Date</label>
+                  <input
+                    type="date"
+                    value={formData.orderDate}
+                    onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Expected Delivery</label>
+                  <input
+                    type="date"
+                    value={formData.expectedDeliveryDate}
+                    onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Items Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/10 rounded">
+                    <Package className="w-4 h-4 text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground">Order Items</h2>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2 border-primary/20 text-primary hover:bg-primary/5">
+                  <Plus className="w-4 h-4" />
+                  Add Item
+                </Button>
+              </div>
+              
+              <div className="border border-muted-foreground/10 rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-black text-[10px] uppercase tracking-wider text-muted-foreground">Inventory Item (Optional)</th>
+                      <th className="px-4 py-3 text-left font-black text-[10px] uppercase tracking-wider text-muted-foreground">Description</th>
+                      <th className="px-4 py-3 text-center font-black text-[10px] uppercase tracking-wider text-muted-foreground w-24">Qty</th>
+                      <th className="px-4 py-3 text-right font-black text-[10px] uppercase tracking-wider text-muted-foreground w-32">Unit Price</th>
+                      <th className="px-4 py-3 text-right font-black text-[10px] uppercase tracking-wider text-muted-foreground w-32">Total</th>
+                      <th className="px-4 py-3 text-center font-black text-[10px] uppercase tracking-wider text-muted-foreground w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-background divide-y divide-muted-foreground/5">
+                    {items.map((item) => (
+                      <tr key={item.id} className="hover:bg-muted/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <select
+                            value={item.materialId || ''}
+                            onChange={(e) => updateItem(item.id, 'materialId', e.target.value)}
+                            disabled={isSubmitting}
+                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="">Manual Entry</option>
+                            {inventoryItems.map((inv) => (
+                              <option key={inv.id} value={inv.id}>{inv.name}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                            placeholder="Description"
+                            disabled={isSubmitting}
+                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                            min="1"
+                            disabled={isSubmitting}
+                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs text-center focus:ring-1 focus:ring-primary font-bold"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-[10px] text-muted-foreground">KES</span>
+                            <input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              min="0"
+                              step="0.01"
+                              disabled={isSubmitting}
+                              className="w-24 rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs text-right focus:ring-1 focus:ring-primary font-bold"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-foreground">
+                          KES {(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(item.id)}
+                            disabled={isSubmitting || items.length === 1}
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="flex justify-end p-4 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Grand Total</p>
+                  <p className="text-2xl font-black text-foreground">
+                    <span className="text-sm font-normal text-muted-foreground mr-1">KES</span>
+                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Number</label>
-              <input
-                type="text"
-                value={formData.orderNumber}
-                onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                placeholder="Enter order number"
+              <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Additional Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Enter any special instructions or details..."
+                rows={3}
                 disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="w-full rounded-xl border-none bg-muted/20 px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-inner"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Supplier *</label>
-              <select 
-                value={formData.supplierId}
-                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+
+            {/* Actions */}
+            <div className="flex gap-4 pt-6 border-t border-muted-foreground/10">
+              <Button 
+                type="submit" 
                 disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                <option value="">Select Supplier</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Order Date and Expected Delivery Date Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Date</label>
-              <input
-                type="date"
-                value={formData.orderDate}
-                onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Creating PO...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    <span className="text-base font-bold">Save Purchase Order</span>
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => router.back()} 
                 disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Expected Delivery Date</label>
-              <input
-                type="date"
-                value={formData.expectedDeliveryDate}
-                onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Items Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-medium text-gray-700 uppercase tracking-wider">Items</label>
-              <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Item
+                className="gap-2 px-8 py-6 rounded-xl border-muted-foreground/20 hover:bg-muted/50"
+              >
+                <X className="w-5 h-5" />
+                <span className="text-base font-medium">Cancel</span>
               </Button>
             </div>
-            
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Quantity</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Unit Price</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Total</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="Item description"
-                          disabled={isSubmitting}
-                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                          min="1"
-                          disabled={isSubmitting}
-                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
-                          disabled={isSubmitting}
-                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium">
-                        KES {(item.quantity * item.unitPrice).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          disabled={isSubmitting || items.length === 1}
-                          className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="mt-4 text-right">
-              <span className="text-sm font-medium text-gray-700">
-                Total: <span className="text-lg font-bold">KES {totalAmount.toFixed(2)}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Notes Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Enter any additional notes"
-              rows={3}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-4 pt-4 border-t border-gray-100">
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Order
-                </>
-              )}
-            </Button>
-            <Button 
-              variant="outline" 
-              type="button" 
-              onClick={() => router.back()} 
-              disabled={isSubmitting}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

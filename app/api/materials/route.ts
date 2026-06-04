@@ -5,7 +5,12 @@ export async function GET() {
   try {
     const materials = await prisma.material.findMany({
       include: {
-        project: true,
+        categoryRel: true,
+        site: {
+          include: {
+            contractor: true
+          }
+        },
       },
     });
     return NextResponse.json(materials);
@@ -19,9 +24,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const material = await prisma.material.create({
       data: {
-        projectId: body.projectId,
+        siteId: body.siteId,
         name: body.name,
-        category: body.category,
+        categoryId: body.categoryId,
         quantity: body.quantity,
         unit: body.unit,
         unitCost: body.unitCost,
@@ -30,7 +35,12 @@ export async function POST(request: NextRequest) {
         status: body.status || 'pending',
       },
       include: {
-        project: true,
+        categoryRel: true,
+        site: {
+          include: {
+            contractor: true
+          }
+        },
       },
     });
     return NextResponse.json(material, { status: 201 });

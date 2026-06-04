@@ -7,19 +7,24 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const inventoryItem = await prisma.inventoryItem.findUnique({
+    const material = await prisma.material.findUnique({
       where: { id },
       include: {
-        category: true,
+        categoryRel: true,
+        site: {
+          include: {
+            contractor: true
+          }
+        },
       },
     });
-    if (!inventoryItem) {
-      return NextResponse.json({ error: 'Inventory item not found' }, { status: 404 });
+    if (!material) {
+      return NextResponse.json({ error: 'Material not found' }, { status: 404 });
     }
-    return NextResponse.json(inventoryItem);
+    return NextResponse.json(material);
   } catch (error) {
-    console.error('Failed to fetch inventory item:', error);
-    return NextResponse.json({ error: 'Failed to fetch inventory item' }, { status: 500 });
+    console.error('Failed to fetch material:', error);
+    return NextResponse.json({ error: 'Failed to fetch material' }, { status: 500 });
   }
 }
 
@@ -31,54 +36,42 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     
-    // Calculate total price if unitPrice and quantity are provided
-    const unitPrice = body.unitPrice ? parseFloat(body.unitPrice) : undefined;
-    const quantity = body.quantity !== undefined ? parseInt(body.quantity) : undefined;
+    const quantity = body.quantity !== undefined ? parseFloat(body.quantity) : undefined;
+    const unitCost = body.unitCost !== undefined ? parseFloat(body.unitCost) : undefined;
     
     const updateData: any = {
       name: body.name,
-      description: body.description,
-      sku: body.sku,
-      barcode: body.barcode,
       categoryId: body.categoryId,
       unit: body.unit,
-      quantity: quantity,
-      minStockLevel: body.minStockLevel !== undefined ? parseInt(body.minStockLevel) : undefined,
-      maxStockLevel: body.maxStockLevel !== undefined ? (body.maxStockLevel ? parseInt(body.maxStockLevel) : null) : undefined,
-      reorderPoint: body.reorderPoint !== undefined ? parseInt(body.reorderPoint) : undefined,
-      unitPrice: unitPrice,
-      location: body.location,
-      supplierId: body.supplierId,
-      notes: body.notes,
+      supplier: body.supplier,
+      status: body.status,
     };
 
-    // Remove undefined fields
-    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
-
-    if (unitPrice !== undefined || quantity !== undefined) {
-      // We need the current values if one is missing
-      const currentItem = await prisma.inventoryItem.findUnique({
-        where: { id }
-      });
-      if (currentItem) {
-        const finalPrice = unitPrice !== undefined ? unitPrice : currentItem.unitPrice;
-        const finalQuantity = quantity !== undefined ? quantity : currentItem.quantity;
-        updateData.totalPrice = finalPrice * finalQuantity;
-      }
+    if (quantity !== undefined) updateData.quantity = quantity;
+    if (unitCost !== undefined) updateData.unitCost = unitCost;
+    if (quantity !== undefined && unitCost !== undefined) {
+      updateData.totalCost = quantity * unitCost;
     }
 
-    const inventoryItem = await prisma.inventoryItem.update({
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+    const material = await prisma.material.update({
       where: { id },
       data: updateData,
       include: {
-        category: true,
+        categoryRel: true,
+        site: {
+          include: {
+            contractor: true
+          }
+        },
       },
     });
 
-    return NextResponse.json(inventoryItem);
+    return NextResponse.json(material);
   } catch (error) {
-    console.error('Failed to update inventory item:', error);
-    return NextResponse.json({ error: 'Failed to update inventory item' }, { status: 500 });
+    console.error('Failed to update material:', error);
+    return NextResponse.json({ error: 'Failed to update material' }, { status: 500 });
   }
 }
 
@@ -88,12 +81,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.inventoryItem.delete({
+    await prisma.material.delete({
       where: { id },
     });
-    return NextResponse.json({ message: 'Inventory item deleted' });
+    return NextResponse.json({ message: 'Material deleted' });
   } catch (error) {
-    console.error('Failed to delete inventory item:', error);
-    return NextResponse.json({ error: 'Failed to delete inventory item' }, { status: 500 });
+    console.error('Failed to delete material:', error);
+    return NextResponse.json({ error: 'Failed to delete material' }, { status: 500 });
   }
 }

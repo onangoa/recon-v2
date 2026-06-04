@@ -21,103 +21,64 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-interface Project {
+interface Site {
   id: string;
   name: string;
   location: string;
   description: string | null;
-  coordinates: string | null;
-  category: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  status: string;
-  companyId: string | null;
-  company: {
-    id: string;
-    name: string;
-  } | null;
 }
 
-interface Company {
-  id: string;
-  name: string;
-}
-
-export default function EditProjectPage() {
+export default function EditSitePage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const projectId = params.id as string;
+  const siteId = params.id as string;
   
   const [formData, setFormData] = useState({
     name: '',
     location: '',
     description: '',
-    coordinates: '',
     category: '',
-    startDate: '',
-    endDate: '',
-    status: 'planning',
-    companyId: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [companies, setCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
-    const fetchProject = async () => {
+    const fetchSite = async () => {
       try {
-        const response = await fetch(`/api/projects/${projectId}`);
+        const response = await fetch(`/api/sites/${siteId}`);
         if (response.ok) {
-          const project: Project = await response.json();
+          const site: Site = await response.json();
           setFormData({
-            name: project.name,
-            location: project.location,
-            description: project.description || '',
-            coordinates: project.coordinates || '',
-            category: project.category || '',
-            startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
-            endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
-            status: project.status,
-            companyId: project.companyId || '',
+            name: site.name,
+            location: site.location,
+            description: site.description || '',
+            category: '', // Category not currently in DB
           });
         } else {
           toast({
             title: "Error",
-            description: "Failed to fetch project data.",
+            description: "Failed to fetch site data.",
             variant: "destructive",
           });
-          router.push('/contractor/projects');
+          router.push('/contractor/sites');
         }
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to fetch project data.",
+          description: "Failed to fetch site data.",
           variant: "destructive",
         });
-        router.push('/contractor/projects');
+        router.push('/contractor/sites');
       } finally {
         setIsLoading(false);
       }
     };
 
-    const fetchCompanies = async () => {
-      try {
-        const response = await fetch('/api/companies?limit=100');
-        const data = await response.json();
-        if (data.companies && Array.isArray(data.companies)) {
-          setCompanies(data.companies);
-        }
-      } catch (error) {
-        console.error('Failed to fetch companies:', error);
-      }
-    };
-
-    if (projectId) {
-      fetchProject();
-      fetchCompanies();
+    if (siteId) {
+      fetchSite();
     }
-  }, [projectId, router, toast]);
+  }, [siteId, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +86,7 @@ export default function EditProjectPage() {
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "Project name is required.",
+        description: "Site name is required.",
         variant: "destructive",
       });
       return;
@@ -134,7 +95,7 @@ export default function EditProjectPage() {
     if (!formData.location.trim()) {
       toast({
         title: "Validation Error",
-        description: "Project location is required.",
+        description: "Site location is required.",
         variant: "destructive",
       });
       return;
@@ -143,12 +104,16 @@ export default function EditProjectPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
+      const response = await fetch(`/api/sites/${siteId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          location: formData.location,
+          description: formData.description,
+        }),
       });
 
       const result = await response.json();
@@ -156,7 +121,7 @@ export default function EditProjectPage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Project "${result.name}" has been updated.`,
+          description: `Site "${result.name}" has been updated.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -164,10 +129,10 @@ export default function EditProjectPage() {
             </div>
           ),
         });
-        router.push('/contractor/projects');
+        router.push('/contractor/sites');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update project');
+        throw new Error(result.error || 'Failed to update site');
       }
     } catch (error: any) {
       toast({
@@ -187,8 +152,8 @@ export default function EditProjectPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -203,11 +168,11 @@ export default function EditProjectPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/projects">Projects</BreadcrumbLink>
+            <BreadcrumbLink href="/contractor/sites">Sites</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Edit Project</BreadcrumbPage>
+            <BreadcrumbPage>Edit Site</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -215,8 +180,8 @@ export default function EditProjectPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Project</h1>
-          <p className="text-sm text-gray-500">Update project information.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Site</h1>
+          <p className="text-sm text-gray-500">Update information for your project site.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -231,12 +196,12 @@ export default function EditProjectPage() {
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Project Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Site Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter project name"
+              placeholder="Enter site name"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
@@ -249,80 +214,27 @@ export default function EditProjectPage() {
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="Enter project location"
+              placeholder="Enter site location"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
-          {/* Category and Company Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Category</option>
-                <option value="infrastructure">Infrastructure / Roads</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="industrial">Industrial</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company</label>
-              <select 
-                value={formData.companyId}
-                onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>{company.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Start Date and End Date Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Start Date</label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">End Date</label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Coordinates Field */}
+          {/* Category Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Coordinates</label>
-            <input
-              type="text"
-              value={formData.coordinates}
-              onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
-              placeholder="e.g. -1.286389, 36.817222"
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
+            <select 
+              value={formData.category || ''}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            >
+              <option value="">Select Category</option>
+              <option value="infrastructure">Infrastructure / Roads</option>
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+              <option value="industrial">Industrial</option>
+            </select>
           </div>
 
           {/* Description Field */}
@@ -331,7 +243,7 @@ export default function EditProjectPage() {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter project description"
+              placeholder="Enter site description"
               rows={4}
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -348,12 +260,12 @@ export default function EditProjectPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
+                  Updating...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Update Project
+                  Update Site
                 </>
               )}
             </Button>

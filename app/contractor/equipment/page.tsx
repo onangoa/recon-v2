@@ -65,6 +65,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 
 interface Equipment {
   id: string;
@@ -84,6 +85,7 @@ interface Equipment {
 export default function EquipmentPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function EquipmentPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/equipment?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/api/equipment?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch equipment');
       const data = await response.json();
       setEquipment(data.equipment);

@@ -45,7 +45,7 @@ model Contractor {
   subscriptionPlanId String
   subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   safetyScore Float      @default(0)
-  projects    Project[]
+  sites       Site[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -56,7 +56,7 @@ model SubscriptionPlan {
   id          String     @id @default(cuid())
   name        String     @unique // "Basic", "Professional", "Enterprise"
   price       Float
-  maxProjects Int
+  maxSites    Int
   maxTeamMembers Int
   features    String     // JSON string of features
   contractors Contractor[]
@@ -64,59 +64,38 @@ model SubscriptionPlan {
   updatedAt   DateTime   @updatedAt
 }
 
-model Project {
-  id            String     @id @default(cuid())
-  contractorId  String
-  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  location      String     // Kenyan location
-  status        String     // "active", "completed", "paused"
-  startDate     DateTime
-  endDate       DateTime?
-  budget        Float
-  spent         Float      @default(0)
-  sites         Site[]
-  tasks         Task[]
-  equipment     Equipment[]
-  documents     Document[]
-  visitors      Visitor[]
-  metrics       Metric[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  @@index([contractorId])
-  @@index([status])
-}
-
 model Site {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name      String
-  location  String
-  coordinates String? // lat,lng format
-  description String?
-  materials  Material[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([projectId])
-}
-
-model Task {
   id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title       String
+  contractorId String
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name        String
+  location    String
   description String?
-  status      String   // "pending", "in-progress", "completed"
-  priority    String   // "low", "medium", "high"
-  dueDate     DateTime?
+  materials   Material[]
+  tasks       Task[]
+  equipment   Equipment[]
+  visitors    Visitor[]
+  documents   Document[]
+  metrics     Metric[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([contractorId])
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title     String
+  description String?
+  status    String   // "pending", "in-progress", "completed"
+  priority  String   // "low", "medium", "high"
+  dueDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId])
   @@index([status])
 }
 
@@ -125,7 +104,6 @@ model Material {
   siteId      String
   site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name        String
-  category    String   // Fallback string
   categoryId  String?
   categoryRel InventoryCategory? @relation(fields: [categoryId], references: [id])
   quantity    Float
@@ -156,33 +134,33 @@ model InventoryCategory {
 }
 
 model Equipment {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name        String   // "Excavator", "Crane", "Concrete Mixer", etc.
-  type        String
-  serialNo    String?
-  rentalCost  Float?
-  dailyRate   Float?
-  status      String   // "in-use", "idle", "maintenance"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name       String   // "Excavator", "Crane", "Concrete Mixer", etc.
+  type       String
+  serialNo   String?
+  rentalCost Float?
+  dailyRate  Float?
+  status     String   // "in-use", "idle", "maintenance"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([siteId])
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name        String
-  type        String   // "contract", "invoice", "report", "permit", "insurance"
-  fileUrl     String
-  uploadedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name      String
+  type      String   // "contract", "invoice", "report", "permit", "insurance"
+  fileUrl   String
+  uploadedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([siteId])
 }
 
 model Photo {
@@ -196,8 +174,8 @@ model Photo {
 
 model Visitor {
   id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name        String
   company     String?
   purpose     String   // "inspection", "meeting", "delivery", "other"
@@ -206,22 +184,39 @@ model Visitor {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([siteId])
 }
 
 model Metric {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type        String   // "safety", "progress", "cost", "quality"
-  value       Float
-  unit        String   // "%", "KES", "days", etc.
-  recordedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  siteId     String
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  type       String   // "safety", "progress", "cost", "quality"
+  value      Float
+  unit       String   // "%", "KES", "days", etc.
+  recordedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([siteId])
   @@index([type])
+}
+
+model License {
+  id               String   @id @default(cuid())
+  name             String
+  licenseNumber    String   @unique
+  issuingAuthority String?
+  issueDate        DateTime?
+  expiryDate       DateTime?
+  type             String?
+  category         String?
+  status           String   @default("active")
+  fileName         String?
+  fileData         String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Supplier {
@@ -236,6 +231,69 @@ model Supplier {
   postalCode    String?
   website       String?
   notes         String?
+  purchaseOrders PurchaseOrder[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model PurchaseOrder {
+  id                   String              @id @default(cuid())
+  orderNumber          String              @unique
+  supplierId           String
+  supplier             Supplier            @relation(fields: [supplierId], references: [id])
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime?
+  status               String              @default("pending") // "pending", "completed", "cancelled"
+  subtotal             Float               @default(0)
+  tax                  Float               @default(0)
+  total                Float               @default(0)
+  notes                String?
+  items                PurchaseOrderItem[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([supplierId])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  description     String
+  quantity        Float         @default(1)
+  unitPrice       Float         @default(0)
+  totalPrice      Float         @default(0)
+  materialId      String?       // Optional link to Material (inventory item)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([purchaseOrderId])
+}
+
+model Wallet {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  balance     Float         @default(0)
+  currency    String        @default("KES")
+  status      String        @default("active")
+  transactions Transaction[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  walletId        String
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount          Float
+  type            String   // "credit" or "debit"
+  description     String?
+  referenceNumber String?
+  status          String   @default("completed")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([walletId])
+  @@index([type])
 }

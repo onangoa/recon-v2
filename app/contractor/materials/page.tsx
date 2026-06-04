@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { 
   Truck, 
   Plus, 
@@ -13,7 +14,9 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  FileText
+  FileText,
+  Loader2,
+  ChevronLeft
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -42,25 +45,55 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+interface PurchaseOrderItem {
+  id: string;
+  description: string;
+  quantity: number;
+}
+
+interface PurchaseOrder {
+  id: string;
+  orderNumber: string;
+  supplier: {
+    name: string;
+  };
+  expectedDeliveryDate: string;
+  orderDate: string;
+  status: string;
+  items: PurchaseOrderItem[];
+}
+
 export default function MaterialsPage() {
-  const deliveries = [
-    {
-      id: 'DEL-001',
-      item: 'Cement (Bamburi)',
-      quantity: '500 Bags',
-      supplier: 'BuildMart',
-      deliveryDate: '2026-06-01',
-      status: 'Received',
-    },
-    {
-      id: 'DEL-002',
-      item: 'Steel Rods (12mm)',
-      quantity: '2 Tons',
-      supplier: 'Steel & Co',
-      deliveryDate: '2026-06-05',
-      status: 'Pending',
-    },
-  ];
+  const [deliveries, setDeliveries] = useState<PurchaseOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
+  const fetchDeliveries = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/purchase-orders?status=delivered&page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      if (!response.ok) throw new Error('Failed to fetch deliveries');
+      const data = await response.json();
+      setDeliveries(data.purchaseOrders);
+      setTotalPages(data.pagination.pages);
+      setTotalCount(data.pagination.total);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeliveries();
+  }, [currentPage, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -81,52 +114,52 @@ export default function MaterialsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Material Supply Chain</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Track deliveries, manage incoming stock, and verify material quality.</p>
+          <p className="text-muted-foreground mt-1 text-sm italic">Track and verify all materials delivered to your project sites.</p>
         </div>
-        <Button asChild className="gap-2 bg-primary hover:bg-primary/90">
-          <Link href="/contractor/materials/create">
+        <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white h-10 shadow-sm">
+          <Link href="/contractor/purchase-orders">
             <Plus className="w-4 h-4" />
-            <span>Log New Delivery</span>
+            <span>Manage Orders</span>
           </Link>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-none shadow-md bg-muted/20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-md bg-emerald-500/5 border border-emerald-500/10">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <div className="p-3 bg-emerald-500/10 rounded-xl">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-bold uppercase">Received</p>
-                <h3 className="text-2xl font-bold">24</h3>
+                <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Received</p>
+                <h3 className="text-3xl font-black text-foreground">{totalCount}</h3>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-md bg-muted/20">
+        <Card className="border-none shadow-md bg-amber-500/5 border border-amber-500/10">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Clock className="w-5 h-5 text-amber-600" />
+              <div className="p-3 bg-amber-500/10 rounded-xl">
+                <Clock className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-bold uppercase">Expected Today</p>
-                <h3 className="text-2xl font-bold">03</h3>
+                <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">Expected Soon</p>
+                <h3 className="text-3xl font-black text-foreground">--</h3>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-md bg-muted/20">
+        <Card className="border-none shadow-md bg-primary/5 border border-primary/10">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+              <div className="p-3 bg-primary/10 rounded-xl">
+                <Package className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-bold uppercase">Delayed</p>
-                <h3 className="text-2xl font-bold">01</h3>
+                <p className="text-[10px] text-primary font-black uppercase tracking-widest">Total Value</p>
+                <h3 className="text-3xl font-black text-foreground">KES --</h3>
               </div>
             </div>
           </CardContent>
@@ -134,82 +167,150 @@ export default function MaterialsPage() {
       </div>
 
       <Card className="border-none shadow-md overflow-hidden">
-        <CardHeader className="pb-3 border-b bg-muted/20">
+        <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search deliveries..."
-                className="pl-10 bg-background border-none h-9 text-sm"
+                placeholder="Search by PO# or supplier..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
               />
             </div>
-            <Button variant="ghost" size="sm" className="gap-2 h-9 border-muted-foreground/20">
-              <Filter className="w-4 h-4" />
-              <span>Filter Status</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 hover:bg-background hover:text-primary transition-colors"
+              onClick={fetchDeliveries}
+              disabled={isLoading}
+            >
+              <RotateCcw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Item & Delivery ID</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Quantity</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Supplier</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Delivery Date</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
-                <TableHead className="text-right w-[80px] font-bold text-xs uppercase tracking-wider">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deliveries.map((delivery) => (
-                <TableRow key={delivery.id} className="hover:bg-muted/20 transition-colors">
-                  <TableCell>
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1 p-1.5 bg-primary/10 rounded">
-                        <Package className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground text-sm">{delivery.item}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground">{delivery.id}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-bold text-sm">
-                    {delivery.quantity}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">{delivery.supplier}</span>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center text-[10px] text-muted-foreground">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {delivery.deliveryDate}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary" className={`
-                      text-[10px] uppercase font-bold px-2 py-0 border-none
-                      ${delivery.status === 'Received' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}
-                    `}>
-                      {delivery.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground italic">Loading deliveries...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-destructive">
+              <AlertCircle className="h-8 w-8" />
+              <p className="text-sm font-medium">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchDeliveries} className="mt-2 text-destructive hover:text-destructive">
+                Try Again
+              </Button>
+            </div>
+          ) : deliveries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+              <Truck className="h-8 w-8 opacity-20" />
+              <p className="text-sm italic">No deliveries found.</p>
+              <Button asChild variant="link" className="text-primary p-0">
+                <Link href="/contractor/purchase-orders">Go to Purchase Orders</Link>
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Item Details & PO#</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Qty</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Supplier</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Delivery Date</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
+                  <TableHead className="text-right w-[80px] font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
-              ))}
-              <TableRow>
-                <TableCell colSpan={6} className="h-20 text-center bg-muted/5">
-                  <p className="text-muted-foreground text-xs italic">Detailed material inventory tracking coming soon</p>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {deliveries.map((delivery) => (
+                  <TableRow key={delivery.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 p-1.5 bg-primary/10 rounded">
+                          <Package className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-foreground text-sm">
+                            {delivery.items.map(i => i.description).join(', ')}
+                          </span>
+                          <span className="text-[10px] font-black text-primary uppercase tracking-tighter">{delivery.orderNumber}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-black text-sm text-foreground">
+                      {delivery.items.reduce((sum, i) => sum + i.quantity, 0)}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-bold text-foreground">{delivery.supplier.name}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center text-[10px] text-muted-foreground font-medium bg-muted/30 py-1 rounded-md px-2">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {new Date(delivery.expectedDeliveryDate || delivery.orderDate).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary" className="text-[10px] uppercase font-black px-2 py-0 border-none bg-emerald-500/10 text-emerald-600">
+                        Received
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-muted/5">
+            <p className="text-sm text-muted-foreground italic">
+              Showing <span className="font-bold">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold">{Math.min(currentPage * limit, totalCount)}</span> of <span className="font-bold">{totalCount}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(p)}
+                    disabled={isLoading}
+                    className={`h-8 w-8 p-0 ${currentPage === p ? 'bg-primary text-white' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

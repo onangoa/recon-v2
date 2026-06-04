@@ -7,7 +7,7 @@ interface Site {
   name: string;
   location: string;
   plan?: string;
-  projectId: string;
+  contractorId: string;
   logo?: any;
 }
 
@@ -36,8 +36,8 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
             id: site.id,
             name: site.name,
             location: site.location,
-            plan: site.project?.name || undefined,
-            projectId: site.projectId,
+            plan: undefined,
+            contractorId: site.contractorId,
           }));
           setSites(transformedSites);
           

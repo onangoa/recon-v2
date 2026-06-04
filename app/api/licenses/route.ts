@@ -66,7 +66,8 @@ export async function POST(request: Request) {
         type: body.type || null,
         category: body.category || null,
         status: body.status || 'active',
-        documentUrl: body.documentUrl || null,
+        fileName: body.fileName || null,
+        fileData: body.fileData || null,
         notes: body.notes || null,
       },
     });

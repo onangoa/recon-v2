@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     if (search) {
       where.OR = [
         { name: { contains: search } },
-        { category: { contains: search } },
+        { categoryRel: { name: { contains: search } } },
         { supplier: { contains: search } },
       ];
     }
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
           categoryRel: true,
           site: {
             include: {
-              project: true
+              contractor: true
             }
           },
         },
@@ -74,12 +74,15 @@ export async function POST(request: Request) {
     const quantity = parseFloat(body.quantity) || 0;
     const unitCost = parseFloat(body.unitCost) || 0;
     
+    if (!body.categoryId) {
+      return NextResponse.json({ error: 'Category ID is required' }, { status: 400 });
+    }
+    
     const inventoryItem = await prisma.material.create({
       data: {
         siteId: body.siteId,
         name: body.name,
-        category: body.category || 'Uncategorized',
-        categoryId: body.categoryId || null,
+        categoryId: body.categoryId,
         unit: body.unit || null,
         quantity: quantity,
         unitCost: unitCost,
@@ -91,7 +94,7 @@ export async function POST(request: Request) {
         categoryRel: true,
         site: {
           include: {
-            project: true
+            contractor: true
           }
         },
       },

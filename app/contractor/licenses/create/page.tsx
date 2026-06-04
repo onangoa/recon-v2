@@ -9,7 +9,8 @@ import {
   X, 
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 export default function CreateLicensePage() {
   const router = useRouter();
@@ -35,10 +37,63 @@ export default function CreateLicensePage() {
     type: '',
     category: '',
     status: 'active',
-    documentUrl: '',
+    fileName: '',
+    fileData: '',
     notes: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      toast({
+        title: "Error",
+        description: "Please select a file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, fileName: data.fileName, fileData: data.fileData }));
+      
+      toast({
+        title: "Success",
+        description: "File uploaded successfully!",
+        variant: "success",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,17 +294,44 @@ export default function CreateLicensePage() {
             </div>
           </div>
 
-          {/* Document URL Field */}
+          {/* Document Upload Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Document URL</label>
-            <input
-              type="url"
-              value={formData.documentUrl}
-              onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
-              placeholder="Enter document URL"
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Document Upload</label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Input
+                  type="file"
+                  onChange={handleFileChange}
+                  disabled={isUploading || isSubmitting}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={!file || isUploading || isSubmitting || !!formData.fileData}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+              {formData.fileData && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Document uploaded successfully!</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Notes Field */}

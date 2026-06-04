@@ -21,10 +21,12 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 
 export default function CreateMachinePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -43,6 +45,15 @@ export default function CreateMachinePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!activeSite) {
+      toast({
+        title: "Error",
+        description: "Please select an active site first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
@@ -69,7 +80,10 @@ export default function CreateMachinePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          siteId: activeSite.id,
+        }),
       });
 
       const result = await response.json();

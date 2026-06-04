@@ -7,15 +7,22 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    const siteId = searchParams.get('siteId');
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
+    const where: any = {};
+    
+    if (siteId) {
+      where.siteId = siteId;
+    }
+    
+    if (search) {
+      where.OR = [
         { name: { contains: search } },
-        { model: { contains: search } },
-        { serialNumber: { contains: search } },
-      ],
-    } : {};
+        { type: { contains: search } },
+        { serialNo: { contains: search } },
+      ];
+    }
 
     const [equipment, total] = await Promise.all([
       prisma.equipment.findMany({
@@ -48,6 +55,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
+    if (!body.siteId) {
+      return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
+    }
+    
     if (!body.name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -58,16 +69,13 @@ export async function POST(request: Request) {
 
     const equipment = await prisma.equipment.create({
       data: {
+        siteId: body.siteId,
         name: body.name,
-        machineType: body.machineType,
-        model: body.model || null,
-        serialNumber: body.serialNumber || null,
-        condition: body.condition || null,
-        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
-        purchasePrice: body.purchasePrice ? parseFloat(body.purchasePrice) : null,
-        lastMaintenanceDate: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : null,
-        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
-        notes: body.notes || null,
+        type: body.type || body.machineType || 'general',
+        serialNo: body.serialNumber || body.serialNo || null,
+        rentalCost: body.rentalCost ? parseFloat(body.rentalCost) : null,
+        dailyRate: body.dailyRate ? parseFloat(body.dailyRate) : null,
+        status: body.status || 'idle',
       },
     });
 

@@ -1,37 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const visitors = await prisma.visitor.findMany({
-      include: {
-        project: true,
-      },
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const siteId = searchParams.get('siteId');
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    
+    if (siteId) {
+      where.siteId = siteId;
+    }
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { company: { contains: search } },
+        { purpose: { contains: search } },
+      ];
+    }
+
+    const [visitors, total] = await Promise.all([
+      prisma.visitor.findMany({
+        where,
+        orderBy: {
+          checkInTime: 'desc'
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.visitor.count({ where })
+    ]);
+
+    return NextResponse.json({
+      visitors,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
     });
-    return NextResponse.json(visitors);
   } catch (error) {
+    console.error('Failed to fetch visitors:', error);
     return NextResponse.json({ error: 'Failed to fetch visitors' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    if (!body.siteId) {
+      return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
+    }
+    
+    if (!body.name) {
+      return NextResponse.json({ error: 'Visitor name is required' }, { status: 400 });
+    }
+
+    if (!body.purpose) {
+      return NextResponse.json({ error: 'Purpose is required' }, { status: 400 });
+    }
+
     const visitor = await prisma.visitor.create({
       data: {
-        projectId: body.projectId,
+        siteId: body.siteId,
         name: body.name,
-        company: body.company,
+        company: body.company || null,
         purpose: body.purpose,
-        checkInTime: new Date(body.checkInTime),
-        checkOutTime: body.checkOutTime ? new Date(body.checkOutTime) : undefined,
-      },
-      include: {
-        project: true,
+        checkInTime: new Date(body.checkInTime || new Date()),
+        checkOutTime: body.checkOutTime ? new Date(body.checkOutTime) : null,
       },
     });
-    return NextResponse.json(visitor, { status: 201 });
+
+    return NextResponse.json(visitor);
   } catch (error) {
+    console.error('Failed to create visitor:', error);
     return NextResponse.json({ error: 'Failed to create visitor' }, { status: 500 });
   }
 }

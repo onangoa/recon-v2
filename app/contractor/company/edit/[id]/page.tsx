@@ -26,15 +26,8 @@ interface Company {
   name: string;
   email: string | null;
   phone: string | null;
-  address: string | null;
-  city: string | null;
-  country: string | null;
-  postalCode: string | null;
-  website: string | null;
-  description: string | null;
-  taxId: string | null;
-  registrationNumber: string | null;
-  logoUrl: string | null;
+  licenseNo: string;
+  location: string;
 }
 
 export default function EditCompanyPage() {
@@ -45,17 +38,9 @@ export default function EditCompanyPage() {
   
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
-    address: '',
-    city: '',
-    country: '',
-    postalCode: '',
-    website: '',
-    description: '',
-    taxId: '',
-    registrationNumber: '',
-    logoUrl: '',
+    licenseNo: '',
+    location: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,22 +53,15 @@ export default function EditCompanyPage() {
           const company: Company = await response.json();
           setFormData({
             name: company.name,
-            email: company.email || '',
             phone: company.phone || '',
-            address: company.address || '',
-            city: company.city || '',
-            country: company.country || '',
-            postalCode: company.postalCode || '',
-            website: company.website || '',
-            description: company.description || '',
-            taxId: company.taxId || '',
-            registrationNumber: company.registrationNumber || '',
-            logoUrl: company.logoUrl || '',
+            licenseNo: company.licenseNo || '',
+            location: company.location || '',
           });
         } else {
+          const errorData = await response.json();
           toast({
             title: "Error",
-            description: "Failed to fetch company data.",
+            description: errorData.error || "Failed to fetch company data.",
             variant: "destructive",
           });
           router.push('/contractor/company');
@@ -120,7 +98,7 @@ export default function EditCompanyPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/companies/${companyId}`, {
+      const response = await fetch('/api/companies', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -192,8 +170,8 @@ export default function EditCompanyPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Company</h1>
-          <p className="text-sm text-gray-500">Update company information.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Company Information</h1>
+          <p className="text-sm text-gray-500">Update your contractor company details.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -203,10 +181,10 @@ export default function EditCompanyPage() {
         </div>
       </div>
 
-      {/* Simplified Form */}
+      {/* Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-8">
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-          {/* Name Field */}
+          {/* Company Name Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company Name *</label>
             <input
@@ -219,144 +197,40 @@ export default function EditCompanyPage() {
             />
           </div>
 
-          {/* Email and Phone Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter email address"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Phone</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Enter phone number"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Address Field */}
+          {/* Phone Number Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Address</label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Enter company address"
-              rows={3}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-
-          {/* City and Country Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">City</label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="Enter city"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Country</label>
-              <input
-                type="text"
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                placeholder="Enter country"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Postal Code and Website Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Postal Code</label>
-              <input
-                type="text"
-                value={formData.postalCode}
-                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                placeholder="Enter postal code"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Website</label>
-              <input
-                type="url"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                placeholder="Enter website URL"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Tax ID and Registration Number Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Tax ID</label>
-              <input
-                type="text"
-                value={formData.taxId}
-                onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                placeholder="Enter tax ID"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Registration Number</label>
-              <input
-                type="text"
-                value={formData.registrationNumber}
-                onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
-                placeholder="Enter registration number"
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {/* Description Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter company description"
-              rows={4}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-
-          {/* Logo URL Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Logo URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Phone Number</label>
             <input
-              type="url"
-              value={formData.logoUrl}
-              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-              placeholder="Enter logo URL"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="Enter phone number"
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* License Number Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">License Number</label>
+            <input
+              type="text"
+              value={formData.licenseNo}
+              onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
+              placeholder="Enter license number"
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* Location Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Location</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="Enter location (e.g., Nairobi, Kisumu)"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
