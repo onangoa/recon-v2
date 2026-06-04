@@ -12,16 +12,16 @@ export async function GET(request: Request) {
     const where = search ? {
       OR: [
         { name: { contains: search } },
-        { sku: { contains: search } },
-        { description: { contains: search } },
+        { category: { contains: search } },
+        { supplier: { contains: search } },
       ],
     } : {};
 
     const [inventory, total] = await Promise.all([
-      prisma.inventoryItem.findMany({
+      prisma.material.findMany({
         where,
         include: {
-          category: true,
+          categoryRel: true,
         },
         orderBy: {
           name: 'asc'
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         skip,
         take: limit,
       }),
-      prisma.inventoryItem.count({ where })
+      prisma.material.count({ where })
     ]);
 
     return NextResponse.json({
@@ -55,26 +55,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const inventoryItem = await prisma.inventoryItem.create({
+    const quantity = parseFloat(body.quantity) || 0;
+    const unitCost = parseFloat(body.unitCost) || 0;
+    
+    const inventoryItem = await prisma.material.create({
       data: {
+        projectId: body.projectId,
         name: body.name,
-        description: body.description || null,
-        sku: body.sku || null,
-        barcode: body.barcode || null,
+        category: body.category || null,
         categoryId: body.categoryId || null,
         unit: body.unit || null,
-        quantity: body.quantity || 0,
-        minStockLevel: body.minStockLevel || 0,
-        maxStockLevel: body.maxStockLevel || null,
-        reorderPoint: body.reorderPoint || 0,
-        unitPrice: body.unitPrice ? parseFloat(body.unitPrice) : 0,
-        totalPrice: body.unitPrice && body.quantity ? (parseFloat(body.unitPrice) * body.quantity) : 0,
-        location: body.location || null,
-        supplierId: body.supplierId || null,
-        notes: body.notes || null,
+        quantity: quantity,
+        unitCost: unitCost,
+        totalCost: quantity * unitCost,
+        supplier: body.supplier || null,
+        status: body.status || 'pending',
       },
       include: {
-        category: true,
+        categoryRel: true,
+        project: true,
       },
     });
 

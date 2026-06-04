@@ -25,25 +25,28 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load sites and active site from localStorage or API
-    const savedSite = localStorage.getItem('activeSite');
-    
     const fetchSites = async () => {
       try {
-        // Mocking API call for now, but this will eventually hit /api/sites
-        const mockSites: Site[] = [
-          { id: '1', name: "Karen Plains Road", location: "Nairobi, KE", plan: "Infrastructure" },
-          { id: '2', name: "Westlands Complex", location: "Westlands, KE", plan: "Commercial" },
-          { id: '3', name: "Syokimau Estate", location: "Macha, KE", plan: "Residential" },
-        ];
-        setSites(mockSites);
+        const response = await fetch('/api/sites');
+        const sitesData = await response.json();
         
-        if (savedSite) {
-          const parsed = JSON.parse(savedSite);
-          const found = mockSites.find(s => s.id === parsed.id);
-          setActiveSiteState(found || mockSites[0]);
-        } else {
-          setActiveSiteState(mockSites[0]);
+        if (Array.isArray(sitesData)) {
+          const transformedSites = sitesData.map((site: any) => ({
+            id: site.id,
+            name: site.name,
+            location: site.location,
+            plan: site.project?.name || undefined,
+          }));
+          setSites(transformedSites);
+          
+          const savedSite = localStorage.getItem('activeSite');
+          if (savedSite) {
+            const parsed = JSON.parse(savedSite);
+            const found = transformedSites.find(s => s.id === parsed.id);
+            setActiveSiteState(found || (transformedSites.length > 0 ? transformedSites[0] : null));
+          } else {
+            setActiveSiteState(transformedSites.length > 0 ? transformedSites[0] : null);
+          }
         }
       } catch (e) {
         console.error("Failed to load sites", e);

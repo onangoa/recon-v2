@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 
 interface Category {
   id: string;
@@ -35,6 +36,7 @@ interface Supplier {
 export default function CreateInventoryItemPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -97,6 +99,20 @@ export default function CreateInventoryItemPage() {
       return;
     }
 
+    if (!activeSite?.id) {
+      toast({
+        title: "Error",
+        description: "No active project selected. Please select a project from the sidebar.",
+        variant: "destructive",
+        action: (
+          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+        ),
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -107,6 +123,7 @@ export default function CreateInventoryItemPage() {
         },
         body: JSON.stringify({
           ...formData,
+          projectId: activeSite.id,
           quantity: parseInt(formData.quantity) || 0,
           minStockLevel: parseInt(formData.minStockLevel) || 0,
           maxStockLevel: formData.maxStockLevel ? parseInt(formData.maxStockLevel) : null,
