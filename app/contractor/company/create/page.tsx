@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { 
@@ -22,13 +21,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CreateSupplierPage() {
+export default function CreateCompanyPage() {
   const router = useRouter();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
     name: '',
-    contactPerson: '',
     email: '',
     phone: '',
     address: '',
@@ -36,7 +34,10 @@ export default function CreateSupplierPage() {
     country: '',
     postalCode: '',
     website: '',
-    notes: '',
+    description: '',
+    taxId: '',
+    registrationNumber: '',
+    logoUrl: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,7 +47,7 @@ export default function CreateSupplierPage() {
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "Supplier name is required.",
+        description: "Company name is required.",
         variant: "destructive",
       });
       return;
@@ -55,7 +56,7 @@ export default function CreateSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/suppliers', {
+      const response = await fetch('/api/companies', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +69,7 @@ export default function CreateSupplierPage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Supplier "${result.name}" has been created.`,
+          description: `Company "${result.name}" has been created.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -76,10 +77,10 @@ export default function CreateSupplierPage() {
             </div>
           ),
         });
-        router.push('/contractor/suppliers');
+        router.push('/contractor/company');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create supplier');
+        throw new Error(result.error || 'Failed to create company');
       }
     } catch (error: any) {
       toast({
@@ -107,11 +108,11 @@ export default function CreateSupplierPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/suppliers">Suppliers</BreadcrumbLink>
+            <BreadcrumbLink href="/contractor/company">Company</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Supplier</BreadcrumbPage>
+            <BreadcrumbPage>Create Company</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -119,8 +120,8 @@ export default function CreateSupplierPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Supplier</h1>
-          <p className="text-sm text-gray-500">Add a new supplier to your network.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create Company</h1>
+          <p className="text-sm text-gray-500">Add a new company to your organization.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -135,25 +136,12 @@ export default function CreateSupplierPage() {
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter supplier name"
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-
-          {/* Contact Person Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Contact Person</label>
-            <input
-              type="text"
-              value={formData.contactPerson}
-              onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-              placeholder="Enter contact person name"
+              placeholder="Enter company name"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
@@ -191,7 +179,7 @@ export default function CreateSupplierPage() {
             <textarea
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Enter address"
+              placeholder="Enter company address"
               rows={3}
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -250,14 +238,53 @@ export default function CreateSupplierPage() {
             </div>
           </div>
 
-          {/* Notes Field */}
+          {/* Tax ID and Registration Number Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Tax ID</label>
+              <input
+                type="text"
+                value={formData.taxId}
+                onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+                placeholder="Enter tax ID"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Registration Number</label>
+              <input
+                type="text"
+                value={formData.registrationNumber}
+                onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                placeholder="Enter registration number"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Description Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Description</label>
             <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Enter any additional notes"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter company description"
               rows={4}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* Logo URL Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Logo URL</label>
+            <input
+              type="url"
+              value={formData.logoUrl}
+              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+              placeholder="Enter logo URL"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
@@ -278,7 +305,7 @@ export default function CreateSupplierPage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Save Supplier
+                  Save Company
                 </>
               )}
             </Button>

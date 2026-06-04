@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
@@ -22,23 +21,103 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CreateLicensePage() {
+interface Project {
+  id: string;
+  name: string;
+  location: string;
+  description: string | null;
+  coordinates: string | null;
+  category: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+  companyId: string | null;
+  company: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface Company {
+  id: string;
+  name: string;
+}
+
+export default function EditProjectPage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
+  const projectId = params.id as string;
   
   const [formData, setFormData] = useState({
     name: '',
-    licenseNumber: '',
-    issuingAuthority: '',
-    issueDate: '',
-    expiryDate: '',
-    type: '',
+    location: '',
+    description: '',
+    coordinates: '',
     category: '',
-    status: 'active',
-    documentUrl: '',
-    notes: '',
+    startDate: '',
+    endDate: '',
+    status: 'planning',
+    companyId: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      try {
+        const response = await fetch(`/api/projects/${projectId}`);
+        if (response.ok) {
+          const project: Project = await response.json();
+          setFormData({
+            name: project.name,
+            location: project.location,
+            description: project.description || '',
+            coordinates: project.coordinates || '',
+            category: project.category || '',
+            startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
+            endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
+            status: project.status,
+            companyId: project.companyId || '',
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch project data.",
+            variant: "destructive",
+          });
+          router.push('/contractor/projects');
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch project data.",
+          variant: "destructive",
+        });
+        router.push('/contractor/projects');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch('/api/companies?limit=100');
+        const data = await response.json();
+        if (data.companies && Array.isArray(data.companies)) {
+          setCompanies(data.companies);
+        }
+      } catch (error) {
+        console.error('Failed to fetch companies:', error);
+      }
+    };
+
+    if (projectId) {
+      fetchProject();
+      fetchCompanies();
+    }
+  }, [projectId, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,16 +125,16 @@ export default function CreateLicensePage() {
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "License name is required.",
+        description: "Project name is required.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.licenseNumber.trim()) {
+    if (!formData.location.trim()) {
       toast({
         title: "Validation Error",
-        description: "License number is required.",
+        description: "Project location is required.",
         variant: "destructive",
       });
       return;
@@ -64,8 +143,8 @@ export default function CreateLicensePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/licenses', {
-        method: 'POST',
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -77,7 +156,7 @@ export default function CreateLicensePage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `License "${result.name}" has been created.`,
+          description: `Project "${result.name}" has been updated.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -85,10 +164,10 @@ export default function CreateLicensePage() {
             </div>
           ),
         });
-        router.push('/contractor/licenses');
+        router.push('/contractor/projects');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create license');
+        throw new Error(result.error || 'Failed to update project');
       }
     } catch (error: any) {
       toast({
@@ -106,6 +185,14 @@ export default function CreateLicensePage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -116,11 +203,11 @@ export default function CreateLicensePage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/licenses">Licenses</BreadcrumbLink>
+            <BreadcrumbLink href="/contractor/projects">Projects</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create License</BreadcrumbPage>
+            <BreadcrumbPage>Edit Project</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -128,8 +215,8 @@ export default function CreateLicensePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create License</h1>
-          <p className="text-sm text-gray-500">Add a new license or permit.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Project</h1>
+          <p className="text-sm text-gray-500">Update project information.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -144,60 +231,32 @@ export default function CreateLicensePage() {
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">License Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Project Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter license name"
+              placeholder="Enter project name"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
-          {/* License Number Field */}
+          {/* Location Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">License Number *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Location *</label>
             <input
               type="text"
-              value={formData.licenseNumber}
-              onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-              placeholder="Enter license number"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="Enter project location"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
-          {/* Issuing Authority Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Issuing Authority</label>
-            <input
-              type="text"
-              value={formData.issuingAuthority}
-              onChange={(e) => setFormData({ ...formData, issuingAuthority: e.target.value })}
-              placeholder="Enter issuing authority"
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
-          </div>
-
-          {/* Type and Category Row */}
+          {/* Category and Company Row */}
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Type</label>
-              <select 
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Type</option>
-                <option value="contractor">Contractor License</option>
-                <option value="safety">Safety Certificate</option>
-                <option value="environmental">Environmental Permit</option>
-                <option value="occupational">Occupational Health</option>
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
               <select 
@@ -207,58 +266,72 @@ export default function CreateLicensePage() {
                 className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               >
                 <option value="">Select Category</option>
-                <option value="federal">Federal</option>
-                <option value="state">State</option>
-                <option value="local">Local</option>
-                <option value="industry">Industry</option>
+                <option value="infrastructure">Infrastructure / Roads</option>
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company</label>
+              <select 
+                value={formData.companyId}
+                onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>{company.name}</option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Issue Date and Expiry Date Row */}
+          {/* Start Date and End Date Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Issue Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Start Date</label>
               <input
                 type="date"
-                value={formData.issueDate}
-                onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Expiry Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">End Date</label>
               <input
                 type="date"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
 
-          {/* Document URL Field */}
+          {/* Coordinates Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Document URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Coordinates</label>
             <input
-              type="url"
-              value={formData.documentUrl}
-              onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
-              placeholder="Enter document URL"
+              type="text"
+              value={formData.coordinates}
+              onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
+              placeholder="e.g. -1.286389, 36.817222"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
-          {/* Notes Field */}
+          {/* Description Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Description</label>
             <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Enter any additional notes"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter project description"
               rows={4}
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -280,7 +353,7 @@ export default function CreateLicensePage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Save License
+                  Update Project
                 </>
               )}
             </Button>

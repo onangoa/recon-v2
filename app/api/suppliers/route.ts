@@ -12,13 +12,13 @@ export async function GET(request: Request) {
     const where = search ? {
       OR: [
         { name: { contains: search } },
+        { contactPerson: { contains: search } },
         { email: { contains: search } },
-        { phone: { contains: search } },
       ],
     } : {};
 
-    const [companies, total] = await Promise.all([
-      prisma.company.findMany({
+    const [suppliers, total] = await Promise.all([
+      prisma.supplier.findMany({
         where,
         orderBy: {
           name: 'asc'
@@ -26,11 +26,11 @@ export async function GET(request: Request) {
         skip,
         take: limit,
       }),
-      prisma.company.count({ where })
+      prisma.supplier.count({ where })
     ]);
 
     return NextResponse.json({
-      companies,
+      suppliers,
       pagination: {
         total,
         pages: Math.ceil(total / limit),
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error('Failed to fetch companies:', error);
-    return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 });
+    console.error('Failed to fetch suppliers:', error);
+    return NextResponse.json({ error: 'Failed to fetch suppliers' }, { status: 500 });
   }
 }
 
@@ -49,12 +49,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     if (!body.name) {
-      return NextResponse.json({ error: 'Company name is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const company = await prisma.company.create({
+    const supplier = await prisma.supplier.create({
       data: {
         name: body.name,
+        contactPerson: body.contactPerson || null,
         email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,
@@ -62,16 +63,13 @@ export async function POST(request: Request) {
         country: body.country || null,
         postalCode: body.postalCode || null,
         website: body.website || null,
-        description: body.description || null,
-        taxId: body.taxId || null,
-        registrationNumber: body.registrationNumber || null,
-        logoUrl: body.logoUrl || null,
+        notes: body.notes || null,
       },
     });
 
-    return NextResponse.json(company);
+    return NextResponse.json(supplier);
   } catch (error) {
-    console.error('Failed to create company:', error);
-    return NextResponse.json({ error: 'Failed to create company' }, { status: 500 });
+    console.error('Failed to create supplier:', error);
+    return NextResponse.json({ error: 'Failed to create supplier' }, { status: 500 });
   }
 }

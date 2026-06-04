@@ -1,21 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Building2, 
   MapPin, 
   Phone, 
-  FileText, 
-  ShieldCheck, 
-  Briefcase,
-  Users,
-  Settings,
-  Pencil,
-  Save,
+  Mail, 
   Globe,
-  Mail,
-  Camera,
-  CheckCircle2
+  Plus,
+  Edit,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -26,27 +22,114 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
-export default function CompanyProfilePage() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+interface Company {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  website: string | null;
+  description: string | null;
+  taxId: string | null;
+  registrationNumber: string | null;
+  logoUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function CompaniesPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/companies');
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data.companies || []);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch companies.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch companies.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this company? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const response = await fetch(`/api/companies/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Company has been deleted.",
+        });
+        fetchCompanies();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to delete company.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete company.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEdit = (company: Company) => {
+    router.push(`/contractor/company/edit/${company.id}`);
+  };
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -54,180 +137,232 @@ export default function CompanyProfilePage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Company Profile</BreadcrumbPage>
+            <BreadcrumbPage>Companies</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Company Profile</h1>
-          <p className="text-muted-foreground mt-1 text-sm italic">Manage your corporate identity and operational credentials.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Companies</h1>
+          <p className="text-muted-foreground mt-1 text-sm italic">Manage all companies associated with your contractor account.</p>
         </div>
         <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-              <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={() => setIsEditing(false)}>
-                <Save className="size-4" /> Save Profile
-              </Button>
-            </>
-          ) : (
-            <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={() => setIsEditing(true)}>
-              <Pencil className="size-4" /> Edit Profile
-            </Button>
-          )}
+          <Button 
+            onClick={() => router.push('/contractor/company/create')}
+            className="bg-primary hover:bg-primary/90 text-white gap-2"
+          >
+            <Plus className="size-4" />
+            Add Company
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="border-none shadow-md overflow-hidden">
-            <CardContent className="pt-8 pb-8 flex flex-col items-center text-center">
-              <div className="relative group">
-                <Avatar className="h-32 w-32 border-4 border-primary/10 shadow-xl">
-                  <AvatarImage src="/placeholder-logo.png" />
-                  <AvatarFallback className="bg-primary/5 text-primary text-4xl font-black">NB</AvatarFallback>
-                </Avatar>
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <Camera className="text-white size-8" />
-                  </div>
-                )}
-              </div>
-              <h2 className="mt-4 text-xl font-bold">Nairobi Builders Ltd</h2>
-              <Badge variant="secondary" className="mt-1 bg-primary/10 text-primary border-none">General Contractor</Badge>
-              
-              <div className="w-full mt-8 space-y-4 text-left">
-                <div className="flex items-center gap-3 text-sm">
-                  <Globe className="size-4 text-primary/60 shrink-0" />
-                  <span className="truncate">www.nairobibuilders.ke</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="size-4 text-primary/60 shrink-0" />
-                  <span className="truncate">ops@nairobibuilders.ke</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Phone className="size-4 text-primary/60 shrink-0" />
-                  <span>+254 711 000 000</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-md bg-emerald-50 border-emerald-100 overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs uppercase tracking-widest text-emerald-700 font-black">Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-emerald-800/60 uppercase">NCA Class</span>
-                <span className="text-sm font-black text-emerald-900">NCA 1</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-emerald-800/60 uppercase">Safety Score</span>
-                <div className="flex items-center gap-1">
-                  <ShieldCheck className="size-3 text-emerald-600" />
-                  <span className="text-sm font-black text-emerald-900">9.2/10</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-3 space-y-8">
-          <Card className="border-none shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/20 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="size-5 text-primary" />
-                Corporate Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label className="font-bold text-muted-foreground uppercase text-[10px]">Legal Entity Name</Label>
-                  {isEditing ? (
-                    <Input defaultValue="Nairobi Builders Limited" className="bg-muted/30 border-none h-10" />
-                  ) : (
-                    <p className="text-lg font-bold">Nairobi Builders Limited</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold text-muted-foreground uppercase text-[10px]">Headquarters</Label>
-                  {isEditing ? (
-                    <Input defaultValue="Upper Hill, Nairobi" className="bg-muted/30 border-none h-10" />
-                  ) : (
-                    <p className="text-lg font-bold">Upper Hill, Nairobi</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label className="font-bold text-muted-foreground uppercase text-[10px]">Registration No / KRA PIN</Label>
-                  <p className="text-lg font-mono font-bold">P051XXXXXXX</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold text-muted-foreground uppercase text-[10px]">Tax Compliance Status</Label>
-                  <div className="flex items-center gap-2 text-emerald-600">
-                    <CheckCircle2 className="size-5" />
-                    <span className="font-bold">Active & Compliant</span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="font-bold text-muted-foreground uppercase text-[10px]">Company Mission & Bio</Label>
-                {isEditing ? (
-                  <Textarea className="bg-muted/30 border-none min-h-[120px]" defaultValue="Pioneering infrastructure development across East Africa with a commitment to sustainable engineering and quality craftsmanship." />
+      {/* Companies Table */}
+      <Card className="border-none shadow-md overflow-hidden">
+        <CardHeader className="bg-muted/20 border-b">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Building2 className="size-5 text-primary" />
+            Company Directory
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-bold text-xs uppercase">Company Name</TableHead>
+                  <TableHead className="font-bold text-xs uppercase">Contact Information</TableHead>
+                  <TableHead className="font-bold text-xs uppercase">Location</TableHead>
+                  <TableHead className="font-bold text-xs uppercase">Registration</TableHead>
+                  <TableHead className="font-bold text-xs uppercase text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                      <div className="space-y-2">
+                        <Building2 className="size-12 mx-auto text-muted-foreground/50" />
+                        <p className="text-lg font-medium">No companies found</p>
+                        <p className="text-sm">Get started by adding your first company.</p>
+                        <Button 
+                          onClick={() => router.push('/contractor/company/create')}
+                          className="mt-4"
+                        >
+                          <Plus className="size-4 mr-2" />
+                          Add Company
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  <p className="text-base leading-relaxed italic text-muted-foreground">
-                    "Pioneering infrastructure development across East Africa with a commitment to sustainable engineering and quality craftsmanship."
-                  </p>
+                  companies.map((company) => (
+                    <TableRow key={company.id} className="hover:bg-muted/5">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Building2 className="size-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{company.name}</p>
+                            {company.description && (
+                              <p className="text-sm text-muted-foreground truncate max-w-xs">
+                                {company.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {company.email && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail className="size-3 text-muted-foreground" />
+                              <span className="truncate">{company.email}</span>
+                            </div>
+                          )}
+                          {company.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="size-3 text-muted-foreground" />
+                              <span>{company.phone}</span>
+                            </div>
+                          )}
+                          {company.website && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Globe className="size-3 text-muted-foreground" />
+                              <a 
+                                href={company.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline truncate"
+                              >
+                                {company.website}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {company.address && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <MapPin className="size-3 text-muted-foreground" />
+                              <span className="truncate">{company.address}</span>
+                            </div>
+                          )}
+                          {(company.city || company.country) && (
+                            <p className="text-sm text-muted-foreground">
+                              {company.city}{company.city && company.country ? ', ' : ''}{company.country}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {company.registrationNumber && (
+                            <Badge variant="outline" className="text-xs">
+                              Reg: {company.registrationNumber}
+                            </Badge>
+                          )}
+                          {company.taxId && (
+                            <Badge variant="secondary" className="text-xs">
+                              Tax: {company.taxId}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(company)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(company.id)}
+                            disabled={deletingId === company.id}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            {deletingId === company.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
-              </div>
-            </CardContent>
-          </Card>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-none shadow-md bg-primary/5">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Briefcase className="size-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Active Projects</p>
-                  <h4 className="text-2xl font-black">14</h4>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-md bg-primary/5">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="size-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Workforce</p>
-                  <h4 className="text-2xl font-black">320+</h4>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-md bg-primary/5">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Settings className="size-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Fleet Size</p>
-                  <h4 className="text-2xl font-black">45</h4>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-none shadow-md bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Companies</p>
+                <h4 className="text-2xl font-black">{companies.length}</h4>
+              </div>
+              <Building2 className="size-8 text-primary/40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-md bg-emerald-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-emerald-800/60 uppercase">Active</p>
+                <h4 className="text-2xl font-black text-emerald-900">{companies.length}</h4>
+              </div>
+              <div className="size-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                <div className="size-4 rounded-full bg-emerald-500"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-md bg-blue-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-blue-800/60 uppercase">With Email</p>
+                <h4 className="text-2xl font-black text-blue-900">
+                  {companies.filter(c => c.email).length}
+                </h4>
+              </div>
+              <Mail className="size-8 text-blue/40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-md bg-purple-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-purple-800/60 uppercase">With Website</p>
+                <h4 className="text-2xl font-black text-purple-900">
+                  {companies.filter(c => c.website).length}
+                </h4>
+              </div>
+              <Globe className="size-8 text-purple/40" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -2,22 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Save, 
   X, 
-  ClipboardList, 
-  Plus, 
-  Trash2, 
-  FileText, 
-  Building2, 
-  HardHat, 
-  Calendar, 
-  Flag,
-  ShoppingCart,
-  Calculator,
-  Truck
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -28,55 +22,58 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderItem {
   id: string;
-  item: string;
+  description: string;
   quantity: number;
   unitPrice: number;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+}
+
 export default function CreatePurchaseOrder() {
   const router = useRouter();
-  const [supplier, setSupplier] = useState('');
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [priority, setPriority] = useState('Low');
-  const [notes, setNotes] = useState('');
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    orderNumber: '',
+    supplierId: '',
+    orderDate: new Date().toISOString().split('T')[0],
+    expectedDeliveryDate: '',
+    status: 'pending',
+    notes: '',
+  });
   const [items, setItems] = useState<OrderItem[]>([
-    { id: '1', item: '', quantity: 1, unitPrice: 0 }
+    { id: '1', description: '', quantity: 1, unitPrice: 0 }
   ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const response = await fetch('/api/suppliers?limit=100');
+        const data = await response.json();
+        if (data.suppliers && Array.isArray(data.suppliers)) {
+          setSuppliers(data.suppliers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch suppliers:', error);
+      }
+    };
+
+    fetchSuppliers();
+  }, []);
 
   const addItem = () => {
     setItems([...items, {
       id: Math.random().toString(36).substr(2, 9),
-      item: '',
+      description: '',
       quantity: 1,
       unitPrice: 0
     }]);
@@ -94,8 +91,76 @@ export default function CreatePurchaseOrder() {
 
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.supplierId) {
+      toast({
+        title: "Validation Error",
+        description: "Supplier is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (items.length === 0 || items.every(item => !item.description.trim())) {
+      toast({
+        title: "Validation Error",
+        description: "At least one item is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/purchase-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          items: items.filter(item => item.description.trim()),
+          subtotal: totalAmount,
+          tax: 0,
+          total: totalAmount,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: `Purchase order "${result.orderNumber}" has been created.`,
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+        router.push('/contractor/purchase-orders');
+        router.refresh();
+      } else {
+        throw new Error(result.error || 'Failed to create purchase order');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+        action: (
+          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+        ),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -112,200 +177,208 @@ export default function CreatePurchaseOrder() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Order</BreadcrumbPage>
+            <BreadcrumbPage>Create Purchase Order</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-10 w-10 border border-muted-foreground/10 hover:bg-muted"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">New Purchase Order</h1>
-            <p className="text-muted-foreground mt-1 text-sm italic">Generate procurement request for site supplies</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create Purchase Order</h1>
+          <p className="text-sm text-gray-500">Create a new purchase order for supplies.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => router.back()}>
-            <X className="w-4 h-4" />
-            <span>Cancel</span>
-          </Button>
-          <Button className="gap-2 bg-primary hover:bg-primary/90 text-white" onClick={handleSubmit}>
-            <ShoppingCart className="w-4 h-4" />
-            <span>Draft PO</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </Button>
         </div>
       </div>
 
-      <div className="space-y-8">
-        {/* Order Details Card */}
-        <Card className="border-none shadow-md overflow-hidden">
-          <CardHeader className="bg-muted/20 border-b">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              PO Context & Logistics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Building2 className="w-3 h-3 text-muted-foreground" /> Target Supplier *
-                </Label>
-                <Select value={supplier} onValueChange={setSupplier}>
-                  <SelectTrigger className="bg-muted/30 border-none h-10 focus-visible:ring-primary">
-                    <SelectValue placeholder="Choose Supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BuildMart">BuildMart Supplies</SelectItem>
-                    <SelectItem value="Steel">Steel & Co</SelectItem>
-                    <SelectItem value="Cement">Cement Industries</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <HardHat className="w-3 h-3 text-muted-foreground" /> Delivery Location
-                </Label>
-                <Input defaultValue="Karen Plains Road Project" disabled className="bg-muted/10 border-none h-10 italic" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Calendar className="w-3 h-3 text-muted-foreground" /> Requested Delivery Date
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="YYYY-MM-DD" 
-                    className="pl-10 bg-muted/30 border-none h-10" 
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Flag className="w-3 h-3 text-muted-foreground" /> Order Priority
-                </Label>
-                <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger className="bg-muted/30 border-none h-10 focus-visible:ring-primary">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Standard (Low)</SelectItem>
-                    <SelectItem value="Medium">Expedited (Medium)</SelectItem>
-                    <SelectItem value="High">Urgent (High)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Special Instructions / Notes</Label>
-              <Textarea 
-                placeholder="Include delivery time windows, offloading requirements, or specific brands..." 
-                className="bg-muted/30 border-none min-h-[100px]"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+      {/* Simplified Form */}
+      <div className="rounded-lg border border-gray-200 bg-white p-8">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+          {/* Order Number and Supplier Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Number</label>
+              <input
+                type="text"
+                value={formData.orderNumber}
+                onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                placeholder="Enter order number"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Line Items Card */}
-        <Card className="border-none shadow-md overflow-hidden">
-          <CardHeader className="bg-muted/20 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Truck className="w-5 h-5 text-primary" />
-              Materials & Services
-            </CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2 border-primary/20 text-primary hover:bg-primary/5">
-              <Plus className="w-4 h-4" /> Add Line Item
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-muted/10">
-                <TableRow>
-                  <TableHead className="font-bold text-xs uppercase">Inventory Item</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-center w-[150px]">Quantity</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-right w-[180px]">Unit Price (KES)</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-right w-[180px]">Total</TableHead>
-                  <TableHead className="text-right w-[60px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/5">
-                    <TableCell>
-                      <Select value={item.item} onValueChange={(val) => updateItem(item.id, 'item', val)}>
-                        <SelectTrigger className="bg-transparent border-none focus:ring-0 px-0 h-auto font-medium">
-                          <SelectValue placeholder="Select Material" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Cement">Cement (50kg bags)</SelectItem>
-                          <SelectItem value="Steel">Steel Rods (12mm)</SelectItem>
-                          <SelectItem value="Bricks">Machine Cut Bricks</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Input 
-                        type="number" 
-                        value={item.quantity} 
-                        onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value))}
-                        className="h-8 bg-muted/30 border-none text-center font-bold"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input 
-                        type="number" 
-                        value={item.unitPrice} 
-                        onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value))}
-                        className="h-8 bg-muted/30 border-none text-right font-mono"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-sm">
-                      KES {(item.quantity * item.unitPrice).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-8 w-8 text-destructive/40 hover:text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Supplier *</label>
+              <select 
+                value={formData.supplierId}
+                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="bg-primary/5 border-t justify-end p-6">
-            <div className="flex items-center gap-8">
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated Total</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium text-muted-foreground italic">KES</span>
-                  <span className="text-3xl font-black tracking-tighter text-primary">
-                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold h-14 px-8 shadow-xl" onClick={handleSubmit}>
-                Generate Purchase Order
+              </select>
+            </div>
+          </div>
+
+          {/* Order Date and Expected Delivery Date Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Date</label>
+              <input
+                type="date"
+                value={formData.orderDate}
+                onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Expected Delivery Date</label>
+              <input
+                type="date"
+                value={formData.expectedDeliveryDate}
+                onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Items Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-sm font-medium text-gray-700 uppercase tracking-wider">Items</label>
+              <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Item
               </Button>
             </div>
-          </CardFooter>
-        </Card>
+            
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Quantity</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Unit Price</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Total</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                          placeholder="Item description"
+                          disabled={isSubmitting}
+                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          min="1"
+                          disabled={isSubmitting}
+                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          disabled={isSubmitting}
+                          className="w-full rounded-md border border-gray-300 px-3 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-medium">
+                        KES {(item.quantity * item.unitPrice).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(item.id)}
+                          disabled={isSubmitting || items.length === 1}
+                          className="text-red-600 hover:text-red-800 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="mt-4 text-right">
+              <span className="text-sm font-medium text-gray-700">
+                Total: <span className="text-lg font-bold">KES {totalAmount.toFixed(2)}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Notes Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Enter any additional notes"
+              rows={3}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-4 pt-4 border-t border-gray-100">
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Order
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => router.back()} 
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

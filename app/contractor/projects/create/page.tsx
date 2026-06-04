@@ -1,18 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Save, 
   X, 
-  Construction, 
-  MapPin, 
-  Briefcase, 
-  Info,
-  Calendar,
+  Loader2,
   CheckCircle2,
-  Building2,
-  Navigation
+  AlertCircle
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -23,31 +19,116 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 export default function CreateSitePage() {
   const router = useRouter();
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    description: '',
+    coordinates: '',
+    category: '',
+    startDate: '',
+    endDate: '',
+    status: 'planning',
+    companyId: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch('/api/companies?limit=100');
+        const data = await response.json();
+        if (data.companies && Array.isArray(data.companies)) {
+          setCompanies(data.companies);
+        }
+      } catch (error) {
+        console.error('Failed to fetch companies:', error);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Project name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.location.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Project location is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: `Project "${result.name}" has been created.`,
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+        router.push('/contractor/projects');
+        router.refresh();
+      } else {
+        throw new Error(result.error || 'Failed to create project');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+        action: (
+          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+        ),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -55,151 +136,172 @@ export default function CreateSitePage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/projects">Sites</BreadcrumbLink>
+            <BreadcrumbLink href="/contractor/projects">Projects</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Site</BreadcrumbPage>
+            <BreadcrumbPage>Create Project</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-10 w-10 border border-muted-foreground/10 hover:bg-muted"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="size-5 text-muted-foreground" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Initialize New Site</h1>
-            <p className="text-muted-foreground mt-1 text-sm italic">Define a new operational location for your construction projects.</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create Project</h1>
+          <p className="text-sm text-gray-500">Add a new project to your portfolio.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
-          <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-            <Save className="size-4" /> Launch Site
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/20 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Navigation className="size-5 text-primary" />
-                Site Identity & Location
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="space-y-2">
-                <Label className="font-bold">Project Site Name *</Label>
-                <Input placeholder="e.g. Karen Plains Road, Westlands Phase 2" className="bg-muted/30 border-none h-11 text-base focus-visible:ring-primary" />
-              </div>
+      {/* Simplified Form */}
+      <div className="rounded-lg border border-gray-200 bg-white p-8">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+          {/* Name Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Project Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter project name"
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <MapPin className="size-3 text-muted-foreground" /> Primary Location / Region *
-                  </Label>
-                  <Select>
-                    <SelectTrigger className="bg-muted/30 border-none h-10">
-                      <SelectValue placeholder="Select Region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nairobi">Nairobi</SelectItem>
-                      <SelectItem value="mombasa">Mombasa</SelectItem>
-                      <SelectItem value="kisumu">Kisumu</SelectItem>
-                      <SelectItem value="kiambu">Kiambu</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Building2 className="size-3 text-muted-foreground" /> Site Category *
-                  </Label>
-                  <Select>
-                    <SelectTrigger className="bg-muted/30 border-none h-10">
-                      <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="infrastructure">Infrastructure / Roads</SelectItem>
-                      <SelectItem value="residential">Residential</SelectItem>
-                      <SelectItem value="commercial">Commercial</SelectItem>
-                      <SelectItem value="industrial">Industrial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+          {/* Location Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Location *</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="Enter project location"
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Info className="size-3 text-muted-foreground" /> Precise Coordinates (Optional)
-                </Label>
-                <Input placeholder="-1.286389, 36.817222" className="bg-muted/30 border-none h-10 font-mono text-xs" />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Category and Company Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
+              <select 
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Category</option>
+                <option value="infrastructure">Infrastructure / Roads</option>
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="industrial">Industrial</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company</label>
+              <select 
+                value={formData.companyId}
+                onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>{company.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          <Card className="border-none shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/20 border-b">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Briefcase className="size-5 text-primary" />
-                Operational Scope
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Calendar className="size-3 text-muted-foreground" /> Commencement Date
-                  </Label>
-                  <Input type="date" className="bg-muted/30 border-none h-10" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Calendar className="size-3 text-muted-foreground" /> Estimated Completion
-                  </Label>
-                  <Input type="date" className="bg-muted/30 border-none h-10" />
-                </div>
-              </div>
+          {/* Start Date and End Date Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Start Date</label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">End Date</label>
+              <input
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label>Site Objectives & Description</Label>
-                <Textarea placeholder="High-level overview of the work to be performed at this site..." className="bg-muted/30 border-none min-h-[120px]" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Coordinates Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Coordinates</label>
+            <input
+              type="text"
+              value={formData.coordinates}
+              onChange={(e) => setFormData({ ...formData, coordinates: e.target.value })}
+              placeholder="e.g. -1.286389, 36.817222"
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
 
-        <div className="space-y-8">
-          <Card className="border-none shadow-md overflow-hidden bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-xs uppercase tracking-widest text-primary font-black">Activation Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg bg-background p-4 border border-primary/10 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">
-                  <CheckCircle2 className="size-4" />
-                  Live Monitoring Ready
-                </div>
-                <p className="text-[10px] leading-relaxed text-muted-foreground font-medium">
-                  Launching a site enables real-time worker attendance, material tracking, and equipment logging for this location.
-                </p>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-0">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-12 shadow-lg">
-                <Construction className="size-4 mr-2" /> Launch Site Instance
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+          {/* Description Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter project description"
+              rows={4}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-4 pt-4 border-t border-gray-100">
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Project
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => router.back()} 
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
