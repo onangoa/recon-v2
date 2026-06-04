@@ -24,7 +24,10 @@ import {
   ChevronRight,
   ShieldCheck,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  QrCode,
+  User,
+  ShoppingBag
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -92,6 +95,7 @@ interface Transaction {
   description: string | null;
   status: string;
   referenceNumber: string | null;
+  receiptNumber: string | null;
   createdAt: Date;
 }
 
@@ -116,6 +120,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentRecipient, setPaymentRecipient] = useState('');
   const [paymentMemo, setPaymentMemo] = useState('');
+  const [payoutType, setPayoutType] = useState('phone');
   const [isMakingPayment, setIsMakingPayment] = useState(false);
 
   useEffect(() => {
@@ -151,7 +156,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     if (!depositAmount || !depositSource) {
       toast({
         title: "Validation Error",
-        description: "Amount and source are required.",
+        description: "Amount and phone number are required.",
         variant: "destructive",
       });
       return;
@@ -164,17 +169,19 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'credit',
+          method: 'mpesa',
           amount: parseFloat(depositAmount),
-          description: depositMemo || `Deposit from ${depositSource}`,
-          referenceNumber: depositSource,
+          description: depositMemo || `Deposit to Wallet`,
+          referenceNumber: depositSource, // Phone for STK Push
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to deposit funds');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to initiate deposit');
 
       toast({
-        title: "Success",
-        description: "Funds deposited successfully!",
+        title: "STK Push Initiated",
+        description: "Please check your phone to complete the transaction.",
         variant: "success",
       });
 
@@ -182,8 +189,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setDepositSource('');
       setDepositMemo('');
       setShowAddFunds(false);
-      fetchWalletData();
-      fetchTransactions();
+      fetchTransactions(); // Show the pending transaction
     } catch (err: any) {
       toast({
         title: "Error",
@@ -199,7 +205,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     if (!paymentAmount || !paymentRecipient) {
       toast({
         title: "Validation Error",
-        description: "Amount and recipient are required.",
+        description: "Amount and recipient details are required.",
         variant: "destructive",
       });
       return;
@@ -221,17 +227,20 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'debit',
+          method: 'mpesa',
+          payoutType: payoutType,
           amount: parseFloat(paymentAmount),
           description: paymentMemo || `Payment to ${paymentRecipient}`,
           referenceNumber: paymentRecipient,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to make payment');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to initiate payment');
 
       toast({
-        title: "Success",
-        description: "Payment sent successfully!",
+        title: "Payment Initiated",
+        description: "Your M-Pesa payout is being processed.",
         variant: "success",
       });
 
@@ -239,8 +248,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setPaymentRecipient('');
       setPaymentMemo('');
       setShowMakePayment(false);
-      fetchWalletData();
-      fetchTransactions();
+      fetchTransactions(); // Show pending transaction
     } catch (err: any) {
       toast({
         title: "Error",
@@ -252,8 +260,8 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const totalCredits = transactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
-  const totalDebits = transactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
+  const totalCredits = transactions.filter(t => t.type === 'credit' && t.status === 'completed').reduce((sum, t) => sum + t.amount, 0);
+  const totalDebits = transactions.filter(t => t.type === 'debit' && t.status === 'completed').reduce((sum, t) => sum + t.amount, 0);
 
   if (isLoading) {
     return (
@@ -358,7 +366,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                   Transaction History
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchTransactions}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { fetchTransactions(); fetchWalletData(); }}>
                     <RotateCcw className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -368,7 +376,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="font-bold text-[10px] uppercase">Ref ID</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase">Ref / Receipt</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase">Amount</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase text-center">Type</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase">Description</TableHead>
@@ -385,7 +393,12 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                   ) : (
                     transactions.map((tx) => (
                       <TableRow key={tx.id} className="hover:bg-muted/20">
-                        <TableCell className="font-mono text-[10px]">{tx.referenceNumber || tx.id.slice(0, 8)}</TableCell>
+                        <TableCell className="font-mono text-[10px]">
+                          <div className="flex flex-col">
+                            <span className="opacity-50">{tx.referenceNumber || tx.id.slice(0, 8)}</span>
+                            <span className="font-bold text-primary">{tx.receiptNumber || '-'}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className={`font-bold font-mono ${tx.type === 'credit' ? 'text-emerald-600' : 'text-red-600'}`}>
                           {tx.type === 'credit' ? '+' : '-'}{wallet.currency} {tx.amount.toFixed(2)}
                         </TableCell>
@@ -396,8 +409,15 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                         </TableCell>
                         <TableCell className="text-xs">{tx.description || '-'}</TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline" className="text-[8px] py-0 border-emerald-200 text-emerald-700">
-                            {tx.status}
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[8px] py-0 border-none ${
+                              tx.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 
+                              tx.status === 'pending' ? 'bg-amber-500/10 text-amber-600' : 
+                              'bg-red-500/10 text-red-600'
+                            }`}
+                          >
+                            {tx.status.toUpperCase()}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -418,15 +438,15 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
               <Dialog open={showAddFunds} onOpenChange={setShowAddFunds}>
                 <DialogTrigger asChild>
                   <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-11 shadow-sm border-none">
-                    <Plus className="w-4 h-4" /> Deposit Funds
+                    <Plus className="w-4 h-4" /> Deposit via M-Pesa
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle className="text-emerald-700 flex items-center gap-2">
-                      <ArrowUpRight className="w-5 h-5" /> Inward Remittance
+                      <Smartphone className="w-5 h-5" /> Add Funds (M-Pesa STK Push)
                     </DialogTitle>
-                    <DialogDescription>Add credits to this wallet via M-Pesa or Bank.</DialogDescription>
+                    <DialogDescription>Initiate an STK Push to your phone to top up your wallet.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -440,19 +460,19 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Source Mobile No. *</Label>
+                      <Label>M-Pesa Number *</Label>
                       <Input 
                         type="tel" 
-                        placeholder="254..." 
+                        placeholder="2547XXXXXXXX" 
                         value={depositSource}
                         onChange={(e) => setDepositSource(e.target.value)}
                         className="bg-muted/30 border-none h-11" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Internal Memo</Label>
+                      <Label>Description (Optional)</Label>
                       <Textarea 
-                        placeholder="Reason for deposit..." 
+                        placeholder="e.g. Wallet top-up" 
                         value={depositMemo}
                         onChange={(e) => setDepositMemo(e.target.value)}
                         className="bg-muted/30 border-none" 
@@ -467,7 +487,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                       disabled={isDepositing}
                     >
                       {isDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Confirm Deposit
+                      Push STK
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -476,25 +496,49 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
               <Dialog open={showMakePayment} onOpenChange={setShowMakePayment}>
                 <DialogTrigger asChild>
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2 h-11 shadow-sm border-none">
-                    <Smartphone className="w-4 h-4" /> Send Payment
+                    <Smartphone className="w-4 h-4" /> Send M-Pesa Payment
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle className="text-blue-700 flex items-center gap-2">
-                      <ArrowDownLeft className="w-5 h-5" /> Outward Payment
+                      <ArrowDownLeft className="w-5 h-5" /> Outward M-Pesa Payout
                     </DialogTitle>
-                    <DialogDescription>Pay suppliers or staff from available balance.</DialogDescription>
+                    <DialogDescription>Pay suppliers or staff via M-Pesa services.</DialogDescription>
                   </DialogHeader>
-                  {wallet.balance <= 0 ? (
-                    <div className="bg-red-50 p-3 rounded-lg border border-red-100 flex items-start gap-2 mb-4">
-                      <Info className="w-4 h-4 text-red-600 mt-0.5" />
-                      <p className="text-[10px] text-red-800 font-medium leading-tight">
-                        Insufficient Balance. Your current balance is {wallet.currency} {wallet.balance.toFixed(2)}. Please top up first.
-                      </p>
-                    </div>
-                  ) : null}
+                  
                   <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Payment Type</Label>
+                      <Select value={payoutType} onValueChange={setPayoutType}>
+                        <SelectTrigger className="bg-muted/30 border-none h-11">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="phone">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="w-4 h-4" /> Phone Number (B2C)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="pochi">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4" /> Pochi la Biashara
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="buygoods">
+                            <div className="flex items-center gap-2">
+                              <ShoppingBag className="w-4 h-4" /> Buy Goods (Till)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="paybill">
+                            <div className="flex items-center gap-2">
+                              <QrCode className="w-4 h-4" /> Paybill
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="space-y-2">
                       <Label>Amount ({wallet.currency}) *</Label>
                       <Input 
@@ -506,35 +550,42 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Recipient Mobile No. *</Label>
+                      <Label>
+                        {payoutType === 'phone' || payoutType === 'pochi' ? 'Recipient Mobile No.' : 'Shortcode / Till Number'} *
+                      </Label>
                       <Input 
-                        type="tel" 
-                        placeholder="254..." 
+                        type="text" 
+                        placeholder={payoutType === 'phone' || payoutType === 'pochi' ? '2547XXXXXXXX' : 'Shortcode'} 
                         value={paymentRecipient}
                         onChange={(e) => setPaymentRecipient(e.target.value)}
                         className="bg-muted/30 border-none h-11" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Internal Memo</Label>
+                      <Label>Description / Remarks</Label>
                       <Textarea 
-                        placeholder="Reason for payment..." 
+                        placeholder="Payment reason..." 
                         value={paymentMemo}
                         onChange={(e) => setPaymentMemo(e.target.value)}
                         className="bg-muted/30 border-none" 
                       />
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowMakePayment(false)}>Cancel</Button>
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                      onClick={handlePayment}
-                      disabled={isMakingPayment || wallet.balance <= 0}
-                    >
-                      {isMakingPayment && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Send Payment
-                    </Button>
+                  <DialogFooter className="flex flex-col gap-2">
+                    {wallet.balance < parseFloat(paymentAmount || '0') && (
+                      <p className="text-[10px] text-red-600 font-bold mb-2">Insufficient Balance!</p>
+                    )}
+                    <div className="flex justify-end gap-2 w-full">
+                      <Button variant="outline" onClick={() => setShowMakePayment(false)}>Cancel</Button>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        onClick={handlePayment}
+                        disabled={isMakingPayment || wallet.balance < parseFloat(paymentAmount || '0')}
+                      >
+                        {isMakingPayment && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Execute Payment
+                      </Button>
+                    </div>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

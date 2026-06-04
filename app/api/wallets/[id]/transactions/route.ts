@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { initiateSTKPush, initiateB2C, initiateB2B } from '@/lib/mpesa';
+import { WalletService } from '@/lib/wallet-service';
 
 export async function GET(
   request: Request,
@@ -44,8 +46,9 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const body = await request.json();
+    const { type, amount, description, referenceNumber, method, payoutType } = body;
 
-    if (!body.type || !body.amount) {
+    if (!type || !amount) {
       return NextResponse.json(
         { error: 'Type and amount are required' },
         { status: 400 }
@@ -60,38 +63,95 @@ export async function POST(
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
-    if (body.type === 'debit' && wallet.balance < body.amount) {
-      return NextResponse.json(
-        { error: 'Insufficient balance' },
-        { status: 400 }
-      );
+    // Standard manual/other method
+    if (method !== 'mpesa') {
+      if (type === 'debit' && wallet.balance < amount) {
+        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+      }
+
+      const newBalance = type === 'credit' ? wallet.balance + amount : wallet.balance - amount;
+
+      const transaction = await prisma.transaction.create({
+        data: {
+          walletId: resolvedParams.id,
+          type,
+          amount,
+          description,
+          referenceNumber,
+          status: 'completed',
+        },
+      });
+
+      await prisma.wallet.update({
+        where: { id: resolvedParams.id },
+        data: { balance: newBalance },
+      });
+
+      return NextResponse.json(transaction);
     }
 
-    const newBalance = body.type === 'credit'
-      ? wallet.balance + body.amount
-      : wallet.balance - body.amount;
+    // M-Pesa Integration
+    if (type === 'credit') {
+      // STK Push
+      const stkResponse = await initiateSTKPush(
+        referenceNumber, // phone number
+        amount,
+        wallet.name,
+        description || 'Deposit to Wallet'
+      );
 
-    const transaction = await prisma.transaction.create({
-      data: {
+      const transaction = await WalletService.createPendingTransaction({
         walletId: resolvedParams.id,
-        type: body.type,
-        amount: body.amount,
-        description: body.description,
-        referenceNumber: body.referenceNumber,
-        status: 'completed',
-      },
-    });
+        amount,
+        type: 'credit',
+        description: description || `M-Pesa STK Push from ${referenceNumber}`,
+        referenceNumber,
+        externalId: stkResponse.CheckoutRequestID,
+      });
 
-    await prisma.wallet.update({
-      where: { id: resolvedParams.id },
-      data: { balance: newBalance },
-    });
+      return NextResponse.json({ transaction, mpesaResponse: stkResponse });
+    } else {
+      // Payout
+      if (wallet.balance < amount) {
+        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+      }
 
-    return NextResponse.json(transaction);
-  } catch (error) {
-    console.error('Failed to create transaction:', error);
+      let payoutResponse;
+      if (payoutType === 'phone' || payoutType === 'pochi') {
+        payoutResponse = await initiateB2C(
+          referenceNumber, // phone number
+          amount,
+          'BusinessPayment',
+          description || `Payment to ${referenceNumber}`,
+          payoutType
+        );
+      } else if (payoutType === 'paybill' || payoutType === 'buygoods') {
+        payoutResponse = await initiateB2B(
+          referenceNumber, // shortcode
+          amount,
+          payoutType === 'paybill' ? 'BusinessPayBill' : 'BusinessBuyGoods',
+          wallet.name,
+          description || `Payment to ${referenceNumber}`
+        );
+      } else {
+        return NextResponse.json({ error: 'Invalid payout type' }, { status: 400 });
+      }
+
+      const transaction = await WalletService.createPendingTransaction({
+        walletId: resolvedParams.id,
+        amount,
+        type: 'debit',
+        description: description || `M-Pesa Payout to ${referenceNumber}`,
+        referenceNumber,
+        externalId: payoutResponse.ConversationID,
+      });
+
+      return NextResponse.json({ transaction, mpesaResponse: payoutResponse });
+    }
+  } catch (error: any) {
+    console.error('Wallet Transaction Error:', error);
     return NextResponse.json(
-      { error: 'Failed to create transaction' },
+      { error: error.message || 'Failed to process transaction' },
       { status: 500 }
     );
   }

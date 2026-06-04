@@ -290,10 +290,13 @@ model Transaction {
   type            String   // "credit" or "debit"
   description     String?
   referenceNumber String?
-  status          String   @default("completed")
+  externalId      String?  // M-Pesa Request ID
+  receiptNumber   String?  // M-Pesa Receipt Number
+  status          String   @default("completed") // "pending", "completed", "failed"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([walletId])
   @@index([type])
+  @@index([externalId])
 }
