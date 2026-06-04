@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         contractor: true,
         sites: true,
@@ -30,16 +31,17 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const updateData: any = { ...body };
     if (body.startDate) updateData.startDate = new Date(body.startDate);
     if (body.endDate) updateData.endDate = new Date(body.endDate);
 
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         contractor: true,
@@ -53,11 +55,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.project.delete({
-      where: { id: params.id },
+      where: { id },
     });
     return NextResponse.json({ message: 'Project deleted' });
   } catch (error) {

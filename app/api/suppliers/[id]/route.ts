@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supplier = await prisma.supplier.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!supplier) {
@@ -23,9 +24,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     
     if (!body.name) {
@@ -33,7 +35,7 @@ export async function PATCH(
     }
 
     const supplier = await prisma.supplier.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name,
         contactPerson: body.contactPerson,
@@ -57,11 +59,12 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.supplier.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ success: true });

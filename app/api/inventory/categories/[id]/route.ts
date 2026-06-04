@@ -1,11 +1,40 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function PATCH(
+export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    const category = await prisma.inventoryCategory.findUnique({
+      where: { id },
+      include: {
+        parent: true,
+        children: true,
+        _count: {
+          select: { materials: true }
+        }
+      }
+    });
+
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(category);
+  } catch (error) {
+    console.error('Failed to fetch category:', error);
+    return NextResponse.json({ error: 'Failed to fetch category' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
     const body = await request.json();
     
     if (!body.name) {
@@ -13,7 +42,7 @@ export async function PATCH(
     }
 
     const category = await prisma.inventoryCategory.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name,
         description: body.description,
@@ -37,12 +66,13 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check if category has materials
     const categoryWithMaterials = await prisma.inventoryCategory.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: { materials: true }
@@ -61,7 +91,7 @@ export async function DELETE(
     }
 
     await prisma.inventoryCategory.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ success: true });
