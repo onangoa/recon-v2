@@ -327,6 +327,172 @@ async function main() {
 
     console.log('Created metrics');
 
+    // Create 100 dummy inventory categories
+    const categoryNames = [
+      'Building Materials', 'Hardware', 'Tools', 'Safety Equipment', 'Electrical',
+      'Plumbing', 'Paints & Coatings', 'Fasteners', 'Adhesives', 'Sealants',
+      'Insulation', 'Roofing', 'Flooring', 'Doors & Windows', 'Drywall',
+      'Concrete & Masonry', 'Steel & Metal', 'Wood & Lumber', 'HVAC', 'Landscaping',
+      'Fasteners', 'Hand Tools', 'Power Tools', 'Welding Equipment', 'Scaffolding',
+      'Lifting Equipment', 'Safety Gear', 'First Aid', 'Fire Protection', 'Signage',
+      'Electrical Panels', 'Wiring', 'Lighting', 'Switches & Outlets', 'Transformers',
+      'Pipes', 'Fittings', 'Valves', 'Pumps', 'Tanks',
+      'Water Heaters', 'Filters', 'Plumbing Fixtures', 'Drainage', 'Irrigation',
+      'Interior Paint', 'Exterior Paint', 'Primers', 'Stains', 'Varnishes',
+      'Nails', 'Screws', 'Bolts', 'Anchors', 'Rivets',
+      'Glues', 'Caulks', 'Tapes', 'Epoxies', 'Sealants',
+      'Thermal Insulation', 'Acoustic Insulation', 'Foam', 'Fiberglass', 'Spray Foam',
+      'Shingles', 'Tiles', 'Metal Roofing', 'Membranes', 'Flashing',
+      'Hardwood', 'Laminate', 'Vinyl', 'Tile', 'Carpet',
+      'Entry Doors', 'Interior Doors', 'Garage Doors', 'Windows', 'Skylights',
+      'Drywall Sheets', 'Joint Compound', 'Tape', 'Corners', 'Access Panels',
+      'Cement', 'Concrete Mix', 'Mortar', 'Grout', 'Rebar',
+      'Steel Beams', 'Aluminum', 'Copper', 'Brass', 'Stainless Steel',
+      'Plywood', 'Lumber', 'Engineered Wood', 'Particle Board', 'MDF',
+      'Air Conditioners', 'Furnaces', 'Ductwork', 'Vents', 'Thermostats',
+      'Soil', 'Mulch', 'Plants', 'Trees', 'Irrigation Systems'
+    ];
+
+    const categoryDescriptions = [
+      'Essential materials for construction projects',
+      'Various hardware components and fittings',
+      'Professional tools for construction work',
+      'Safety equipment and protective gear',
+      'Electrical components and supplies',
+      'Plumbing fixtures and pipes',
+      'Paints, coatings, and finishing products',
+      'Various fastening solutions',
+      'Adhesive products for bonding materials',
+      'Sealants for joints and gaps',
+      'Insulation materials for temperature control',
+      'Roofing materials and accessories',
+      'Flooring materials and solutions',
+      'Doors and windows for buildings',
+      'Drywall and wall finishing materials',
+      'Concrete and masonry supplies',
+      'Steel and metal building materials',
+      'Wood and lumber products',
+      'HVAC equipment and supplies',
+      'Landscaping materials and tools',
+      'Various types of fasteners',
+      'Manual tools for construction',
+      'Electric power tools',
+      'Welding equipment and supplies',
+      'Scaffolding and access equipment',
+      'Material handling and lifting equipment',
+      'Personal protective equipment',
+      'First aid and medical supplies',
+      'Fire safety equipment',
+      'Safety and informational signs',
+      'Electrical distribution equipment',
+      'Electrical wiring and cables',
+      'Lighting fixtures and bulbs',
+      'Electrical switches and outlets',
+      'Power transformers and electrical equipment',
+      'Plumbing pipes and tubing',
+      'Pipe fittings and connectors',
+      'Plumbing valves and controls',
+      'Water pumps and circulation equipment',
+      'Water storage tanks',
+      'Water heating systems',
+      'Water filtration systems',
+      'Plumbing fixtures and fittings',
+      'Drainage systems and components',
+      'Irrigation equipment and supplies',
+      'Interior wall and ceiling paints',
+      'Exterior protective paints and coatings',
+      'Paint primers and preparatory products',
+      'Wood stains and finishes',
+      'Protective varnishes and sealants',
+      'Various types of nails',
+      'Screws for different materials',
+      'Bolts and heavy-duty fasteners',
+      'Wall and structural anchors',
+      'Industrial rivets and fasteners',
+      'Construction adhesives and glues',
+      'Caulking and gap filling products',
+      'Industrial and construction tapes',
+      'Epoxy resins and adhesives',
+      'Joint and gap sealants',
+      'Building thermal insulation',
+      'Soundproofing and acoustic materials',
+      'Spray foam insulation products',
+      'Fiberglass insulation materials',
+      'Insulation foam and sealants',
+      'Roofing shingles and tiles',
+      'Roofing tiles and metal roofing',
+      'Metal roofing systems and accessories',
+      'Roofing membranes and underlayment',
+      'Roofing flashing and drip edges',
+      'Hardwood flooring materials',
+      'Laminate flooring products',
+      'Vinyl flooring solutions',
+      'Ceramic and porcelain tiles',
+      'Carpet and flooring materials',
+      'Exterior and interior entry doors',
+      'Interior room and cabinet doors',
+      'Garage and overhead doors',
+      'Windows and window treatments',
+      'Roof skylights and light tubes',
+      'Drywall sheets and panels',
+      'Drywall joint compounds',
+      'Drywall taping products',
+      'Drywall corner beads and accessories',
+      'Wall and ceiling access panels',
+      'Cement and concrete products',
+      'Ready-mix concrete products',
+      'Mortar and grout products',
+      'Tile and masonry grouts',
+      'Steel reinforcing bars (rebar)',
+      'Structural steel beams and columns',
+      'Aluminum building materials',
+      'Copper pipes and fittings',
+      'Brass fittings and fixtures',
+      'Stainless steel materials',
+      'Plywood and sheet wood products',
+      'Dimensional lumber and wood',
+      'Engineered wood products',
+      'Particle board and composite wood',
+      'Medium density fiberboard (MDF)',
+      'Air conditioning and cooling systems',
+      'Heating systems and furnaces',
+      'HVAC ductwork and ventilation',
+      'Air vents and registers',
+      'Thermostats and climate control',
+      'Garden soil and growing media',
+      'Landscape mulch and ground cover',
+      'Plants and landscaping vegetation',
+      'Trees and large landscaping plants',
+      'Landscape irrigation and watering systems'
+    ];
+
+    // Create parent categories first
+    const parentCategories = [];
+    for (let i = 0; i < 20; i++) {
+      const category = await prisma.inventoryCategory.create({
+        data: {
+          name: categoryNames[i],
+          description: categoryDescriptions[i],
+          parentId: null,
+        },
+      });
+      parentCategories.push(category);
+    }
+
+    // Create sub-categories
+    for (let i = 20; i < categoryNames.length; i++) {
+      const parentIndex = Math.floor(Math.random() * parentCategories.length);
+      await prisma.inventoryCategory.create({
+        data: {
+          name: categoryNames[i],
+          description: categoryDescriptions[i],
+          parentId: parentCategories[parentIndex].id,
+        },
+      });
+    }
+
+    console.log('Created 100 inventory categories');
+
     console.log('✓ Seeding completed successfully!');
   } catch (error) {
     console.error('Error seeding database:', error);

@@ -16,9 +16,7 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
-  CheckCircle2,
-  Save,
-  X
+  CheckCircle2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -50,14 +48,6 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,8 +61,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 interface Category {
   id: string;
@@ -100,9 +88,7 @@ export default function InventoryCategoriesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const limit = 10;
 
-  // Edit/Delete states
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  // Delete states
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,54 +122,6 @@ export default function InventoryCategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, [currentPage]);
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCategory) return;
-    
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/inventory/categories/${editingCategory.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editingCategory.name,
-          description: editingCategory.description,
-          parentId: editingCategory.parentId,
-        }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Category updated successfully",
-          variant: "success",
-          action: (
-            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-              <CheckCircle2 className="h-5 w-5 text-white" />
-            </div>
-          ),
-        });
-        setIsEditDialogOpen(false);
-        fetchCategories();
-      } else {
-        throw new Error('Failed to update category');
-      }
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <AlertCircle className="h-5 w-5 text-white" />
-          </div>
-        ),
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!categoryToDelete) return;
@@ -361,8 +299,7 @@ export default function InventoryCategoriesPage() {
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
                             onClick={() => {
-                              setEditingCategory(cat);
-                              setIsEditDialogOpen(true);
+                              router.push(`/contractor/inventory/categories/edit/${cat.id}`);
                             }}
                           >
                             <Pencil className="size-4" /> Edit
@@ -431,47 +368,6 @@ export default function InventoryCategoriesPage() {
           </div>
         )}
       </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-primary">Edit Category</DialogTitle>
-            <DialogDescription>Update the category details below.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-5 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Category Name</Label>
-              <Input
-                id="edit-name"
-                value={editingCategory?.name || ''}
-                onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
-                placeholder="Enter category name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description" className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editingCategory?.description || ''}
-                onChange={(e) => setEditingCategory(prev => prev ? { ...prev, description: e.target.value } : null)}
-                placeholder="Enter category description"
-                rows={4}
-              />
-            </div>
-            <DialogFooter className="pt-4 gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="gap-2">
-                <X className="w-4 h-4" /> Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className="gap-2 bg-primary">
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

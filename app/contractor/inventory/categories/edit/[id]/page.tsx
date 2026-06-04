@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
@@ -27,33 +27,77 @@ import { useToast } from '@/hooks/use-toast';
 interface Category {
   id: string;
   name: string;
+  description: string | null;
+  parentId: string | null;
+  parent?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
-export default function CreateInventoryCategoryPage() {
+interface ParentCategory {
+  id: string;
+  name: string;
+}
+
+export default function EditInventoryCategoryPage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
+  const categoryId = params.id as string;
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [parentId, setParentId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [parentCategories, setParentCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [parentCategories, setParentCategories] = useState<ParentCategory[]>([]);
 
   useEffect(() => {
+    const fetchCategory = async () => {
+      try {
+        const response = await fetch(`/api/inventory/categories/${categoryId}`);
+        if (!response.ok) throw new Error('Failed to fetch category');
+        
+        const category: Category = await response.json();
+        setName(category.name);
+        setDescription(category.description || '');
+        setParentId(category.parentId || 'none');
+      } catch (error) {
+        console.error('Failed to fetch category:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load category data",
+          variant: "destructive",
+        });
+        router.push('/contractor/inventory/categories');
+      }
+    };
+
     const fetchParentCategories = async () => {
       try {
         const response = await fetch('/api/inventory/categories?limit=100');
         const data = await response.json();
         if (data.categories && Array.isArray(data.categories)) {
-          // Only show top-level categories as potential parents
-          setParentCategories(data.categories.filter((cat: any) => !cat.parentId));
+          // Only show top-level categories as potential parents, excluding current category and its children
+          const filtered = data.categories.filter((cat: any) => 
+            !cat.parentId && cat.id !== categoryId
+          );
+          setParentCategories(filtered);
         }
       } catch (error) {
         console.error('Failed to fetch parent categories:', error);
       }
     };
-    fetchParentCategories();
-  }, []);
+
+    const loadData = async () => {
+      setIsLoading(true);
+      await Promise.all([fetchCategory(), fetchParentCategories()]);
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, [categoryId, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,8 +119,8 @@ export default function CreateInventoryCategoryPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/inventory/categories', {
-        method: 'POST',
+      const response = await fetch(`/api/inventory/categories/${categoryId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -92,7 +136,7 @@ export default function CreateInventoryCategoryPage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Category "${result.name}" has been created.`,
+          description: `Category "${result.name}" has been updated.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -103,7 +147,7 @@ export default function CreateInventoryCategoryPage() {
         router.push('/contractor/inventory/categories');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create category');
+        throw new Error(result.error || 'Failed to update category');
       }
     } catch (error: any) {
       toast({
@@ -120,6 +164,14 @@ export default function CreateInventoryCategoryPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -139,7 +191,7 @@ export default function CreateInventoryCategoryPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Category</BreadcrumbPage>
+            <BreadcrumbPage>Edit Category</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -147,8 +199,8 @@ export default function CreateInventoryCategoryPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Inventory Category</h1>
-          <p className="text-sm text-gray-500">Add a new category to organize your site resources.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Inventory Category</h1>
+          <p className="text-sm text-gray-500">Update category information and organization.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -219,7 +271,7 @@ export default function CreateInventoryCategoryPage() {
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Category
+                    Save Changes
                   </>
                 )}
               </Button>

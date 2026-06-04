@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Save, 
@@ -23,9 +23,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CreateSupplierPage() {
+export default function EditSupplierPage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
+  const supplierId = params.id as string;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -36,6 +38,38 @@ export default function CreateSupplierPage() {
     notes: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSupplier = async () => {
+      try {
+        const response = await fetch(`/api/suppliers/${supplierId}`);
+        if (!response.ok) throw new Error('Failed to fetch supplier');
+        
+        const supplier = await response.json();
+        setFormData({
+          name: supplier.name || '',
+          contactPerson: supplier.contactPerson || '',
+          email: supplier.email || '',
+          phone: supplier.phone || '',
+          address: supplier.address || '',
+          notes: supplier.notes || '',
+        });
+      } catch (error) {
+        console.error('Failed to fetch supplier:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load supplier data",
+          variant: "destructive",
+        });
+        router.push('/contractor/suppliers');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSupplier();
+  }, [supplierId, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +91,8 @@ export default function CreateSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/suppliers', {
-        method: 'POST',
+      const response = await fetch(`/api/suppliers/${supplierId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -70,7 +104,7 @@ export default function CreateSupplierPage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Supplier "${result.name}" has been created.`,
+          description: `Supplier "${result.name}" has been updated.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -81,7 +115,7 @@ export default function CreateSupplierPage() {
         router.push('/contractor/suppliers');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create supplier');
+        throw new Error(result.error || 'Failed to update supplier');
       }
     } catch (error: any) {
       toast({
@@ -99,6 +133,14 @@ export default function CreateSupplierPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -113,7 +155,7 @@ export default function CreateSupplierPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Supplier</BreadcrumbPage>
+            <BreadcrumbPage>Edit Supplier</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -121,8 +163,8 @@ export default function CreateSupplierPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Supplier</h1>
-          <p className="text-sm text-gray-500">Add a new supplier to your network.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Supplier</h1>
+          <p className="text-sm text-gray-500">Update supplier information.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -228,7 +270,7 @@ export default function CreateSupplierPage() {
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Supplier
+                    Save Changes
                   </>
                 )}
               </Button>
