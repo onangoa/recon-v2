@@ -78,7 +78,6 @@ model Project {
   spent         Float      @default(0)
   sites         Site[]
   tasks         Task[]
-  materials     Material[]
   equipment     Equipment[]
   documents     Document[]
   visitors      Visitor[]
@@ -98,6 +97,7 @@ model Site {
   location  String
   coordinates String? // lat,lng format
   description String?
+  materials  Material[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -122,8 +122,8 @@ model Task {
 
 model Material {
   id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name        String
   category    String   // Fallback string
   categoryId  String?
@@ -137,7 +137,7 @@ model Material {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([projectId])
+  @@index([siteId])
   @@index([categoryId])
 }
 

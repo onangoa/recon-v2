@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   ArrowLeft, 
   Save, 
@@ -21,11 +21,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
-interface Company {
-  id: string;
-  name: string;
-}
-
 export default function CreateSitePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -36,29 +31,8 @@ export default function CreateSitePage() {
     description: '',
     coordinates: '',
     category: '',
-    startDate: '',
-    endDate: '',
-    status: 'planning',
-    companyId: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [companies, setCompanies] = useState<Company[]>([]);
-
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const response = await fetch('/api/companies?limit=100');
-        const data = await response.json();
-        if (data.companies && Array.isArray(data.companies)) {
-          setCompanies(data.companies);
-        }
-      } catch (error) {
-        console.error('Failed to fetch companies:', error);
-      }
-    };
-
-    fetchCompanies();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +40,7 @@ export default function CreateSitePage() {
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "Project name is required.",
+        description: "Site name is required.",
         variant: "destructive",
       });
       return;
@@ -75,7 +49,7 @@ export default function CreateSitePage() {
     if (!formData.location.trim()) {
       toast({
         title: "Validation Error",
-        description: "Project location is required.",
+        description: "Site location is required.",
         variant: "destructive",
       });
       return;
@@ -84,12 +58,17 @@ export default function CreateSitePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/projects', {
+      const response = await fetch('/api/sites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          location: formData.location,
+          description: formData.description,
+          coordinates: formData.coordinates,
+        }),
       });
 
       const result = await response.json();
@@ -97,7 +76,7 @@ export default function CreateSitePage() {
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Project "${result.name}" has been created.`,
+          description: `Site "${result.name}" has been created.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -105,10 +84,10 @@ export default function CreateSitePage() {
             </div>
           ),
         });
-        router.push('/contractor/projects');
+        router.push('/contractor/sites');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create project');
+        throw new Error(result.error || 'Failed to create site');
       }
     } catch (error: any) {
       toast({
@@ -136,11 +115,11 @@ export default function CreateSitePage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/projects">Projects</BreadcrumbLink>
+            <BreadcrumbLink href="/contractor/sites">Sites</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Create Project</BreadcrumbPage>
+            <BreadcrumbPage>Create Site</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -148,8 +127,8 @@ export default function CreateSitePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Project</h1>
-          <p className="text-sm text-gray-500">Add a new project to your portfolio.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create Site</h1>
+          <p className="text-sm text-gray-500">Add a new site to your portfolio.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -164,12 +143,12 @@ export default function CreateSitePage() {
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Project Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Site Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter project name"
+              placeholder="Enter site name"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
@@ -182,43 +161,27 @@ export default function CreateSitePage() {
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="Enter project location"
+              placeholder="Enter site location"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
-          {/* Category and Company Row */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Category</option>
-                <option value="infrastructure">Infrastructure / Roads</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="industrial">Industrial</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Company</label>
-              <select 
-                value={formData.companyId}
-                onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>{company.name}</option>
-                ))}
-              </select>
-            </div>
+          {/* Category Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
+            <select 
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            >
+              <option value="">Select Category</option>
+              <option value="infrastructure">Infrastructure / Roads</option>
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+              <option value="industrial">Industrial</option>
+            </select>
           </div>
 
           {/* Start Date and End Date Row */}
@@ -264,7 +227,7 @@ export default function CreateSitePage() {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter project description"
+              placeholder="Enter site description"
               rows={4}
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -286,7 +249,7 @@ export default function CreateSitePage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Save Project
+                  Save Site
                 </>
               )}
             </Button>

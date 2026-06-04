@@ -166,15 +166,15 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                   ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2 p-2" asChild>
-                    <Link href="/contractor/projects">
+                    <Link href="/contractor/sites">
                       <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                        <Briefcase className="size-4" />
+                        <MapPin className="size-4" />
                       </div>
                       <div className="font-medium text-foreground text-sm">Manage Sites</div>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2 p-2" asChild>
-                    <Link href="/contractor/projects/create">
+                    <Link href="/contractor/sites/create">
                       <div className="flex size-6 items-center justify-center rounded-md border bg-background text-primary">
                         <Plus className="size-4" />
                       </div>
@@ -280,7 +280,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
             <SidebarTrigger className="-ml-1 text-primary" />
             <div className="h-4 w-px bg-border mx-2"></div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Project</span>
+              <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Site</span>
               <span className="text-sm font-bold text-primary">{activeSite?.name}</span>
             </div>
           </div>

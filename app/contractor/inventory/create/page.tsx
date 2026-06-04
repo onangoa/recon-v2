@@ -123,7 +123,7 @@ export default function CreateInventoryItemPage() {
         },
         body: JSON.stringify({
           ...formData,
-          projectId: activeSite.id,
+          siteId: activeSite.id,
           quantity: parseInt(formData.quantity) || 0,
           minStockLevel: parseInt(formData.minStockLevel) || 0,
           maxStockLevel: formData.maxStockLevel ? parseInt(formData.maxStockLevel) : null,

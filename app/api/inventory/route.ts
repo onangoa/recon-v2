@@ -7,21 +7,33 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    const siteId = searchParams.get('siteId');
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
+    const where: any = {};
+    
+    if (siteId) {
+      where.siteId = siteId;
+    }
+    
+    if (search) {
+      where.OR = [
         { name: { contains: search } },
         { category: { contains: search } },
         { supplier: { contains: search } },
-      ],
-    } : {};
+      ];
+    }
 
     const [inventory, total] = await Promise.all([
       prisma.material.findMany({
         where,
         include: {
           categoryRel: true,
+          site: {
+            include: {
+              project: true
+            }
+          },
         },
         orderBy: {
           name: 'asc'
@@ -55,14 +67,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    if (!body.siteId) {
+      return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
+    }
+
     const quantity = parseFloat(body.quantity) || 0;
     const unitCost = parseFloat(body.unitCost) || 0;
     
     const inventoryItem = await prisma.material.create({
       data: {
-        projectId: body.projectId,
+        siteId: body.siteId,
         name: body.name,
-        category: body.category || null,
+        category: body.category || 'Uncategorized',
         categoryId: body.categoryId || null,
         unit: body.unit || null,
         quantity: quantity,
@@ -73,7 +89,11 @@ export async function POST(request: Request) {
       },
       include: {
         categoryRel: true,
-        project: true,
+        site: {
+          include: {
+            project: true
+          }
+        },
       },
     });
 

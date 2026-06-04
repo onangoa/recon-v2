@@ -74,7 +74,7 @@ export default function SitesManagementPage() {
           <p className="text-muted-foreground mt-1 text-sm italic">Oversee all active, pending, and completed construction locations.</p>
         </div>
         <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
-          <Link href="/contractor/projects/create">
+          <Link href="/contractor/sites/create">
             <Plus className="size-4" /> Add New Site
           </Link>
         </Button>
