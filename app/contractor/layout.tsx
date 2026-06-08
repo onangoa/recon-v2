@@ -84,11 +84,10 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer },
     { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList },
     { label: 'Material Deliveries', href: '/contractor/materials', icon: Truck },
-    { label: 'Labour Management', href: '/contractor/labour', icon: Construction },
     { label: 'Licenses', href: '/contractor/licenses', icon: FileText },
     { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen },
     { label: 'Payroll', href: '/contractor/payroll', icon: Coins },
-    { label: 'Staff', href: '/contractor/team', icon: Users },
+    { label: 'Workers', href: '/contractor/workers', icon: Users },
     { label: 'Reports', href: '/contractor/reports', icon: BarChart3 },
     { label: 'Settings', href: '/contractor/settings', icon: Settings },
   ];

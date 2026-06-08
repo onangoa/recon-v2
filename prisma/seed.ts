@@ -5,6 +5,12 @@ const prisma = new PrismaClient();
 async function main() {
   try {
     // Clear existing data in order of dependencies
+    await prisma.salarySlipDetail.deleteMany({});
+    await prisma.salarySlip.deleteMany({});
+    await prisma.payrollPeriod.deleteMany({});
+    await prisma.salaryComponent.deleteMany({});
+    await prisma.worker.deleteMany({});
+    await prisma.designation.deleteMany({});
     await prisma.metric.deleteMany({});
     await prisma.visitor.deleteMany({});
     await prisma.photo.deleteMany({});
@@ -117,6 +123,97 @@ async function main() {
     }
 
     console.log('Created contractors');
+
+    // Create Designations for each contractor
+    const designations = [];
+    for (const contractor of contractors) {
+      const designData = [
+        { title: 'Site Manager', description: 'Oversees entire site operations', minSalary: 150000, maxSalary: 250000 },
+        { title: 'Project Engineer', description: 'Handles engineering aspects', minSalary: 120000, maxSalary: 180000 },
+        { title: 'Foreman', description: 'Leads worker teams', minSalary: 60000, maxSalary: 90000 },
+        { title: 'Mason', description: 'Stone and brick work', minSalary: 45000, maxSalary: 65000 },
+        { title: 'Electrician', description: 'Electrical installations', minSalary: 50000, maxSalary: 75000 },
+        { title: 'Laborer', description: 'General site work', minSalary: 25000, maxSalary: 35000 },
+      ];
+
+      for (const data of designData) {
+        const designation = await prisma.designation.create({
+          data: {
+            contractorId: contractor.id,
+            ...data,
+          },
+        });
+        designations.push(designation);
+      }
+    }
+    console.log('Created designations');
+
+    // Create Workers for each contractor
+    const workers = [];
+    let workerCounter = 1;
+    for (const contractor of contractors) {
+      const contractorDesignations = designations.filter(d => d.contractorId === contractor.id);
+      const workerData = [
+        { name: `Worker ${workerCounter}`, email: `worker${workerCounter}@example.com`, phone: `+254700000${workerCounter.toString().padStart(3, '0')}`, nationalId: `ID-${workerCounter.toString().padStart(6, '0')}`, designationId: contractorDesignations[0].id },
+        { name: `Worker ${workerCounter + 1}`, email: `worker${workerCounter + 1}@example.com`, phone: `+254700000${(workerCounter + 1).toString().padStart(3, '0')}`, nationalId: `ID-${(workerCounter + 1).toString().padStart(6, '0')}`, designationId: contractorDesignations[1].id },
+        { name: `Worker ${workerCounter + 2}`, email: `worker${workerCounter + 2}@example.com`, phone: `+254700000${(workerCounter + 2).toString().padStart(3, '0')}`, nationalId: `ID-${(workerCounter + 2).toString().padStart(6, '0')}`, designationId: contractorDesignations[2].id },
+        { name: `Worker ${workerCounter + 3}`, email: `worker${workerCounter + 3}@example.com`, phone: `+254700000${(workerCounter + 3).toString().padStart(3, '0')}`, nationalId: `ID-${(workerCounter + 3).toString().padStart(6, '0')}`, designationId: contractorDesignations[3].id },
+        { name: `Worker ${workerCounter + 4}`, email: `worker${workerCounter + 4}@example.com`, phone: `+254700000${(workerCounter + 4).toString().padStart(3, '0')}`, nationalId: `ID-${(workerCounter + 4).toString().padStart(6, '0')}`, designationId: contractorDesignations[4].id },
+        { name: `Worker ${workerCounter + 5}`, email: `worker${workerCounter + 5}@example.com`, phone: `+254700000${(workerCounter + 5).toString().padStart(3, '0')}`, nationalId: `ID-${(workerCounter + 5).toString().padStart(6, '0')}`, designationId: contractorDesignations[5].id },
+      ];
+
+      for (const data of workerData) {
+        const worker = await prisma.worker.create({
+          data: {
+            contractorId: contractor.id,
+            ...data,
+            status: 'Active',
+            joinedAt: new Date(),
+          },
+        });
+        workers.push(worker);
+      }
+      workerCounter += 6;
+    }
+    console.log('Created workers');
+
+    // Create Salary Components for each contractor
+    for (const contractor of contractors) {
+      const componentData = [
+        { name: 'House Allowance', type: 'earning', calculationType: 'percentage', percentage: 15, sortOrder: 1 },
+        { name: 'Transport Allowance', type: 'earning', calculationType: 'fixed', amount: 5000, sortOrder: 2 },
+        { name: 'NHIF', type: 'deduction', deductionType: 'pre_tax', calculationType: 'fixed', amount: 1700, isStatutory: true, sortOrder: 3 },
+        { name: 'NSSF', type: 'deduction', deductionType: 'pre_tax', calculationType: 'fixed', amount: 1080, isStatutory: true, sortOrder: 4 },
+        { name: 'Advance Payment', type: 'deduction', deductionType: 'post_tax', calculationType: 'fixed', amount: 0, sortOrder: 5 },
+      ];
+
+      for (const data of componentData) {
+        await prisma.salaryComponent.create({
+          data: {
+            contractorId: contractor.id,
+            ...data,
+          },
+        });
+      }
+    }
+    console.log('Created salary components');
+
+    // Create Payroll Periods
+    for (const contractor of contractors) {
+      const contractorWorkers = workers.filter(w => w.contractorId === contractor.id);
+      await prisma.payrollPeriod.create({
+        data: {
+          contractorId: contractor.id,
+          name: 'June 2026',
+          startDate: new Date('2026-06-01'),
+          endDate: new Date('2026-06-30'),
+          status: 'draft',
+          createdByWorkerId: contractorWorkers[0].id,
+          totalEmployees: contractorWorkers.length,
+        },
+      });
+    }
+    console.log('Created payroll periods');
 
     // Create team members for each contractor
     for (const contractor of contractors) {

@@ -47,10 +47,158 @@ model Contractor {
   safetyScore Float      @default(0)
   sites       Site[]
   team        TeamMember[]
+  workers     Worker[]
+  designations Designation[]
+  payrollPeriods PayrollPeriod[]
+  salaryComponents SalaryComponent[]
+  salarySlips SalarySlip[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   @@index([subscriptionPlanId])
+}
+
+model Worker {
+  id           String     @id @default(cuid())
+  contractorId String
+  contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  nationalId   String?    @unique
+  designationId String?
+  designation  Designation? @relation(fields: [designationId], references: [id])
+  status       String     @default("Active") // "Active", "Inactive", "Terminated"
+  joinedAt     DateTime   @default(now())
+  salarySlips  SalarySlip[]
+  payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([contractorId])
+  @@index([designationId])
+}
+
+model Designation {
+  id          String   @id @default(cuid())
+  contractorId String
+  contractor  Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  minSalary   Float?
+  maxSalary   Float?
+  isActive    Boolean  @default(true)
+  workers     Worker[]
+  salarySlips SalarySlip[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([contractorId])
+}
+
+model PayrollPeriod {
+  id              String   @id @default(cuid())
+  contractorId    String
+  contractor      Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  status          String   @default("draft") // "draft", "processing", "completed", "cancelled"
+  description     String?
+  totalEmployees  Int      @default(0)
+  totalGrossPay   Float    @default(0)
+  totalNetPay     Float    @default(0)
+  totalDeductions Float    @default(0)
+  createdByWorkerId String?
+  createdBy       Worker?  @relation("CreatedBy", fields: [createdByWorkerId], references: [id], onDelete: SetNull)
+  salarySlips     SalarySlip[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorId])
+  @@index([createdByWorkerId])
+}
+
+model SalaryComponent {
+  id            String   @id @default(cuid())
+  contractorId  String
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name          String
+  type          String   // "earning", "deduction"
+  deductionType String?  // "pre_tax", "post_tax", "employer_only"
+  calculationType String // "fixed", "percentage"
+  amount        Float?
+  percentage    Float?
+  isTaxable     Boolean  @default(true)
+  isStatutory   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  description   String?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([contractorId])
+}
+
+model SalarySlip {
+  id                String   @id @default(cuid())
+  contractorId      String
+  contractor        Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  payrollPeriodId   String
+  payrollPeriod     PayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  workerId          String
+  worker            Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  designationId     String?
+  designation       Designation? @relation(fields: [designationId], references: [id])
+  workingHours      Float    @default(0)
+  attainedHours     Float    @default(0)
+  workingDays       Int      @default(0)
+  attainedDays      Int      @default(0)
+  overtimeHours     Float    @default(0)
+  lateHours         Float    @default(0)
+  lateDays          Int      @default(0)
+  leaveHours        Float    @default(0)
+  leaveDays         Int      @default(0)
+  basicSalary       Float    @default(0)
+  totalAllowance    Float    @default(0)
+  totalDeductions   Float    @default(0)
+  grossPay          Float    @default(0)
+  chargeableIncome  Float    @default(0)
+  payeTax           Float    @default(0)
+  personalRelief    Float    @default(0)
+  netPay            Float    @default(0)
+  employerCosts     Float    @default(0)
+  status            String   @default("draft") // "draft", "processed", "paid", "cancelled"
+  note              String?
+  paymentMethod     String?
+  phoneNumber       String?
+  details           SalarySlipDetail[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([contractorId])
+  @@index([payrollPeriodId])
+  @@index([workerId])
+  @@index([designationId])
+}
+
+model SalarySlipDetail {
+  id                String   @id @default(cuid())
+  salarySlipId      String
+  salarySlip        SalarySlip @relation(fields: [salarySlipId], references: [id], onDelete: Cascade)
+  salaryComponentId String
+  componentName     String
+  componentType     String   // "earning", "deduction"
+  deductionType     String?  // "pre_tax", "post_tax", "employer_only"
+  isStatutory       Boolean  @default(false)
+  amount            Float    @default(0)
+  percentage        Float?
+  calculationDetails String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([salarySlipId])
+  @@index([salaryComponentId])
 }
 
 model SubscriptionPlan {
