@@ -1,123 +1,472 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { 
+  Users, 
+  Plus, 
+  Search, 
+  MoreVertical, 
+  Edit2, 
+  Trash2, 
+  Building2, 
+  MapPin, 
+  Phone, 
+  Mail,
+  ShieldCheck,
+  ExternalLink,
+  Filter,
+  Download
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from 'sonner';
 
 interface Contractor {
   id: string;
-  firstName: string;
-  lastName: string;
+  companyName: string;
+  location: string;
   phoneNumber: string;
-  email: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  licenseNo: string;
+  subscriptionPlanId: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  subscriptionPlan: {
+    name: string;
+  };
+  createdAt: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
 }
 
 export default function ContractorsPage() {
-  const [contractors, setContractors] = useState<Contractor[]>([
-    { id: '1', firstName: 'sdt', lastName: 'tyui', phoneNumber: '0701515491', email: 'demo@outlook.com', status: 'ACTIVE' },
-    { id: '2', firstName: 'Antwon', lastName: 'Ullrich', phoneNumber: '0700000009', email: 'ononagoa@gmail.com', status: 'ACTIVE' },
-    { id: '3', firstName: 'Jennifer', lastName: 'Emard', phoneNumber: '0634427523', email: 'test0@gmail.com', status: 'ACTIVE' },
-    { id: '4', firstName: 'Delphine', lastName: 'Jakubowski-Gorczany', phoneNumber: '0700000000', email: 'demo3@gmail.com', status: 'ACTIVE' },
-    { id: '5', firstName: 'Rebarcrete', lastName: 'Construction', phoneNumber: '0706491785', email: 'rebarcreteconstruction@gmail.com', status: 'ACTIVE' },
-    { id: '6', firstName: 'John', lastName: 'Doe', phoneNumber: '0700000001', email: 'test@gmail.com', status: 'ACTIVE' },
-    { id: '7', firstName: 'Antwon', lastName: 'Ullrich', phoneNumber: '7000000000', email: 'demo@gmail.com', status: 'ACTIVE' },
-  ]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredContractors, setFilteredContractors] = useState(contractors);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
+
+  // Form states
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    companyName: '',
+    location: '',
+    phoneNumber: '',
+    licenseNo: '',
+    subscriptionPlanId: '',
+  });
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [contractorsRes, plansRes] = await Promise.all([
+        fetch('/api/superadmin/contractors'),
+        fetch('/api/subscription-plans'),
+      ]);
+      const contractorsData = await contractorsRes.json();
+      const plansData = await plansRes.json();
+      setContractors(contractorsData);
+      setPlans(plansData);
+    } catch (error) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const filtered = contractors.filter(
-      (c) =>
-        c.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredContractors(filtered);
-  }, [searchTerm, contractors]);
+    fetchData();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/superadmin/contractors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        toast.success('Contractor created successfully');
+        setIsCreateDialogOpen(false);
+        setFormData({
+          name: '',
+          email: '',
+          companyName: '',
+          location: '',
+          phoneNumber: '',
+          licenseNo: '',
+          subscriptionPlanId: '',
+        });
+        fetchData();
+      } else {
+        toast.error('Failed to create contractor');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedContractor) return;
+    try {
+      const res = await fetch(`/api/superadmin/contractors/${selectedContractor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        toast.success('Contractor updated successfully');
+        setIsEditDialogOpen(false);
+        setSelectedContractor(null);
+        fetchData();
+      } else {
+        toast.error('Failed to update contractor');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this contractor? This will also delete their user account.')) return;
+    try {
+      const res = await fetch(`/api/superadmin/contractors/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast.success('Contractor deleted');
+        fetchData();
+      } else {
+        toast.error('Failed to delete contractor');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const openEditDialog = (contractor: Contractor) => {
+    setSelectedContractor(contractor);
+    setFormData({
+      name: contractor.user.name,
+      email: contractor.user.email,
+      companyName: contractor.companyName,
+      location: contractor.location,
+      phoneNumber: contractor.phoneNumber,
+      licenseNo: contractor.licenseNo,
+      subscriptionPlanId: contractor.subscriptionPlanId,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const filteredContractors = contractors.filter(c => 
+    c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="text-sm text-gray-600">
-        <span>Home</span> <span className="mx-2">/</span> <span className="font-medium">Contractors</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Contractors</h1>
-        <Link
-          href="/superadmin/contractors/new"
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
-        >
-          <span>+</span> Add Contractor
-        </Link>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Contractor Management</h1>
+          <p className="text-muted-foreground">Manage all registered contractors and their subscription tiers.</p>
         </div>
-        <button className="rounded-md border border-gray-300 bg-gray-500 text-white px-4 py-2 text-sm hover:bg-gray-600">
-          ↻
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">FIRST NAME</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">LAST NAME</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">PHONE NUMBER</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">E-MAIL</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">STATUS</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContractors.map((contractor) => (
-                <tr key={contractor.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-900">{contractor.firstName}</td>
-                  <td className="py-3 px-4 text-gray-900">{contractor.lastName}</td>
-                  <td className="py-3 px-4 text-gray-600">{contractor.phoneNumber}</td>
-                  <td className="py-3 px-4 text-gray-600">{contractor.email}</td>
-                  <td className="py-3 px-4">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                      {contractor.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-800">✎</button>
-                      <button className="text-red-600 hover:text-red-800">🗑</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-600">Showing 1 to {filteredContractors.length} of {contractors.length} rows</span>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">rows per page</span>
-          <button className="rounded-md border border-gray-300 bg-gray-600 text-white px-3 py-1 hover:bg-gray-700">
-            10
-          </button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="h-9 gap-2">
+            <Download className="w-4 h-4" /> Export
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4" /> Add Contractor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Contractor</DialogTitle>
+                <DialogDescription>Create a new contractor account and company profile.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Contact Name</Label>
+                    <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Full Name" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" required />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name</Label>
+                  <Input id="companyName" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} placeholder="Legal Company Name" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input id="location" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="e.g. Nairobi" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <Input id="phoneNumber" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} placeholder="+254..." required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="licenseNo">License Number</Label>
+                    <Input id="licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} placeholder="NCA-..." required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Subscription Plan</Label>
+                    <Select value={formData.subscriptionPlanId} onValueChange={val => setFormData({...formData, subscriptionPlanId: val})}>
+                      <SelectTrigger id="plan">
+                        <SelectValue placeholder="Select Plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map(plan => (
+                          <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">Create Contractor</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+
+      <Card className="border-none shadow-md">
+        <CardHeader className="border-b border-border/50 pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search by company, name or email..." 
+                className="pl-9 h-10 bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-9 gap-2">
+                <Filter className="w-4 h-4" /> Filter
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Company</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Primary Contact</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Plan</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Location</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Created</TableHead>
+                <TableHead className="text-right font-bold text-[11px] uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-10 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-10 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredContractors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                    No contractors found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredContractors.map((contractor) => (
+                  <TableRow key={contractor.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-foreground flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-primary" />
+                          {contractor.companyName}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <ShieldCheck className="w-3 h-3" />
+                          {contractor.licenseNo}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{contractor.user.name}</span>
+                        <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><Mail className="w-2.5 h-2.5" /> {contractor.user.email}</span>
+                          <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" /> {contractor.phoneNumber}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[9px]">
+                        {contractor.subscriptionPlan.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm flex items-center gap-1.5 text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {contractor.location}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(contractor.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Contractor Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openEditDialog(contractor)} className="gap-2">
+                            <Edit2 className="w-3.5 h-3.5" /> Edit Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2">
+                            <ExternalLink className="w-3.5 h-3.5" /> View Analytics
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDelete(contractor.id)} className="gap-2 text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" /> Delete Account
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Contractor</DialogTitle>
+            <DialogDescription>Update company and contact information.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Contact Name</Label>
+                <Input id="edit-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input id="edit-email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-companyName">Company Name</Label>
+              <Input id="edit-companyName" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Input id="edit-location" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phoneNumber">Phone Number</Label>
+                <Input id="edit-phoneNumber" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-licenseNo">License Number</Label>
+                <Input id="edit-licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-plan">Subscription Plan</Label>
+                <Select value={formData.subscriptionPlanId} onValueChange={val => setFormData({...formData, subscriptionPlanId: val})}>
+                  <SelectTrigger id="edit-plan">
+                    <SelectValue placeholder="Select Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map(plan => (
+                      <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

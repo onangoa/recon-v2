@@ -14,310 +14,375 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { 
+  Users, 
+  CreditCard, 
+  Wallet, 
+  ClipboardList,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Clock,
+  ArrowRight,
+  ShieldCheck,
+  Building2,
+  DollarSign
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle,
+  CardFooter
+} from '@/components/ui/card';
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent, 
+  ChartLegend, 
+  ChartLegendContent 
+} from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface DashboardStats {
+  totalRevenue: number;
+  revenueTrend: number;
+  totalContractors: number;
+  contractorsTrend: number;
+  activeSubscriptions: number;
+  subscriptionsTrend: number;
+  totalPlans: number;
+}
+
+interface Transaction {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  amount: string;
+  method: string;
+  status: 'COMPLETED' | 'FAILED' | 'PENDING';
+  date: string;
+}
 
 const contractorsData = [
-  { month: 'Jan', count: 0 },
-  { month: 'Feb', count: 1 },
-  { month: 'Mar', count: 1 },
-  { month: 'Apr', count: 0 },
-  { month: 'May', count: 0 },
-  { month: 'Jun', count: 0 },
-  { month: 'Jul', count: 0 },
-  { month: 'Aug', count: 0 },
-  { month: 'Sep', count: 0 },
-  { month: 'Oct', count: 1 },
-  { month: 'Nov', count: 1 },
-  { month: 'Dec', count: 0 },
+  { month: 'Jan', count: 4 },
+  { month: 'Feb', count: 7 },
+  { month: 'Mar', count: 5 },
+  { month: 'Apr', count: 8 },
+  { month: 'May', count: 12 },
+  { month: 'Jun', count: 15 },
 ];
 
 const revenueData = [
-  { date: 'Dec 25', revenue: 0 },
-  { date: '20 Dec', revenue: 10 },
-  { date: 'Jan 26', revenue: 30 },
-  { date: '10 Jan', revenue: 70 },
-  { date: '20 Jan', revenue: 80 },
-  { date: 'Feb 26', revenue: 50 },
-];
-
-const subscriptionRateData = [
-  { day: 1, rate: 80 },
-  { day: 2, rate: 60 },
-  { day: 3, rate: 50 },
-  { day: 4, rate: 40 },
-  { day: 5, rate: 30 },
-  { day: 6, rate: 35 },
-  { day: 7, rate: 45 },
-  { day: 8, rate: 55 },
-  { day: 9, rate: 65 },
-  { day: 10, rate: 75 },
-  { day: 11, rate: 70 },
-  { day: 12, rate: 65 },
-  { day: 13, rate: 60 },
-  { day: 14, rate: 50 },
-  { day: 15, rate: 45 },
-  { day: 16, rate: 40 },
+  { date: 'Jan', revenue: 1200 },
+  { date: 'Feb', revenue: 2100 },
+  { date: 'Mar', revenue: 1800 },
+  { date: 'Apr', revenue: 2400 },
+  { date: 'May', revenue: 3200 },
+  { date: 'Jun', revenue: 4500 },
 ];
 
 const planSalesData = [
-  { name: 'Demo Plan Free', value: 65, color: '#10b981' },
-  { name: 'Plan 1', value: 35, color: '#3b82f6' },
+  { name: 'Basic', value: 45, color: '#10b981' },
+  { name: 'Professional', value: 35, color: '#3b82f6' },
+  { name: 'Enterprise', value: 20, color: '#8b5cf6' },
 ];
 
-const transactionsData = [
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', amount: 'Kshs. 3.00', method: 'Mpesa', status: 'COMPLETED', date: '2026-02-10 14:02' },
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', amount: 'Kshs. 3.00', method: 'Mpesa', status: 'FAILED', date: '2026-02-10 14:01' },
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', amount: 'Kshs. 3.00', method: 'Mpesa', status: 'FAILED', date: '2026-02-10 14:00' },
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', amount: 'Kshs. 3.00', method: 'Mpesa', status: 'FAILED', date: '2026-02-10 14:00' },
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', amount: 'Kshs. 3.00', method: 'Mpesa', status: 'FAILED', date: '2026-02-10 13:59' },
-];
+const contractorsConfig = {
+  count: { label: 'New Contractors', color: '#3b82f6' },
+};
 
-const topContractorsData = [
-  { name: 'Delphine Jakubowski-Gorczany', phone: '0700000000', email: 'demo3@gmail.com', earnings: 'KSHs. 100.00' },
-  { name: 'Antwon Ullrich', phone: '0700000009', email: 'ananaga@gmail.com', earnings: 'KSHs. 27.00' },
-  { name: 'Jennifer Emard', phone: '0634427523', email: 'test0@gmail.com', earnings: 'KSHs. 12.00' },
-  { name: 'Antwon Ullrich', phone: '7000000000', email: 'demo@gmail.com', earnings: 'KSHs. 6.00' },
-  { name: 'Rebarcrete Construction', phone: '0706491785', email: 'rebarcreteconstruction@gmail.com', earnings: 'KSHs. 6.00' },
-];
+const revenueConfig = {
+  revenue: { label: 'Revenue (KES)', color: '#10b981' },
+};
+
+const plansConfig = {
+  basic: { label: 'Basic', color: '#10b981' },
+  professional: { label: 'Professional', color: '#3b82f6' },
+  enterprise: { label: 'Enterprise', color: '#8b5cf6' },
+};
 
 export default function SuperadminDashboard() {
-  const [breadcrumbs, setBreadcrumbs] = useState('Home');
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/superadmin/dashboard');
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        
+        setStats(data.stats);
+        setTransactions(data.recentTransactions);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const MetricCard = ({ label, value, icon: Icon, trend, trendValue, colorClass, prefix = "" }: any) => (
+    <Card className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <h3 className="text-2xl font-bold tracking-tight">
+                {loading ? <Skeleton className="h-8 w-24" /> : `${prefix}${value.toLocaleString()}`}
+              </h3>
+              {!loading && trendValue !== undefined && (
+                <span className={`flex items-center text-xs font-semibold ${trendValue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {trendValue >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                  {Math.abs(trendValue)}%
+                </span>
+              )}
+            </div>
+          </div>
+          <div className={`p-3 rounded-2xl ${colorClass}`}>
+            <Icon className="w-6 h-6" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="text-sm text-gray-600">
-        <span className="font-medium">{breadcrumbs}</span>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Platform Overview</h1>
+        <p className="text-muted-foreground">Comprehensive monitoring of contractors, subscriptions, and financial health.</p>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Revenue (Monthly)</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">Kshs. 0.00</p>
-              <p className="mt-1 text-xs text-gray-500">0% change from last month</p>
-            </div>
-            <div className="text-3xl">💰</div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Contractor (Monthly)</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
-              <p className="mt-1 text-xs text-gray-500">0% change from last month</p>
-            </div>
-            <div className="text-3xl">👷</div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Subscriptions (Monthly)</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
-              <p className="mt-1 text-xs text-gray-500">0% change from last month</p>
-            </div>
-            <div className="text-3xl">💳</div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Plans</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">3</p>
-              <p className="mt-1 text-xs text-gray-500">Active plans</p>
-            </div>
-            <div className="text-3xl">📋</div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard 
+          label="Total Revenue" 
+          value={stats?.totalRevenue || 0} 
+          prefix="KES "
+          icon={DollarSign} 
+          trendValue={stats?.revenueTrend} 
+          colorClass="bg-emerald-100 text-emerald-900" 
+        />
+        <MetricCard 
+          label="Contractors" 
+          value={stats?.totalContractors || 0} 
+          icon={Users} 
+          trendValue={stats?.contractorsTrend} 
+          colorClass="bg-blue-100 text-blue-900" 
+        />
+        <MetricCard 
+          label="Active Subs" 
+          value={stats?.activeSubscriptions || 0} 
+          icon={CreditCard} 
+          trendValue={stats?.subscriptionsTrend} 
+          colorClass="bg-orange-100 text-orange-900" 
+        />
+        <MetricCard 
+          label="Available Plans" 
+          value={stats?.totalPlans || 0} 
+          icon={ClipboardList} 
+          colorClass="bg-purple-100 text-purple-900" 
+        />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Total Contractors Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Total Contractors</h3>
-            <span className="text-xs font-medium text-gray-500">Total Count of Contractors</span>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={contractorsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#3b2f2f" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Revenue Chart */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl font-bold">Revenue Growth</CardTitle>
+              <CardDescription>Monthly platform earnings (KES)</CardDescription>
+            </div>
+            <Badge variant="outline" className="font-medium">Year to Date</Badge>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer config={revenueConfig} className="aspect-[16/9] w-full">
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickMargin={10}
+                  fontSize={12}
+                />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="var(--color-revenue)" 
+                  fillOpacity={1} 
+                  fill="url(#fillRevenue)" 
+                  strokeWidth={3}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-        {/* Total Revenue Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Total Revenue</h3>
-            <span className="text-xs font-medium text-gray-500">Total Revenue obtained</span>
-            <span className="text-lg font-bold text-gray-900">Kshs. 205.00</span>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#6366f1"
-                fillOpacity={1}
-                fill="url(#colorRevenue)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Subscription Rate Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4">
-            <h3 className="font-semibold text-gray-900">Subscription Rate</h3>
-            <p className="text-xs font-medium text-gray-500">Subscription Rate of Plans</p>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={subscriptionRateData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="rate"
-                stroke="#10b981"
-                dot={false}
-                name="Demo Plan Free"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Plan Sales Chart */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <div className="mb-4">
-            <h3 className="font-semibold text-gray-900">Plan Sales</h3>
-            <p className="text-xs font-medium text-gray-500">Active Subscriptions Per Plans</p>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={planSalesData}
-                cx="50%"
-                cy="50%"
-                innerRadius={80}
-                outerRadius={120}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {planSalesData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `${value}%`} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Contractors Chart */}
+        <Card className="shadow-md border-none">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-xl font-bold">Contractor Acquisition</CardTitle>
+              <CardDescription>New contractors joining the platform</CardDescription>
+            </div>
+            <Badge variant="outline" className="text-blue-600 bg-blue-50 border-blue-200">Growth</Badge>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer config={contractorsConfig} className="aspect-[16/9] w-full">
+              <BarChart data={contractorsData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickMargin={10}
+                  fontSize={12}
+                />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar 
+                  dataKey="count" 
+                  fill="var(--color-count)" 
+                  radius={[4, 4, 0, 0]} 
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recent Transactions */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h3 className="mb-4 font-semibold text-gray-900">Recent Transactions</h3>
-        <p className="mb-4 text-xs text-gray-500">Recently Added Transactions</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-700">NAME</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">PHONE NUMBER</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">E-MAIL</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">AMOUNT</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">PAYMENT METHOD</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">STATUS</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">CREATED AT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactionsData.map((transaction, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-900">{transaction.name}</td>
-                  <td className="py-3 px-4 text-gray-600">{transaction.phone}</td>
-                  <td className="py-3 px-4 text-gray-600">{transaction.email}</td>
-                  <td className="py-3 px-4 text-gray-900 font-medium">{transaction.amount}</td>
-                  <td className="py-3 px-4 text-gray-600">{transaction.method}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        transaction.status === 'COMPLETED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}
-                    >
-                      {transaction.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-gray-600 text-xs">{transaction.date}</td>
-                </tr>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Plan Distribution */}
+        <Card className="shadow-md border-none">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">Plan Distribution</CardTitle>
+            <CardDescription>Popularity of subscription tiers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={plansConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={planSalesData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {planSalesData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+            <div className="mt-4 space-y-2">
+              {planSalesData.map((plan) => (
+                <div key={plan.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: plan.color }}></div>
+                    <span className="text-sm font-medium">{plan.name}</span>
+                  </div>
+                  <span className="text-sm font-bold">{plan.value}%</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-gray-600">Showing 1 to 10 of 10 rows</span>
-          <button className="rounded-md border border-gray-300 bg-gray-500 text-white px-3 py-1">10</button>
-        </div>
-      </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Top Contractors */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <h3 className="mb-4 font-semibold text-gray-900">Top Contractors</h3>
-        <p className="mb-4 text-xs text-gray-500">Top 5 Contractors by Maximum Purchase</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-700">NAME</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">PHONE NUMBER</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">E-MAIL</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">TOTAL EARNINGS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topContractorsData.map((contractor, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-900">{contractor.name}</td>
-                  <td className="py-3 px-4 text-gray-600">{contractor.phone}</td>
-                  <td className="py-3 px-4 text-gray-600">{contractor.email}</td>
-                  <td className="py-3 px-4 text-blue-600 font-semibold">{contractor.earnings}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-gray-600">Showing 1 to 5 of 5 rows</span>
-        </div>
+        {/* Recent Transactions Table */}
+        <Card className="lg:col-span-2 shadow-md border-none">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold">Recent Transactions</CardTitle>
+              <CardDescription>Latest financial activities across the platform</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/superadmin/transactions">View All</a>
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left py-3 px-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Contractor</th>
+                    <th className="text-left py-3 px-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Amount</th>
+                    <th className="text-left py-3 px-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Method</th>
+                    <th className="text-left py-3 px-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Status</th>
+                    <th className="text-left py-3 px-4 font-bold text-muted-foreground uppercase tracking-wider text-[10px]">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <tr key={i}>
+                        <td className="py-4 px-4"><Skeleton className="h-4 w-32" /></td>
+                        <td className="py-4 px-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="py-4 px-4"><Skeleton className="h-4 w-16" /></td>
+                        <td className="py-4 px-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="py-4 px-4"><Skeleton className="h-4 w-24" /></td>
+                      </tr>
+                    ))
+                  ) : (
+                    transactions.map((transaction) => (
+                      <tr key={transaction.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-foreground">{transaction.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{transaction.email}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 font-bold text-primary">{transaction.amount}</td>
+                        <td className="py-4 px-4 text-muted-foreground">{transaction.method}</td>
+                        <td className="py-4 px-4">
+                          <Badge 
+                            variant={
+                              transaction.status === 'COMPLETED' ? 'default' : 
+                              transaction.status === 'FAILED' ? 'destructive' : 'secondary'
+                            }
+                            className="text-[10px] font-bold px-2 py-0"
+                          >
+                            {transaction.status}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-xs text-muted-foreground">{transaction.date}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+          <CardFooter className="bg-muted/20 border-t border-border p-4">
+            <p className="text-xs text-muted-foreground italic">Showing last 5 platform transactions.</p>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

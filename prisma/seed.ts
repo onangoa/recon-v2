@@ -27,7 +27,7 @@ async function main() {
         price: 2999,
         maxSites: 5,
         maxTeamMembers: 3,
-        features: 'Up to 5 sites,Basic reporting,Email support',
+        features: JSON.stringify(['Up to 5 sites', 'Basic reporting', 'Email support']),
       },
     });
 
@@ -37,7 +37,7 @@ async function main() {
         price: 7999,
         maxSites: 50,
         maxTeamMembers: 15,
-        features: 'Unlimited sites,Advanced reporting,Priority support,Team management',
+        features: JSON.stringify(['Unlimited sites', 'Advanced reporting', 'Priority support', 'Team management']),
       },
     });
 
@@ -47,7 +47,7 @@ async function main() {
         price: 19999,
         maxSites: 999,
         maxTeamMembers: 999,
-        features: 'Unlimited sites,Custom reporting,24/7 support,Advanced features',
+        features: JSON.stringify(['Unlimited sites', 'Custom reporting', '24/7 support', 'Advanced features']),
       },
     });
 

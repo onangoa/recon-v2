@@ -1,54 +1,123 @@
+import { 
+  BarChart3, 
+  TrendingUp, 
+  Users, 
+  ShieldCheck, 
+  FileText, 
+  Download,
+  Calendar
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
 export default function ReportsPage() {
+  const reports = [
+    {
+      title: "Revenue Analytics",
+      description: "Detailed breakdown of subscription income and platform fees.",
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50"
+    },
+    {
+      title: "Contractor Insights",
+      description: "Performance metrics, growth rates, and retention data.",
+      icon: Users,
+      color: "text-blue-600",
+      bg: "bg-blue-50"
+    },
+    {
+      title: "Safety Compliance",
+      description: "Consolidated safety scores and incident reports across all sites.",
+      icon: ShieldCheck,
+      color: "text-orange-600",
+      bg: "bg-orange-50"
+    },
+    {
+      title: "Project Progress",
+      description: "Aggregated project completion status and resource utilization.",
+      icon: BarChart3,
+      color: "text-purple-600",
+      bg: "bg-purple-50"
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">Reports</h2>
-        <p className="mt-2 text-muted-foreground">
-          Generate and view platform reports
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="font-semibold text-foreground mb-2">Revenue Report</h3>
-          <p className="text-sm text-muted-foreground">
-            View monthly revenue from subscriptions and services
-          </p>
-          <button className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Generate
-          </button>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Platform Reports</h1>
+          <p className="text-muted-foreground">Generate comprehensive analytics and insights for the entire platform.</p>
         </div>
-
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="font-semibold text-foreground mb-2">Contractor Performance</h3>
-          <p className="text-sm text-muted-foreground">
-            Analyze contractor metrics and project completion rates
-          </p>
-          <button className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Generate
-          </button>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="font-semibold text-foreground mb-2">Project Analytics</h3>
-          <p className="text-sm text-muted-foreground">
-            View project completion trends and budget analysis
-          </p>
-          <button className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Generate
-          </button>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h3 className="font-semibold text-foreground mb-2">Safety Report</h3>
-          <p className="text-sm text-muted-foreground">
-            Safety scores and incident tracking across all projects
-          </p>
-          <button className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Generate
-          </button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-9 gap-2">
+            <Calendar className="w-4 h-4" /> Filter by Date
+          </Button>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {reports.map((report, idx) => (
+          <Card key={idx} className="border-none shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center gap-4 pb-4">
+              <div className={`p-3 rounded-2xl ${report.bg} ${report.color}`}>
+                <report.icon className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-xl font-bold">{report.title}</CardTitle>
+                <CardDescription>{report.description}</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex gap-2">
+                  <Badge variant="secondary" className="text-[10px] font-bold">PDF</Badge>
+                  <Badge variant="secondary" className="text-[10px] font-bold">CSV</Badge>
+                  <Badge variant="secondary" className="text-[10px] font-bold">EXCEL</Badge>
+                </div>
+                <Button size="sm" className="gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-none h-8 text-xs font-bold">
+                  <Download className="w-3.5 h-3.5" /> Generate Report
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-none shadow-md bg-muted/20">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            Recently Generated
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-background border border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Monthly_Revenue_June_2026.pdf</p>
+                    <p className="text-[10px] text-muted-foreground">Generated by Super Admin • 2 hours ago</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" className="text-primary font-bold text-xs h-7">Download</Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,168 +1,374 @@
 'use client';
 
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  ClipboardList, 
+  CheckCircle2, 
+  DollarSign, 
+  Users, 
+  Layout,
+  MoreVertical,
+  Layers
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription,
+  CardFooter 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface Plan {
   id: string;
   name: string;
-  type: 'PAID' | 'FREE';
-  modules: string[];
-  monthlyPrice: string;
-  yearlyPrice: string;
-  lifetimePrice: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  price: number;
+  maxSites: number;
+  maxTeamMembers: number;
+  features: string; // JSON string or comma-separated string
+  createdAt: string;
 }
 
-const plansData: Plan[] = [
-  {
-    id: '1',
-    name: 'Plan 1',
-    type: 'PAID',
-    modules: ['CLIENTS', 'WORKERS', 'ATTENDANCE', 'INVENTORY', 'SUPPLIERS', 'VISITORS', 'PETTY_CASH', 'WORKER_PAYMENTS', 'LICENSES', 'MACHINES', 'LEAVE_REQUESTS', 'PURCHASE_ORDERS', 'MATERIAL_DELIVERIES', 'REPORTS', 'FILES', 'SETTINGS'],
-    monthlyPrice: 'Kshs. 10.00',
-    yearlyPrice: 'Kshs. 5.00',
-    lifetimePrice: 'Kshs. 4.00',
-    status: 'ACTIVE',
-  },
-  {
-    id: '2',
-    name: 'Demo Plan Paid',
-    type: 'PAID',
-    modules: ['CLIENTS', 'WORKERS', 'ATTENDANCE', 'INVENTORY', 'SUPPLIERS', 'VISITORS', 'PETTY_CASH', 'WORKER_PAYMENTS', 'LICENSES', 'MACHINES', 'LEAVE_REQUESTS', 'PURCHASE_ORDERS', 'MATERIAL_DELIVERIES', 'REPORTS', 'FILES', 'SETTINGS'],
-    monthlyPrice: 'Kshs. 100.00',
-    yearlyPrice: 'Kshs. 100.00',
-    lifetimePrice: 'Kshs. 100.00',
-    status: 'ACTIVE',
-  },
-  {
-    id: '3',
-    name: 'Demo Plan Free',
-    type: 'FREE',
-    modules: ['CLIENTS', 'WORKERS', 'ATTENDANCE', 'INVENTORY', 'SUPPLIERS', 'VISITORS', 'PETTY_CASH', 'WORKER_PAYMENTS', 'LICENSES', 'MACHINES', 'LEAVE_REQUESTS', 'PURCHASE_ORDERS', 'MATERIAL_DELIVERIES', 'REPORTS', 'FILES', 'SETTINGS'],
-    monthlyPrice: 'Kshs. 0.00',
-    yearlyPrice: 'Kshs. 0.00',
-    lifetimePrice: 'Kshs. 0.00',
-    status: 'ACTIVE',
-  },
-];
-
 export default function PlansPage() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    maxSites: '',
+    maxTeamMembers: '',
+    features: [''],
+  });
+
+  const safeParseFeatures = (featuresStr: string): string[] => {
+    try {
+      const parsed = JSON.parse(featuresStr);
+      if (Array.isArray(parsed)) return parsed;
+      return [featuresStr];
+    } catch (e) {
+      // If it's not valid JSON, it might be a comma-separated string (legacy)
+      if (featuresStr.includes(',')) {
+        return featuresStr.split(',').map(f => f.trim());
+      }
+      return [featuresStr];
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/superadmin/plans');
+      const data = await res.json();
+      setPlans(data);
+    } catch (error) {
+      toast.error('Failed to load plans');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/superadmin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          features: formData.features.filter(f => f.trim() !== ''),
+        }),
+      });
+      if (res.ok) {
+        toast.success('Plan created successfully');
+        setIsCreateDialogOpen(false);
+        setFormData({ name: '', price: '', maxSites: '', maxTeamMembers: '', features: [''] });
+        fetchData();
+      } else {
+        toast.error('Failed to create plan');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlan) return;
+    try {
+      const res = await fetch(`/api/superadmin/plans/${selectedPlan.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          features: formData.features.filter(f => f.trim() !== ''),
+        }),
+      });
+      if (res.ok) {
+        toast.success('Plan updated successfully');
+        setIsEditDialogOpen(false);
+        setSelectedPlan(null);
+        fetchData();
+      } else {
+        toast.error('Failed to update plan');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this plan?')) return;
+    try {
+      const res = await fetch(`/api/superadmin/plans/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Plan deleted');
+        fetchData();
+      } else {
+        toast.error(data.error || 'Failed to delete plan');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const openEditDialog = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setFormData({
+      name: plan.name,
+      price: plan.price.toString(),
+      maxSites: plan.maxSites.toString(),
+      maxTeamMembers: plan.maxTeamMembers.toString(),
+      features: safeParseFeatures(plan.features),
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const addFeatureField = () => {
+    setFormData({ ...formData, features: [...formData.features, ''] });
+  };
+
+  const updateFeatureField = (index: number, value: string) => {
+    const newFeatures = [...formData.features];
+    newFeatures[index] = value;
+    setFormData({ ...formData, features: newFeatures });
+  };
+
+  const removeFeatureField = (index: number) => {
+    const newFeatures = formData.features.filter((_, i) => i !== index);
+    setFormData({ ...formData, features: newFeatures.length > 0 ? newFeatures : [''] });
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="text-sm text-gray-600">
-        <span>Home</span> <span className="mx-2">/</span> <span className="font-medium">Plans</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Plans</h1>
-        <Link
-          href="/superadmin/plans/new"
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
-        >
-          <span>+</span> New Plan
-        </Link>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-4">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">FILTER BY STATUS</label>
-          <select className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white">
-            <option>Select status</option>
-            <option>Active</option>
-            <option>Inactive</option>
-          </select>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Subscription Plans</h1>
+          <p className="text-muted-foreground">Define and manage the pricing tiers available for contractors.</p>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">FILTER BY TYPE</label>
-          <select className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white">
-            <option>Select type</option>
-            <option>PAID</option>
-            <option>FREE</option>
-          </select>
-        </div>
-        <div className="flex-1 flex items-end gap-2">
-          <input
-            type="text"
-            placeholder="Search"
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button className="rounded-md bg-gray-500 text-white px-4 py-2 text-sm hover:bg-gray-600">
-            ↻
-          </button>
-        </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4" /> Create New Plan
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Subscription Plan</DialogTitle>
+              <DialogDescription>Define a new tier with specific features and limits.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreate} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Plan Name</Label>
+                <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Professional" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Monthly Price (KES)</Label>
+                  <Input id="price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxSites">Max Sites</Label>
+                  <Input id="maxSites" type="number" value={formData.maxSites} onChange={e => setFormData({...formData, maxSites: e.target.value})} placeholder="5" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxTeamMembers">Max Team Members per Site</Label>
+                <Input id="maxTeamMembers" type="number" value={formData.maxTeamMembers} onChange={e => setFormData({...formData, maxTeamMembers: e.target.value})} placeholder="20" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Features</Label>
+                {formData.features.map((feature, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input value={feature} onChange={e => updateFeatureField(index, e.target.value)} placeholder="Feature description" required />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeFeatureField(index)} className="text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addFeatureField} className="w-full mt-2 border-dashed">
+                  <Plus className="w-3 h-3 mr-2" /> Add Feature
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Create Plan</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Plans Table */}
-      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">NAME</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">PLAN TYPE</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">MODULES</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">MONTHLY PRICE</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">YEARLY PRICE</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">LIFETIME PRICE</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">STATUS</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plansData.map((plan) => (
-                <tr key={plan.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-gray-900 font-medium">{plan.name}</td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      plan.type === 'PAID'
-                        ? 'bg-orange-100 text-orange-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {plan.type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-wrap gap-1">
-                      {plan.modules.slice(0, 4).map((module) => (
-                        <span key={module} className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                          {module}
-                        </span>
-                      ))}
-                      {plan.modules.length > 4 && (
-                        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                          +{plan.modules.length - 4} more
-                        </span>
-                      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          Array(3).fill(0).map((_, i) => (
+            <Card key={i} className="border-none shadow-md overflow-hidden">
+              <CardHeader><Skeleton className="h-24 w-full" /></CardHeader>
+              <CardContent><Skeleton className="h-48 w-full" /></CardContent>
+            </Card>
+          ))
+        ) : plans.length === 0 ? (
+          <div className="col-span-full h-48 flex flex-col items-center justify-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+            <Layers className="w-8 h-8 mb-2 opacity-20" />
+            <p>No subscription plans defined yet.</p>
+          </div>
+        ) : (
+          plans.map((plan) => (
+            <Card key={plan.id} className="border-none shadow-md overflow-hidden group relative flex flex-col">
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1">
+                  <Button variant="secondary" size="icon" className="h-8 w-8 bg-white/90 backdrop-blur shadow-sm" onClick={() => openEditDialog(plan)}>
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm" onClick={() => handleDelete(plan.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <CardHeader className="bg-primary/5 pb-8">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  {plan.name}
+                  {plan.price === 0 && <Badge className="bg-emerald-500 hover:bg-emerald-600">Free</Badge>}
+                </CardTitle>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-primary">KES {plan.price.toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground">/month</span>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 flex-1">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="flex items-center gap-2 text-primary mb-1">
+                        <Layout className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Max Sites</span>
+                      </div>
+                      <span className="text-lg font-bold">{plan.maxSites}</span>
                     </div>
-                  </td>
-                  <td className="py-3 px-4 text-gray-900">{plan.monthlyPrice}</td>
-                  <td className="py-3 px-4 text-gray-900">{plan.yearlyPrice}</td>
-                  <td className="py-3 px-4 text-gray-900">{plan.lifetimePrice}</td>
-                  <td className="py-3 px-4">
-                    <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                      {plan.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-800">✎</button>
-                      <button className="text-red-600 hover:text-red-800">🗑</button>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="flex items-center gap-2 text-primary mb-1">
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Team Size</span>
+                      </div>
+                      <span className="text-lg font-bold">{plan.maxTeamMembers}</span>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="space-y-2.5 mt-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Included Features</p>
+                    {safeParseFeatures(plan.features).map((feature: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                        <span className="text-sm text-muted-foreground leading-tight">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-muted/10 border-t border-border/50 py-4 px-6 mt-auto">
+                <p className="text-[10px] text-muted-foreground italic">
+                  Created on {new Date(plan.createdAt).toLocaleDateString()}
+                </p>
+              </CardFooter>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription Plan</DialogTitle>
+            <DialogDescription>Update the tier details and limits.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Plan Name</Label>
+              <Input id="edit-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Monthly Price (KES)</Label>
+                <Input id="edit-price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-maxSites">Max Sites</Label>
+                <Input id="edit-maxSites" type="number" value={formData.maxSites} onChange={e => setFormData({...formData, maxSites: e.target.value})} required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-maxTeamMembers">Max Team Members per Site</Label>
+              <Input id="edit-maxTeamMembers" type="number" value={formData.maxTeamMembers} onChange={e => setFormData({...formData, maxTeamMembers: e.target.value})} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Features</Label>
+              {formData.features.map((feature, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input value={feature} onChange={e => updateFeatureField(index, e.target.value)} placeholder="Feature description" required />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeFeatureField(index)} className="text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-600">Showing 1 to {plansData.length} of {plansData.length} rows</span>
-      </div>
+              <Button type="button" variant="outline" size="sm" onClick={addFeatureField} className="w-full mt-2 border-dashed">
+                <Plus className="w-3 h-3 mr-2" /> Add Feature
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

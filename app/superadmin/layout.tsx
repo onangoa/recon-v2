@@ -2,12 +2,57 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { 
+  LayoutDashboard, 
+  Users, 
+  ClipboardList, 
+  CreditCard, 
+  Wallet, 
+  ShieldCheck, 
+  Settings,
+  Search,
+  Bell,
+  MessageSquare,
+  LogOut,
+  HardHat,
+  ChevronsUpDown,
+  Building2,
+  Plus,
+  CheckCircle2,
+  Construction,
+  MapPin,
+  LifeBuoy
+} from 'lucide-react';
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarGroupLabel, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem, 
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
+  SidebarRail
+} from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-export default function SuperadminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -18,98 +63,172 @@ export default function SuperadminLayout({
   };
 
   const navItems = [
-    { label: 'Dashboard', href: '/superadmin', icon: '🏠' },
-    { label: 'Contractors', href: '/superadmin/contractors', icon: '👷' },
-    { label: 'Plans', href: '/superadmin/plans', icon: '📋' },
-    { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: '💳' },
-    { label: 'Transactions', href: '/superadmin/transactions', icon: '💰' },
-    { label: 'Admins', href: '/superadmin/admins', icon: '👥' },
-    { label: 'Support', href: '/superadmin/support', icon: '🆘' },
-    { label: 'Settings', href: '/superadmin/settings', icon: '⚙️' },
+    { label: 'Dashboard', href: '/superadmin', icon: LayoutDashboard },
+    { label: 'Contractors', href: '/superadmin/contractors', icon: Users },
+    { label: 'Plans', href: '/superadmin/plans', icon: ClipboardList },
+    { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
+    { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
+    { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
+    { label: 'Support', href: '/superadmin/reports', icon: LifeBuoy },
+    { label: 'Settings', href: '/superadmin/settings', icon: Settings },
   ];
 
   const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
+    return pathname === href || (href !== '/superadmin' && pathname.startsWith(href + '/'));
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-56 border-r border-gray-200 bg-white flex flex-col">
-        {/* Logo */}
-        <div className="border-b border-gray-200 px-4 py-4">
-          <Link href="/superadmin" className="flex items-center gap-2">
-            <div className="text-2xl">🏢</div>
-            <span className="font-semibold text-gray-900">RECON</span>
-          </Link>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? 'bg-orange-50 text-primary border-l-4 border-primary'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        {/* Logout */}
-        <div className="border-t border-gray-200 p-3">
-          <button
-            onClick={handleLogout}
-            className="w-full rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
-              <div className="relative w-96">
-                <input
-                  type="text"
-                  placeholder="Search (CTRL + K)"
-                  className="w-full rounded-md border border-gray-300 bg-gray-50 px-4 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+    <div className="flex min-h-screen w-full bg-background">
+      <Sidebar collapsible="icon" variant="inset" className="border-r border-border">
+        <SidebarHeader className="border-b border-border/50 pb-4">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="flex items-center gap-3 px-2 py-4 group-data-[collapsible=icon]:justify-center">
+                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                  <ShieldCheck className="size-6" />
+                </div>
+                <div className="flex flex-col gap-0 group-data-[collapsible=icon]:hidden">
+                  <span className="font-black text-xl tracking-tighter text-foreground leading-none">RECON<span className="text-primary">ADMIN</span></span>
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-0.5">Platform Control</span>
+                </div>
               </div>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+
+        <SidebarContent className="px-2 py-4 custom-scrollbar">
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-2 mb-2">Platform Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive(item.href)}
+                      tooltip={item.label}
+                      className={isActive(item.href) ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary font-bold" : ""}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={isActive(item.href) ? "text-primary" : "text-muted-foreground"} />
+                        <span className="font-medium">{item.label}</span>
+                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-primary group-data-[collapsible=icon]:hidden" />}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter className="p-4 border-t border-border">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src="/placeholder-user.jpg" alt="Admin" />
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">SA</AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                      <span className="truncate font-semibold text-primary">Super Admin</span>
+                      <span className="truncate text-xs opacity-70">Global Administrator</span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                      <Avatar className="h-8 w-8 rounded-lg">
+                        <AvatarImage src="/placeholder-user.jpg" alt="Admin" />
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">SA</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">Super Admin</span>
+                        <span className="truncate text-xs text-muted-foreground">admin@reconhub.com</span>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2" asChild>
+                    <Link href="/superadmin/settings">
+                      <Settings className="size-4" /> Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 text-destructive" onClick={handleLogout}>
+                    <LogOut className="size-4" /> Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
+          <div className="flex items-center gap-4 flex-1">
+            <SidebarTrigger className="-ml-1 text-primary" />
+            <div className="h-4 w-px bg-border mx-2"></div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Portal</span>
+              <span className="text-sm font-bold text-primary">Super Administrator</span>
             </div>
-            <div className="flex items-center gap-6">
-              <button className="text-gray-500 hover:text-gray-700">
-                <span className="text-xl">🔔</span>
-              </button>
-              <button className="text-gray-500 hover:text-gray-700">
-                <span className="text-xl">💬</span>
-              </button>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-700">Hi</span>
-                <span className="font-semibold text-gray-900">Super</span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
-                S
-              </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="relative w-64 hidden lg:block">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search platform..."
+                className="w-full pl-8 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-8 text-xs"
+              />
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative h-9 w-9">
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full border border-background"></span>
+              </Button>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
+                <MessageSquare className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto bg-gray-50 p-6">
-          {children}
+        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8">
+          <div className="mx-auto max-w-7xl">
+            {children}
+          </div>
         </main>
-      </div>
+      </SidebarInset>
     </div>
+  );
+}
+
+export default function SuperadminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <SidebarProvider>
+      <SidebarNav>{children}</SidebarNav>
+    </SidebarProvider>
   );
 }

@@ -22,8 +22,7 @@ import {
   TrendingDown,
   Activity,
   Calendar,
-  Clock,
-  ArrowRight
+  Clock
 } from 'lucide-react';
 import { 
   Card, 
@@ -181,10 +180,6 @@ export default function ContractorDashboard() {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="px-6 py-3 bg-muted/30 flex justify-between items-center group cursor-pointer hover:bg-muted/50">
-        <span className="text-xs font-medium text-muted-foreground">View detailed report</span>
-        <ArrowRight className="w-3 h-3 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-      </CardFooter>
     </Card>
   );
 
