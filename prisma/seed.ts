@@ -118,6 +118,28 @@ async function main() {
 
     console.log('Created contractors');
 
+    // Create team members for each contractor
+    for (const contractor of contractors) {
+      const teamData = [
+        { name: 'James Mwangi', role: 'Site Supervisor', email: `james.m@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 111 222', status: 'On-Site' },
+        { name: 'Sarah Chengo', role: 'Safety Officer', email: `sarah.c@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 333 444', status: 'On-Site' },
+        { name: 'David Otieno', role: 'Foreman', email: `david.o@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 555 666', status: 'Off-Duty' },
+        { name: 'Alice Kamau', role: 'Project Engineer', email: `alice.k@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 777 888', status: 'Active' },
+        { name: 'Robert Maina', role: 'Electrician', email: `robert.m@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 999 000', status: 'Active' },
+      ];
+
+      for (const data of teamData) {
+        await prisma.teamMember.create({
+          data: {
+            contractorId: contractor.id,
+            ...data,
+          },
+        });
+      }
+    }
+
+    console.log('Created team members');
+
     // Create sites for each contractor
     const sites = [];
     const siteData = [

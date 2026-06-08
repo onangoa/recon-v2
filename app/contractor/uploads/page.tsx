@@ -314,9 +314,17 @@ export default function SiteUploadsPage() {
                             className="gap-2 cursor-pointer"
                             asChild
                           >
-                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={doc.fileUrl}>
                               <ExternalLink className="size-4" /> View
                             </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onClick={() => {
+                              router.push(`/contractor/uploads/edit/${doc.id}`);
+                            }}
+                          >
+                            <Pencil className="size-4" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 text-destructive cursor-pointer"

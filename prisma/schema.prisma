@@ -46,6 +46,7 @@ model Contractor {
   subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   safetyScore Float      @default(0)
   sites       Site[]
+  team        TeamMember[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -83,6 +84,21 @@ model Site {
   @@index([contractorId])
 }
 
+model TeamMember {
+  id           String   @id @default(cuid())
+  contractorId String
+  contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  name         String
+  role         String
+  email        String?
+  phone        String?
+  status       String   @default("Active") // "On-Site", "Off-Duty", "Active", etc.
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([contractorId])
+}
+
 model Task {
   id        String   @id @default(cuid())
   siteId    String
@@ -112,11 +128,25 @@ model Material {
   totalCost   Float
   supplier    String?
   status      String   // "pending", "ordered", "received"
+  movements   StockMovement[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([siteId])
   @@index([categoryId])
+}
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  quantity   Float    // The quantity after the movement or the change
+  change     Float    // The change amount (+/-)
+  type       String   // "in", "out", "adjustment"
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([materialId])
 }
 
 model InventoryCategory {
@@ -156,6 +186,7 @@ model Document {
   name      String
   type      String   // "contract", "invoice", "report", "permit", "insurance"
   fileUrl   String
+  notes     String?
   uploadedAt DateTime @default(now())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

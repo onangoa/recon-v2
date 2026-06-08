@@ -257,8 +257,11 @@ export default function MaterialsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
+                      <Button variant="ghost" size="sm" className="gap-2 text-primary hover:bg-primary/5" asChild>
+                        <Link href={`/contractor/purchase-orders/edit/${delivery.id}`}>
+                          <FileText className="w-4 h-4" />
+                          <span className="text-xs font-bold">View</span>
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>

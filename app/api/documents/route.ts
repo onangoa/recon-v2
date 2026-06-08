@@ -53,34 +53,55 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    if (!body.siteId) {
-      return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
-    }
-    
-    if (!body.name) {
-      return NextResponse.json({ error: 'Document name is required' }, { status: 400 });
-    }
 
-    if (!body.fileUrl) {
-      return NextResponse.json({ error: 'File URL is required' }, { status: 400 });
+    if (Array.isArray(body)) {
+      // Bulk upload
+      const documents = await prisma.$transaction(
+        body.map((doc: any) => 
+          prisma.document.create({
+            data: {
+              siteId: doc.siteId,
+              name: doc.name,
+              type: doc.type,
+              fileUrl: doc.fileUrl,
+              notes: doc.notes || null,
+              uploadedAt: new Date(),
+            },
+          })
+        )
+      );
+      return NextResponse.json(documents);
+    } else {
+      // Single upload
+      if (!body.siteId) {
+        return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
+      }
+
+      if (!body.name) {
+        return NextResponse.json({ error: 'Document name is required' }, { status: 400 });
+      }
+
+      if (!body.fileUrl) {
+        return NextResponse.json({ error: 'File URL is required' }, { status: 400 });
+      }
+
+      if (!body.type) {
+        return NextResponse.json({ error: 'Document type is required' }, { status: 400 });
+      }
+
+      const document = await prisma.document.create({
+        data: {
+          siteId: body.siteId,
+          name: body.name,
+          type: body.type,
+          fileUrl: body.fileUrl,
+          notes: body.notes || null,
+          uploadedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json(document);
     }
-
-    if (!body.type) {
-      return NextResponse.json({ error: 'Document type is required' }, { status: 400 });
-    }
-
-    const document = await prisma.document.create({
-      data: {
-        siteId: body.siteId,
-        name: body.name,
-        type: body.type,
-        fileUrl: body.fileUrl,
-        uploadedAt: new Date(),
-      },
-    });
-
-    return NextResponse.json(document);
   } catch (error) {
     console.error('Failed to upload document:', error);
     return NextResponse.json({ error: 'Failed to upload document' }, { status: 500 });

@@ -1,0 +1,67 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const equipment = await prisma.equipment.findUnique({
+      where: { id },
+    });
+
+    if (!equipment) {
+      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(equipment);
+  } catch (error) {
+    console.error('Failed to fetch equipment:', error);
+    return NextResponse.json({ error: 'Failed to fetch equipment' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const equipment = await prisma.equipment.update({
+      where: { id },
+      data: {
+        name: body.name,
+        type: body.type || body.machineType,
+        serialNo: body.serialNo || body.serialNumber,
+        rentalCost: body.rentalCost ? parseFloat(body.rentalCost) : undefined,
+        dailyRate: body.dailyRate ? parseFloat(body.dailyRate) : undefined,
+        status: body.status,
+      },
+    });
+
+    return NextResponse.json(equipment);
+  } catch (error) {
+    console.error('Failed to update equipment:', error);
+    return NextResponse.json({ error: 'Failed to update equipment' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await prisma.equipment.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete equipment:', error);
+    return NextResponse.json({ error: 'Failed to delete equipment' }, { status: 500 });
+  }
+}

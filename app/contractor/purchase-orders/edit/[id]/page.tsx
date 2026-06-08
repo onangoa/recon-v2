@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface OrderItem {
   id: string;
@@ -114,7 +113,7 @@ export default function EditPurchaseOrder() {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, toast]);
 
   const addItem = () => {
     setItems([...items, {
@@ -138,7 +137,7 @@ export default function EditPurchaseOrder() {
             ...item, 
             materialId: value, 
             description: selectedItem.name,
-            unitPrice: selectedItem.unitPrice || selectedItem.unitCost || 0
+            unitPrice: selectedItem.unitCost || 0
           } : item
         ));
         return;
@@ -181,17 +180,16 @@ export default function EditPurchaseOrder() {
         }),
       });
 
-      const result = await response.json();
-
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Purchase order "${result.orderNumber}" has been updated.`,
+          description: `Purchase order "${formData.orderNumber}" has been updated.`,
           variant: "success",
         });
         router.push('/contractor/purchase-orders');
         router.refresh();
       } else {
+        const result = await response.json();
         throw new Error(result.error || 'Failed to update purchase order');
       }
     } catch (error: any) {
@@ -207,15 +205,14 @@ export default function EditPurchaseOrder() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -232,235 +229,214 @@ export default function EditPurchaseOrder() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => router.back()}
-            className="h-10 w-10 border border-muted-foreground/10"
-          >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Purchase Order</h1>
+          <p className="text-sm text-gray-500">Update PO details for order #{formData.orderNumber}.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Edit Purchase Order</h1>
-            <p className="text-muted-foreground mt-1 text-sm italic">Update PO details for order #{formData.orderNumber}.</p>
-          </div>
         </div>
       </div>
 
-      {/* Form */}
-      <Card className="border-none shadow-md overflow-hidden">
-        <CardContent className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl">
-            {/* Order Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-muted/20 rounded-xl border border-muted-foreground/5">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Order Number</label>
-                  <input
-                    type="text"
-                    value={formData.orderNumber}
-                    onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                    disabled={isSubmitting}
-                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Supplier *</label>
-                  <select 
-                    value={formData.supplierId}
-                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                    disabled={isSubmitting}
-                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary shadow-sm"
-                  >
-                    <option value="">Select Supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Order Date</label>
-                  <input
-                    type="date"
-                    value={formData.orderDate}
-                    onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
-                    disabled={isSubmitting}
-                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Expected Delivery</label>
-                  <input
-                    type="date"
-                    value={formData.expectedDeliveryDate}
-                    onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
-                    disabled={isSubmitting}
-                    className="w-full rounded-lg border-none bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Items Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/10 rounded">
-                    <Package className="w-4 h-4 text-primary" />
-                  </div>
-                  <h2 className="text-lg font-bold text-foreground">Order Items</h2>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2 border-primary/20 text-primary hover:bg-primary/5">
-                  <Plus className="w-4 h-4" />
-                  Add Item
-                </Button>
-              </div>
-              
-              <div className="border border-muted-foreground/10 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/30">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-black text-[10px] uppercase tracking-wider text-muted-foreground">Inventory Item (Optional)</th>
-                      <th className="px-4 py-3 text-left font-black text-[10px] uppercase tracking-wider text-muted-foreground">Description</th>
-                      <th className="px-4 py-3 text-center font-black text-[10px] uppercase tracking-wider text-muted-foreground w-24">Qty</th>
-                      <th className="px-4 py-3 text-right font-black text-[10px] uppercase tracking-wider text-muted-foreground w-32">Unit Price</th>
-                      <th className="px-4 py-3 text-right font-black text-[10px] uppercase tracking-wider text-muted-foreground w-32">Total</th>
-                      <th className="px-4 py-3 text-center font-black text-[10px] uppercase tracking-wider text-muted-foreground w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-background divide-y divide-muted-foreground/5">
-                    {items.map((item) => (
-                      <tr key={item.id} className="hover:bg-muted/5 transition-colors">
-                        <td className="px-4 py-3">
-                          <select
-                            value={item.materialId || ''}
-                            onChange={(e) => updateItem(item.id, 'materialId', e.target.value)}
-                            disabled={isSubmitting}
-                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary"
-                          >
-                            <option value="">Manual Entry</option>
-                            {inventoryItems.map((inv) => (
-                              <option key={inv.id} value={inv.id}>{inv.name}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            value={item.description}
-                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                            placeholder="Description"
-                            disabled={isSubmitting}
-                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs focus:ring-1 focus:ring-primary"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                            min="1"
-                            disabled={isSubmitting}
-                            className="w-full rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs text-center focus:ring-1 focus:ring-primary font-bold"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <span className="text-[10px] text-muted-foreground">KES</span>
-                            <input
-                              type="number"
-                              value={item.unitPrice}
-                              onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                              min="0"
-                              step="0.01"
-                              disabled={isSubmitting}
-                              className="w-24 rounded-md border-none bg-muted/20 px-3 py-1.5 text-xs text-right focus:ring-1 focus:ring-primary font-bold"
-                            />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-foreground">
-                          KES {(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(item.id)}
-                            disabled={isSubmitting || items.length === 1}
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              <div className="flex justify-end p-4 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Grand Total</p>
-                  <p className="text-2xl font-black text-foreground">
-                    <span className="text-sm font-normal text-muted-foreground mr-1">KES</span>
-                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
+      <div className="rounded-lg border border-gray-200 bg-white p-8">
+        <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-black text-primary uppercase tracking-widest mb-2">Additional Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Enter any special instructions or details..."
-                rows={3}
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Number</label>
+              <input
+                type="text"
+                value={formData.orderNumber}
+                onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
                 disabled={isSubmitting}
-                className="w-full rounded-xl border-none bg-muted/20 px-4 py-3 text-sm focus:ring-2 focus:ring-primary shadow-inner"
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Supplier *</label>
+              <select 
+                value={formData.supplierId}
+                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-4 pt-6 border-t border-muted-foreground/10">
-              <Button 
-                type="submit" 
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Date</label>
+              <input
+                type="date"
+                value={formData.orderDate}
+                onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
                 disabled={isSubmitting}
-                className="gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Updating PO...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    <span className="text-base font-bold">Update Purchase Order</span>
-                  </>
-                )}
-              </Button>
-              <Button 
-                variant="outline" 
-                type="button" 
-                onClick={() => router.back()} 
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Expected Delivery</label>
+              <input
+                type="date"
+                value={formData.expectedDeliveryDate}
+                onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
                 disabled={isSubmitting}
-                className="gap-2 px-8 py-6 rounded-xl border-muted-foreground/20 hover:bg-muted/50"
-              >
-                <X className="w-5 h-5" />
-                <span className="text-base font-medium">Cancel</span>
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Order Items</h3>
+              <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Item
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+            
+            <div className="border border-gray-200 rounded-md overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200 text-gray-500">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium uppercase tracking-wider text-[10px]">Inventory Item</th>
+                    <th className="px-4 py-2 text-left font-medium uppercase tracking-wider text-[10px]">Description</th>
+                    <th className="px-4 py-2 text-center font-medium uppercase tracking-wider text-[10px] w-20">Qty</th>
+                    <th className="px-4 py-2 text-right font-medium uppercase tracking-wider text-[10px] w-32">Unit Price</th>
+                    <th className="px-4 py-2 text-right font-medium uppercase tracking-wider text-[10px] w-32">Total</th>
+                    <th className="px-4 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-2">
+                        <select
+                          value={item.materialId || ''}
+                          onChange={(e) => updateItem(item.id, 'materialId', e.target.value)}
+                          disabled={isSubmitting}
+                          className="w-full rounded border-gray-300 text-xs focus:ring-primary focus:border-primary"
+                        >
+                          <option value="">Manual Entry</option>
+                          {inventoryItems.map((inv) => (
+                            <option key={inv.id} value={inv.id}>{inv.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                          placeholder="Description"
+                          disabled={isSubmitting}
+                          className="w-full rounded border-gray-300 text-xs focus:ring-primary focus:border-primary"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          min="1"
+                          disabled={isSubmitting}
+                          className="w-full rounded border-gray-300 text-xs text-center focus:ring-primary focus:border-primary"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          disabled={isSubmitting}
+                          className="w-full rounded border-gray-300 text-xs text-right focus:ring-primary focus:border-primary"
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium">
+                        KES {(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(item.id)}
+                          disabled={isSubmitting || items.length === 1}
+                          className="h-7 w-7 text-destructive"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase font-medium">Grand Total</p>
+                <p className="text-xl font-bold text-gray-900">
+                  <span className="text-sm font-normal mr-1">KES</span>
+                  {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Enter any additional notes"
+              rows={3}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-6 border-t border-gray-100">
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Update Purchase Order
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => router.back()} 
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -10,7 +10,10 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Upload as UploadIcon
+  Upload as UploadIcon,
+  Plus,
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -25,72 +28,80 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSite } from '@/hooks/use-site';
 
+interface DocumentEntry {
+  id: string;
+  name: string;
+  type: string;
+  fileUrl: string;
+  notes: string;
+  isUploading: boolean;
+  isUploaded: boolean;
+}
+
 export default function CreateDocumentPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { activeSite } = useSite();
   
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    fileUrl: '',
-  });
+  const [documents, setDocuments] = useState<DocumentEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name || selectedFile.name,
-      }));
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      const newEntries: DocumentEntry[] = Array.from(selectedFiles).map(file => ({
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        type: 'other',
+        fileUrl: '',
+        notes: '',
+        isUploading: false,
+        isUploaded: false,
+        file: file // Temporary storage for upload
+      } as any));
+      
+      setDocuments(prev => [...prev, ...newEntries]);
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) {
-      toast({
-        title: "Error",
-        description: "Please select a file first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
+  const uploadFile = async (entry: DocumentEntry & { file: File }) => {
+    setDocuments(prev => prev.map(d => d.id === entry.id ? { ...d, isUploading: true } : d));
+    
     try {
       const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
+      formDataUpload.append('file', entry.file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to upload file');
-      }
+      if (!response.ok) throw new Error('Failed to upload file');
 
       const data = await response.json();
-      setFormData(prev => ({ ...prev, fileUrl: data.fileData }));
       
-      toast({
-        title: "Success",
-        description: "File uploaded successfully!",
-        variant: "success",
-      });
+      setDocuments(prev => prev.map(d => d.id === entry.id ? { 
+        ...d, 
+        fileUrl: data.fileData, 
+        isUploading: false, 
+        isUploaded: true 
+      } : d));
     } catch (error: any) {
+      setDocuments(prev => prev.map(d => d.id === entry.id ? { ...d, isUploading: false } : d));
       toast({
-        title: "Error",
-        description: error.message || "Failed to upload file",
+        title: "Upload Error",
+        description: `Failed to upload ${entry.name}: ${error.message}`,
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
+  };
+
+  const removeDocument = (id: string) => {
+    setDocuments(prev => prev.filter(d => d.id !== id));
+  };
+
+  const updateDocument = (id: string, field: keyof DocumentEntry, value: string) => {
+    setDocuments(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,28 +116,20 @@ export default function CreateDocumentPage() {
       return;
     }
 
-    if (!formData.name.trim()) {
+    if (documents.length === 0) {
       toast({
-        title: "Validation Error",
-        description: "Document name is required.",
+        title: "Error",
+        description: "Please add at least one document.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.type.trim()) {
+    const pendingUploads = documents.filter(d => !d.isUploaded);
+    if (pendingUploads.length > 0) {
       toast({
-        title: "Validation Error", 
-        description: "Document type is required.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.fileUrl.trim()) {
-      toast({
-        title: "Validation Error", 
-        description: "Please upload a file first.",
+        title: "Error",
+        description: "Please wait for all files to finish uploading.",
         variant: "destructive",
       });
       return;
@@ -140,18 +143,19 @@ export default function CreateDocumentPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          siteId: activeSite.id,
-        }),
+        body: JSON.stringify(documents.map(d => ({
+          name: d.name,
+          type: d.type,
+          fileUrl: d.fileUrl,
+          notes: d.notes,
+          siteId: activeSite.id
+        }))),
       });
-
-      const result = await response.json();
 
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Document "${result.name}" has been uploaded.`,
+          description: `${documents.length} document(s) have been uploaded.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -162,18 +166,14 @@ export default function CreateDocumentPage() {
         router.push('/contractor/uploads');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to upload document');
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to save documents');
       }
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <AlertCircle className="h-5 w-5 text-white" />
-          </div>
-        ),
       });
     } finally {
       setIsSubmitting(false);
@@ -193,15 +193,15 @@ export default function CreateDocumentPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Upload New Document</BreadcrumbPage>
+            <BreadcrumbPage>Upload Documents</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Upload New Document</h1>
-          <p className="text-sm text-gray-500">Add a new document or file to your site.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Upload Site Documents</h1>
+          <p className="text-sm text-gray-500">Add documents or files to your site. Bulk upload supported.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -212,82 +212,113 @@ export default function CreateDocumentPage() {
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white p-8">
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">File Upload *</label>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Input
-                  type="file"
-                  onChange={handleFileChange}
-                  disabled={isUploading || isSubmitting}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleUpload}
-                  disabled={!file || isUploading || isSubmitting || !!formData.fileUrl}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <UploadIcon className="w-4 h-4" />
-                      Upload
-                    </>
-                  )}
-                </Button>
-              </div>
-              {formData.fileUrl && (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>File uploaded successfully!</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Document Name *</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-muted/30 border-2 border-dashed border-muted-foreground/20 rounded-xl p-8 text-center">
             <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter document name"
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              type="file"
+              id="file-upload"
+              multiple
+              className="hidden"
+              onChange={handleFilesChange}
             />
+            <label 
+              htmlFor="file-upload"
+              className="flex flex-col items-center cursor-pointer"
+            >
+              <div className="bg-primary/10 p-4 rounded-full mb-4">
+                <UploadIcon className="w-8 h-8 text-primary" />
+              </div>
+              <p className="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, Images, Excel, or Word documents</p>
+            </label>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Document Type *</label>
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            >
-              <option value="">Select Document Type</option>
-              <option value="contract">Contract</option>
-              <option value="invoice">Invoice</option>
-              <option value="report">Report</option>
-              <option value="permit">Permit</option>
-              <option value="insurance">Insurance</option>
-              <option value="blueprint">Blueprint</option>
-              <option value="photo">Photo</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+          {documents.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Document Queue ({documents.length})</h3>
+              <div className="space-y-4">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="p-4 border border-gray-100 rounded-lg bg-gray-50/50 space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="p-2 bg-white rounded border border-gray-100">
+                          <FileText className="w-4 h-4 text-primary" />
+                        </div>
+                        <input
+                          type="text"
+                          value={doc.name}
+                          onChange={(e) => updateDocument(doc.id, 'name', e.target.value)}
+                          className="text-sm font-medium bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-1 flex-1"
+                          placeholder="Document Name"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <select
+                          value={doc.type}
+                          onChange={(e) => updateDocument(doc.id, 'type', e.target.value)}
+                          className="text-xs border-gray-200 rounded-md bg-white px-2 py-1 focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="contract">Contract</option>
+                          <option value="invoice">Invoice</option>
+                          <option value="report">Report</option>
+                          <option value="permit">Permit</option>
+                          <option value="insurance">Insurance</option>
+                          <option value="blueprint">Blueprint</option>
+                          <option value="photo">Photo</option>
+                          <option value="other">Other</option>
+                        </select>
+                        {!doc.isUploaded && !doc.isUploading && (
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="secondary"
+                            onClick={() => uploadFile(doc as any)}
+                            className="h-8 px-3"
+                          >
+                            Upload
+                          </Button>
+                        )}
+                        {doc.isUploading && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Uploading...
+                          </div>
+                        )}
+                        {doc.isUploaded && (
+                          <div className="text-green-600">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeDocument(doc.id)}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <textarea
+                        value={doc.notes}
+                        onChange={(e) => updateDocument(doc.id, 'notes', e.target.value)}
+                        placeholder="Add notes/description for this document..."
+                        className="w-full text-xs border-gray-200 rounded-md bg-white px-3 py-2 focus:ring-1 focus:ring-primary"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-4 pt-4 border-t border-gray-100">
             <Button 
               type="submit" 
-              disabled={isSubmitting || !formData.fileUrl}
+              disabled={isSubmitting || documents.length === 0 || documents.some(d => !d.isUploaded)}
               className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
             >
               {isSubmitting ? (
@@ -298,7 +329,7 @@ export default function CreateDocumentPage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Save Document
+                  Save Documents
                 </>
               )}
             </Button>

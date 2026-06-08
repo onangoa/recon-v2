@@ -295,10 +295,10 @@ export default function InventoryPage() {
                       <span className="text-xs text-muted-foreground">{item.unit}</span>
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">
-                      ${item.unitCost.toFixed(2)}
+                      KSh {item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">
-                      ${item.totalCost.toFixed(2)}
+                      KSh {item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge 

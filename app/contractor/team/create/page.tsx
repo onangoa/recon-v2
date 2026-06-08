@@ -1,0 +1,255 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { 
+  ArrowLeft, 
+  Save, 
+  X, 
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  UserPlus
+} from 'lucide-react';
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
+export default function CreateTeamMemberPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    status: 'Active',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Member name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.role.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Role is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: `Team member "${result.name}" has been added.`,
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+        router.push('/contractor/team');
+        router.refresh();
+      } else {
+        throw new Error(result.error || 'Failed to add team member');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+        action: (
+          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+        ),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/contractor/team">Workforce</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Add Member</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Add Team Member</h1>
+          <p className="text-muted-foreground mt-1 text-sm italic">Register a new staff member to your site workforce.</p>
+        </div>
+        <Button variant="ghost" onClick={() => router.back()} className="gap-2 h-10">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-muted-foreground/10 bg-white shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-muted-foreground/5 bg-muted/5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <UserPlus className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Staff Information</h2>
+              <p className="text-xs text-muted-foreground">Basic details for identification and communication.</p>
+            </div>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Full Name *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. John Doe"
+                disabled={isSubmitting}
+                className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Role *</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary shadow-sm"
+              >
+                <option value="">Select Role</option>
+                <option value="Site Supervisor">Site Supervisor</option>
+                <option value="Safety Officer">Safety Officer</option>
+                <option value="Project Engineer">Project Engineer</option>
+                <option value="Foreman">Foreman</option>
+                <option value="Electrician">Electrician</option>
+                <option value="Plumber">Plumber</option>
+                <option value="Mason">Mason</option>
+                <option value="Carpenter">Carpenter</option>
+                <option value="General Worker">General Worker</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Email Address</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="e.g. john@reconsmi.ke"
+                disabled={isSubmitting}
+                className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Phone Number</label>
+              <input
+                type="text"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="e.g. +254 700 000 000"
+                disabled={isSubmitting}
+                className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary shadow-sm"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-[10px] font-black text-primary uppercase tracking-widest">Current Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              disabled={isSubmitting}
+              className="w-full md:w-1/2 rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary shadow-sm"
+            >
+              <option value="Active">Active</option>
+              <option value="On-Site">On-Site</option>
+              <option value="Off-Duty">Off-Duty</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+
+          <div className="flex gap-4 pt-6 border-t border-muted-foreground/5">
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="gap-2 bg-primary hover:bg-primary/90 text-white px-8 py-6 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Adding Staff...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  <span className="text-base font-bold">Register Member</span>
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => router.back()} 
+              disabled={isSubmitting}
+              className="gap-2 px-8 py-6 rounded-xl border-muted-foreground/20 hover:bg-muted/50"
+            >
+              <X className="w-5 h-5" />
+              <span className="text-base font-medium">Cancel</span>
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

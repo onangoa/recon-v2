@@ -63,7 +63,6 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
     quantity: '',
     unitCost: '',
     supplier: '',
-    status: 'pending',
   });
   
   const [categories, setCategories] = useState<Category[]>([]);
@@ -91,7 +90,6 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
           quantity: data.quantity?.toString() || '0',
           unitCost: data.unitCost?.toString() || '0',
           supplier: data.supplier || '',
-          status: data.status || 'pending',
         });
       } catch (error: any) {
         toast({
@@ -174,7 +172,6 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
           unitCost: unitCost,
           totalCost: quantity * unitCost,
           supplier: formData.supplier || null,
-          status: formData.status,
         }),
       });
 
@@ -286,19 +283,6 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Status</label>
-              <select 
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="pending">Pending</option>
-                <option value="ordered">Ordered</option>
-                <option value="received">Received</option>
               </select>
             </div>
           </div>
