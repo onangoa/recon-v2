@@ -1,0 +1,61 @@
+Phase 1: Configuration (One-time setup)
+
+   1. Define Job Roles (Designations):
+       * Go to Workers > Designations.
+       * Click Add Designation (e.g., "Site Manager", "Mason").
+       * Set the Min/Max Salary. The system uses the Min Salary as the base pay for payroll calculations.
+   2. Set Up Pay Rules (Salary Components):
+       * Go to Payroll > Components.
+       * Add your standard Earnings (e.g., House Allowance) and Deductions (e.g., NHIF, NSSF).
+       * Note: For statutory deductions like NHIF/NSSF, ensure you mark them as Pre-Tax so they are deducted before PAYE calculation.
+
+  Phase 2: Workforce Management
+
+   3. Register Your Workers:
+       * Go to Workers > Add Worker.
+       * Fill in their personal details, National ID, and phone number (crucial for M-Pesa payments).
+       * Assign them a Designation from the list you created in Phase 1.
+
+  Phase 3: The Payroll Cycle
+
+   4. Create a Payroll Period:
+       * Go to Payroll > New Period.
+       * Define the name (e.g., "June 2026") and the date range (e.g., 1st to 30th).
+       * Save to create a Draft period.
+   5. Process Payroll:
+       * Open your newly created period from the Payroll dashboard.
+       * Click Process Payroll.
+       * What happens now: The system automatically identifies all active workers, applies your salary components, calculates the progressive Kenyan
+         PAYE tax, subtracts relief, and generates a Salary Slip for every worker.
+   6. Review and Pay:
+  Key Logic Tips:
+   * PAYE Calculation: The system uses the latest Kenyan tax bands (10% to 35%) and applies the KES 2,400 monthly personal relief automatically.
+   * Net Pay: Net Pay = (Basic + Allowances) - (Pre-tax Deductions + PAYE + Post-tax Deductions).
+
+In this system, you do not manually add workers one by one to a payroll period. Instead, the system uses an Automatic Inclusion logic.
+
+  Here is how it works:
+
+  1. The "Active" Rule
+  When you click "Process Payroll" on a period (e.g., "June 2026"), the system automatically scans your entire workforce. It will include every worker
+  who meets these two criteria:
+   * Status: Must be set to Active.
+   * Designation: Must have a job role assigned (so the system knows their base salary).
+
+  2. How to ensure a worker is included:
+  If a worker is missing from your payroll list, follow these steps:
+   1. Go to the Workers module.
+   2. Find the worker in the list.
+   3. Check their Status. If it's "Inactive" or "Terminated," they will be skipped.
+   4. Ensure they have a Designation (e.g., "Mason").
+   5. If you just added a new worker, simply go back to the Payroll Period and click Process Payroll again. The system will "Upsert" the data—meaning
+      it will add the new worker and update existing ones without creating duplicates.
+
+  3. Summary of the Workflow:
+   * Step 1: Register your workers in the Workers module and set them to Active.
+   * Step 2: Create a Payroll Period (it starts as a Draft).
+   * Step 3: Click Process Payroll. 
+   * Result: The system pulls all your Active workers, calculates their pay, and creates their Salary Slips automatically.
+
+  Pro Tip: If a worker leaves mid-month, change their status to Inactive before you process the payroll to ensure they are excluded from the payment
+  run.
