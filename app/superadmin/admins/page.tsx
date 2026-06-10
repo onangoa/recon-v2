@@ -50,7 +50,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from 'sonner';
+import { useToast } from "@/hooks/use-toast";
 
 interface Admin {
   id: string;
@@ -60,6 +60,7 @@ interface Admin {
 }
 
 export default function AdminsPage() {
+  const { toast } = useToast();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +81,11 @@ export default function AdminsPage() {
       const data = await res.json();
       setAdmins(data);
     } catch (error) {
-      toast.error('Failed to load admins');
+      toast({
+        title: "Error",
+        description: "Failed to load admins",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -98,16 +103,29 @@ export default function AdminsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Admin created successfully');
+        toast({
+          title: "Success",
+          description: "Admin created successfully",
+        });
         setIsCreateDialogOpen(false);
         setFormData({ name: '', email: '', password: '' });
         fetchData();
       } else {
-        toast.error('Failed to create admin');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create admin",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -120,16 +138,29 @@ export default function AdminsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Admin updated successfully');
+        toast({
+          title: "Success",
+          description: "Admin updated successfully",
+        });
         setIsEditDialogOpen(false);
         setSelectedAdmin(null);
         fetchData();
       } else {
-        toast.error('Failed to update admin');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update admin",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -139,14 +170,27 @@ export default function AdminsPage() {
       const res = await fetch(`/api/superadmin/admins/${id}`, {
         method: 'DELETE',
       });
+      const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Admin removed');
+        toast({
+          title: "Deleted",
+          description: "Admin removed",
+        });
         fetchData();
       } else {
-        toast.error('Failed to remove admin');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to remove admin",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 

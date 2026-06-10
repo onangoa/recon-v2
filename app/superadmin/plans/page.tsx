@@ -11,7 +11,11 @@ import {
   Users, 
   Layout,
   MoreVertical,
-  Layers
+  Layers,
+  Power,
+  PowerOff,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   Card, 
@@ -35,7 +39,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { useToast } from "@/hooks/use-toast";
 
 interface Plan {
   id: string;
@@ -43,11 +47,13 @@ interface Plan {
   price: number;
   maxSites: number;
   maxTeamMembers: number;
-  features: string; // JSON string or comma-separated string
+  features: string;
   createdAt: string;
+  isActive: boolean;
 }
 
 export default function PlansPage() {
+  const { toast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -83,7 +89,11 @@ export default function PlansPage() {
       const data = await res.json();
       setPlans(data);
     } catch (error) {
-      toast.error('Failed to load plans');
+      toast({
+        title: "Error",
+        description: "Failed to load plans",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -104,16 +114,29 @@ export default function PlansPage() {
           features: formData.features.filter(f => f.trim() !== ''),
         }),
       });
+      const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Plan created successfully');
+        toast({
+          title: "Success",
+          description: "Plan created successfully",
+        });
         setIsCreateDialogOpen(false);
         setFormData({ name: '', price: '', maxSites: '', maxTeamMembers: '', features: [''] });
         fetchData();
       } else {
-        toast.error('Failed to create plan');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create plan",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -129,16 +152,29 @@ export default function PlansPage() {
           features: formData.features.filter(f => f.trim() !== ''),
         }),
       });
+      const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Plan updated successfully');
+        toast({
+          title: "Success",
+          description: "Plan updated successfully",
+        });
         setIsEditDialogOpen(false);
         setSelectedPlan(null);
         fetchData();
       } else {
-        toast.error('Failed to update plan');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update plan",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -149,14 +185,60 @@ export default function PlansPage() {
         method: 'DELETE',
       });
       const data = await res.json();
+      
       if (res.ok) {
-        toast.success('Plan deleted');
+        toast({
+          title: "Deleted",
+          description: "Plan deleted",
+        });
         fetchData();
       } else {
-        toast.error(data.error || 'Failed to delete plan');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete plan",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleActive = async (plan: Plan) => {
+    const action = plan.isActive ? 'deactivate' : 'activate';
+    if (!confirm(`Are you sure you want to ${action} this plan? ${plan.isActive ? 'Contractors will not be able to select this plan for new subscriptions.' : 'This plan will be available for contractors to select.'}`)) return;
+
+    try {
+      const res = await fetch(`/api/superadmin/plans/${plan.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !plan.isActive }),
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: `Plan ${plan.isActive ? 'deactivated' : 'activated'} successfully`,
+        });
+        fetchData();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || `Failed to ${action} plan`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -262,9 +344,18 @@ export default function PlansPage() {
           </div>
         ) : (
           plans.map((plan) => (
-            <Card key={plan.id} className="border-none shadow-md overflow-hidden group relative flex flex-col">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Card key={plan.id} className={`border-none shadow-md overflow-hidden group relative flex flex-col ${!plan.isActive ? 'opacity-60' : ''}`}>
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <div className="flex gap-1">
+                  <Button 
+                    variant={plan.isActive ? "secondary" : "outline"} 
+                    size="icon" 
+                    className={`h-8 w-8 ${plan.isActive ? 'bg-white/90 backdrop-blur shadow-sm' : 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'}`}
+                    onClick={() => handleToggleActive(plan)}
+                    title={plan.isActive ? "Deactivate Plan" : "Activate Plan"}
+                  >
+                    {plan.isActive ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                  </Button>
                   <Button variant="secondary" size="icon" className="h-8 w-8 bg-white/90 backdrop-blur shadow-sm" onClick={() => openEditDialog(plan)}>
                     <Edit2 className="w-3.5 h-3.5" />
                   </Button>
@@ -273,10 +364,15 @@ export default function PlansPage() {
                   </Button>
                 </div>
               </div>
-              <CardHeader className="bg-primary/5 pb-8">
+              <CardHeader className={`bg-primary/5 pb-8 ${!plan.isActive ? 'bg-muted/20' : ''}`}>
                 <CardTitle className="text-xl font-bold flex items-center gap-2">
                   {plan.name}
                   {plan.price === 0 && <Badge className="bg-emerald-500 hover:bg-emerald-600">Free</Badge>}
+                  {!plan.isActive && (
+                    <Badge variant="outline" className="border-destructive text-destructive">
+                      Inactive
+                    </Badge>
+                  )}
                 </CardTitle>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-3xl font-black text-primary">KES {plan.price.toLocaleString()}</span>

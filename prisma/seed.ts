@@ -63,7 +63,7 @@ async function main() {
     const superadminUser = await prisma.user.create({
       data: {
         email: 'admin@constructionhub.ke',
-        password: 'hashed_admin_password',
+        password: '12345678',
         role: 'superadmin',
         name: 'John Admin',
       },

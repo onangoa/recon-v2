@@ -2,18 +2,34 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const contractors = await prisma.contractor.findMany({
-      include: {
-        user: true,
-        subscriptionPlan: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+
+    const [contractors, total] = await Promise.all([
+      prisma.contractor.findMany({
+        skip,
+        take: limit,
+        include: {
+          user: true,
+          subscriptionPlan: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.contractor.count(),
+    ]);
+
+    return NextResponse.json({
+      contractors,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page,
     });
-    return NextResponse.json(contractors);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch contractors' }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Users, 
   Plus, 
@@ -18,7 +19,10 @@ import {
   Download,
   RefreshCw,
   Copy,
-  Lock
+  Lock,
+  Eye,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Card, 
@@ -90,6 +94,7 @@ interface Plan {
 
 export default function ContractorsPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +104,11 @@ export default function ContractorsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(10);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -131,12 +141,14 @@ export default function ContractorsPage() {
     setLoading(true);
     try {
       const [contractorsRes, plansRes] = await Promise.all([
-        fetch('/api/superadmin/contractors'),
+        fetch(`/api/superadmin/contractors?page=${currentPage}&limit=${limit}`),
         fetch('/api/subscription-plans'),
       ]);
       const contractorsData = await contractorsRes.json();
       const plansData = await plansRes.json();
-      setContractors(contractorsData);
+      
+      setContractors(contractorsData.contractors || []);
+      setTotalPages(contractorsData.pages || 1);
       setPlans(plansData);
     } catch (error) {
       toast({
@@ -151,7 +163,7 @@ export default function ContractorsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,6 +232,8 @@ export default function ContractorsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
+      
       if (res.ok) {
         toast({
           title: "Success",
@@ -231,7 +245,7 @@ export default function ContractorsPage() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to update contractor",
+          description: data.error || "Failed to update contractor",
           variant: "destructive",
         });
       }
@@ -252,6 +266,8 @@ export default function ContractorsPage() {
       const res = await fetch(`/api/superadmin/contractors/${id}`, {
         method: 'DELETE',
       });
+      const data = await res.json();
+      
       if (res.ok) {
         toast({
           title: "Deleted",
@@ -261,7 +277,7 @@ export default function ContractorsPage() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to delete contractor",
+          description: data.error || "Failed to delete contractor",
           variant: "destructive",
         });
       }
@@ -517,11 +533,11 @@ export default function ContractorsPage() {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuLabel>Contractor Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => router.push(`/superadmin/contractors/${contractor.id}`)} className="gap-2">
+                            <Eye className="w-3.5 h-3.5" /> View Contractor
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEditDialog(contractor)} className="gap-2">
                             <Edit2 className="w-3.5 h-3.5" /> Edit Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2">
-                            <ExternalLink className="w-3.5 h-3.5" /> View Analytics
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleDelete(contractor.id)} className="gap-2 text-destructive">
@@ -535,6 +551,46 @@ export default function ContractorsPage() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/5">
+            <div className="text-xs text-muted-foreground">
+              Showing page <span className="font-bold text-foreground">{currentPage}</span> of <span className="font-bold text-foreground">{totalPages}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 w-8 p-0" 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button 
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 w-8 p-0 text-xs"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 w-8 p-0" 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
