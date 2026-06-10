@@ -16,7 +16,8 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
-  CheckCircle2
+  CheckCircle2,
+  MinusCircle
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -58,6 +59,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -100,6 +111,12 @@ export default function InventoryPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Usage recording states
+  const [itemForUsage, setItemForUsage] = useState<InventoryItem | null>(null);
+  const [isUsageDialogOpen, setIsUsageDialogOpen] = useState(false);
+  const [usageQuantity, setUsageQuantity] = useState<string>('');
+  const [usageNotes, setUsageNotes] = useState<string>('');
+
   const fetchInventory = async () => {
     setIsLoading(true);
     setError(null);
@@ -118,6 +135,64 @@ export default function InventoryPage() {
       setError(err.message || 'Something went wrong');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRecordUsage = async () => {
+    if (!itemForUsage || !usageQuantity) return;
+    
+    const qty = parseFloat(usageQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast({
+        title: "Invalid quantity",
+        description: "Please enter a valid quantity greater than zero",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (qty > itemForUsage.quantity) {
+      toast({
+        title: "Insufficient stock",
+        description: `Only ${itemForUsage.quantity} ${itemForUsage.unit} available`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/inventory/${itemForUsage.id}/usage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantity: qty,
+          notes: usageNotes,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Recorded usage of ${qty} ${itemForUsage.unit}`,
+          variant: "success",
+        });
+        setIsUsageDialogOpen(false);
+        setUsageQuantity('');
+        setUsageNotes('');
+        fetchInventory();
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to record usage');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -319,14 +394,23 @@ export default function InventoryPage() {
                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer text-amber-600"
+                            onClick={() => {
+                              setItemForUsage(item);
+                              setIsUsageDialogOpen(true);
+                            }}
+                          >
+                            <MinusCircle className="size-4" /> Record Usage
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
                             onClick={() => {
                               router.push(`/contractor/inventory/edit/${item.id}`);
                             }}
                           >
-                            <Pencil className="size-4" /> Edit
+                            <Pencil className="size-4" /> Edit Item
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 text-destructive cursor-pointer"
@@ -335,7 +419,7 @@ export default function InventoryPage() {
                               setIsDeleteDialogOpen(true);
                             }}
                           >
-                            <Trash2 className="size-4" /> Delete
+                            <Trash2 className="size-4" /> Delete Item
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -419,6 +503,59 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Usage Dialog */}
+      <Dialog open={isUsageDialogOpen} onOpenChange={setIsUsageDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <MinusCircle className="w-5 h-5" /> Record Usage
+            </DialogTitle>
+            <DialogDescription>
+              Record how much of <span className="font-bold text-foreground">"{itemForUsage?.name}"</span> has been used.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity to Use ({itemForUsage?.unit})</Label>
+              <Input
+                id="quantity"
+                type="number"
+                placeholder="0.00"
+                value={usageQuantity}
+                onChange={(e) => setUsageQuantity(e.target.value)}
+                autoFocus
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                Current stock: {itemForUsage?.quantity} {itemForUsage?.unit}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Where was this used? (e.g., Section A foundation)"
+                value={usageNotes}
+                onChange={(e) => setUsageNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUsageDialogOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRecordUsage} 
+              disabled={isSubmitting || !usageQuantity}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Confirm Usage
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

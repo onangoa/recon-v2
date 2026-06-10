@@ -171,34 +171,6 @@ export default function PurchaseOrdersList() {
     }
   };
 
-  const markAsDelivered = async (id: string) => {
-    try {
-      const response = await fetch(`/api/purchase-orders/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'delivered' }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Updated",
-          description: "Order marked as delivered and inventory updated",
-          variant: "success",
-        });
-        fetchOrders();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update order');
-      }
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -329,18 +301,16 @@ export default function PurchaseOrdersList() {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
+                            onClick={() => router.push(`/contractor/purchase-orders/${order.id}`)}
+                          >
+                            <Eye className="size-4" /> View Order
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
                             onClick={() => router.push(`/contractor/purchase-orders/edit/${order.id}`)}
                           >
                             <Pencil className="size-4" /> Edit Order
                           </DropdownMenuItem>
-                          {order.status !== 'delivered' && (
-                            <DropdownMenuItem 
-                              className="gap-2 cursor-pointer text-emerald-600"
-                              onClick={() => markAsDelivered(order.id)}
-                            >
-                              <PackageCheck className="size-4" /> Mark Delivered
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem className="gap-2 cursor-pointer">
                             <Download className="w-4 h-4" /> Download PDF
                           </DropdownMenuItem>
