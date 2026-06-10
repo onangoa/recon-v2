@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Loader2,
   ArrowLeft,
   Save,
   X,
+  UserPlus,
   CheckCircle2
 } from 'lucide-react';
 import { 
@@ -26,15 +27,12 @@ interface Designation {
   title: string;
 }
 
-export default function EditWorkerPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function CreateWorkerPage() {
   const { toast } = useToast();
   const router = useRouter();
-  
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,59 +40,52 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     nationalId: '',
     designationId: '',
     status: 'Active',
-    joinedAt: ''
+    joinedAt: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
+    const fetchDesignations = async () => {
       try {
-        const [workerRes, designRes] = await Promise.all([
-          fetch(`/api/workers/${id}`),
-          fetch('/api/designations')
-        ]);
-
-        if (!workerRes.ok) throw new Error('Failed to fetch worker');
-        if (!designRes.ok) throw new Error('Failed to fetch designations');
-
-        const worker = await workerRes.json();
-        const designs = await designRes.json();
-
-        setDesignations(designs);
-        setFormData({
-          name: worker.name,
-          email: worker.email || '',
-          phone: worker.phone || '',
-          nationalId: worker.nationalId || '',
-          designationId: worker.designationId || '',
-          status: worker.status,
-          joinedAt: worker.joinedAt ? new Date(worker.joinedAt).toISOString().split('T')[0] : ''
-        });
-      } catch (err: any) {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
-      } finally {
-        setIsLoading(false);
+        const response = await fetch('/api/designations');
+        if (response.ok) {
+          const data = await response.json();
+          setDesignations(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch designations');
       }
     };
-
-    fetchData();
-  }, [id, toast]);
+    fetchDesignations();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim() || !formData.designationId) {
+      toast({
+        title: "Validation Error",
+        description: "Name and Designation are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/workers/${id}`, {
-        method: 'PUT',
+      const response = await fetch('/api/workers', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          contractorId: 'placeholder-id',
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to update worker');
+      if (!response.ok) throw new Error('Failed to create worker');
 
       toast({
         title: "Success!",
-        description: "Worker profile updated successfully.",
+        description: `Worker "${formData.name}" has been registered.`,
         variant: "success",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -104,20 +95,15 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
       });
       router.push('/contractor/workers');
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground italic">Loading worker data...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -127,14 +113,14 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           <BreadcrumbSeparator />
           <BreadcrumbItem><BreadcrumbLink href="/contractor/workers">Workers</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem><BreadcrumbPage>Edit Worker</BreadcrumbPage></BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbPage>Add Worker</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Edit Worker Profile</h1>
-          <p className="text-sm text-gray-500 italic">Modify personal and employment details for {formData.name}.</p>
+          <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Add New Worker</h1>
+          <p className="text-sm text-gray-500 italic">Register a new employee into your workforce.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -153,6 +139,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Enter worker's full name"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 required
@@ -164,6 +151,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 type="text"
                 value={formData.nationalId}
                 onChange={(e) => setFormData({...formData, nationalId: e.target.value})}
+                placeholder="ID Number"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
@@ -177,6 +165,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="example@email.com"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
@@ -187,13 +176,14 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 type="text"
                 value={formData.phone}
                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="+254..."
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Job Designation *</label>
               <select
@@ -207,19 +197,6 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 {designations.map((d) => (
                   <option key={d.id} value={d.id}>{d.title}</option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Terminated">Terminated</option>
               </select>
             </div>
             <div>
@@ -248,7 +225,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Update Profile
+                  Save Worker
                 </>
               )}
             </Button>

@@ -5,14 +5,43 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
+    const search = searchParams.get('search');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
 
-    const workers = await prisma.worker.findMany({
-      where: contractorId ? { contractorId } : {},
-      include: {
-        designation: true,
-      },
+    const where = {
+      ...(contractorId ? { contractorId } : {}),
+      ...(search ? {
+        OR: [
+          { name: { contains: search } },
+          { email: { contains: search } },
+          { phone: { contains: search } },
+          { nationalId: { contains: search } },
+        ]
+      } : {})
+    };
+
+    const [workers, total] = await Promise.all([
+      prisma.worker.findMany({
+        where,
+        include: { designation: true },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.worker.count({ where })
+    ]);
+
+    return NextResponse.json({
+      workers,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
     });
-    return NextResponse.json(workers);
   } catch (error) {
     console.error('Failed to fetch workers:', error);
     return NextResponse.json({ error: 'Failed to fetch workers' }, { status: 500 });

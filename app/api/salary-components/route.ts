@@ -5,14 +5,33 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '100'); // Default 100 for components as they are usually few
+    const skip = (page - 1) * limit;
 
-    const components = await prisma.salaryComponent.findMany({
-      where: contractorId ? { contractorId } : {},
-      orderBy: {
-        sortOrder: 'asc',
-      },
+    const where = contractorId ? { contractorId } : {};
+
+    const [components, total] = await Promise.all([
+      prisma.salaryComponent.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          sortOrder: 'asc',
+        },
+      }),
+      prisma.salaryComponent.count({ where })
+    ]);
+
+    return NextResponse.json({
+      components,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
     });
-    return NextResponse.json(components);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch salary components' }, { status: 500 });
   }

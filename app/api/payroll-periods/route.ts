@@ -5,21 +5,37 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
 
-    // Fetch periods for the contractor (or all if none specified for now)
-    const periods = await prisma.payrollPeriod.findMany({
-      where: contractorId ? { contractorId } : {},
-      include: {
-        createdBy: true,
-        _count: {
-          select: { salarySlips: true }
-        }
-      },
-      orderBy: {
-        startDate: 'desc',
-      },
+    const where = contractorId ? { contractorId } : {};
+
+    const [periods, total] = await Promise.all([
+      prisma.payrollPeriod.findMany({
+        where,
+        include: {
+          createdBy: true,
+          _count: {
+            select: { salarySlips: true }
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: { startDate: 'desc' }
+      }),
+      prisma.payrollPeriod.count({ where })
+    ]);
+
+    return NextResponse.json({
+      periods,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
     });
-    return NextResponse.json(periods);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch payroll periods' }, { status: 500 });
   }

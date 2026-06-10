@@ -15,6 +15,7 @@ import {
   Filter,
   Loader2,
   ChevronRight,
+  ChevronLeft,
   FileText,
   Settings2,
   ArrowUpRight,
@@ -77,14 +78,21 @@ export default function PayrollPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
   const fetchPeriods = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/payroll-periods');
+      const response = await fetch(`/api/payroll-periods?page=${currentPage}&limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch payroll periods');
       const data = await response.json();
-      setPeriods(data);
+      setPeriods(data.periods);
+      setTotalPages(data.pagination.pages);
+      setTotalCount(data.pagination.total);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -94,7 +102,7 @@ export default function PayrollPage() {
 
   useEffect(() => {
     fetchPeriods();
-  }, []);
+  }, [currentPage]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -160,7 +168,7 @@ export default function PayrollPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Total Periods</p>
-                <h3 className="text-2xl font-bold">{periods.length}</h3>
+                <h3 className="text-2xl font-bold">{totalCount}</h3>
               </div>
             </div>
           </CardContent>
@@ -302,6 +310,50 @@ export default function PayrollPage() {
             </Table>
           )}
         </CardContent>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-muted/5">
+            <p className="text-sm text-muted-foreground italic">
+              Showing <span className="font-bold">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold">{Math.min(currentPage * limit, totalCount)}</span> of <span className="font-bold">{totalCount}</span> periods
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(p)}
+                    disabled={isLoading}
+                    className={`h-8 w-8 p-0 ${currentPage === p ? 'bg-primary text-white' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

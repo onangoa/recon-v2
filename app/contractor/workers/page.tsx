@@ -94,6 +94,11 @@ export default function WorkersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -102,10 +107,15 @@ export default function WorkersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/workers');
+      let url = `/api/workers?page=${currentPage}&limit=${limit}`;
+      if (searchQuery) url += `&search=${searchQuery}`;
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch workers');
       const data = await response.json();
-      setWorkers(data);
+      setWorkers(data.workers);
+      setTotalPages(data.pagination.pages);
+      setTotalCount(data.pagination.total);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -114,8 +124,17 @@ export default function WorkersPage() {
   };
 
   useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (currentPage !== 1) setCurrentPage(1);
+      else fetchWorkers();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  useEffect(() => {
     fetchWorkers();
-  }, []);
+  }, [currentPage]);
 
   const handleDelete = async () => {
     if (!workerToDelete) return;
@@ -156,12 +175,6 @@ export default function WorkersPage() {
       .toUpperCase()
       .substring(0, 2);
   };
-
-  const filteredWorkers = workers.filter(w => 
-    w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.designation?.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.phone?.includes(searchQuery)
-  );
 
   return (
     <div className="space-y-6">
@@ -207,7 +220,7 @@ export default function WorkersPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Total Workers</p>
-                <h3 className="text-2xl font-bold">{workers.length}</h3>
+                <h3 className="text-2xl font-bold">{totalCount}</h3>
               </div>
             </div>
           </CardContent>
@@ -275,7 +288,7 @@ export default function WorkersPage() {
               <AlertCircle className="h-8 w-8" />
               <p className="text-sm font-medium">{error}</p>
             </div>
-          ) : filteredWorkers.length === 0 ? (
+          ) : workers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
               <Users className="h-8 w-8 opacity-20" />
               <p className="text-sm italic">No workers found.</p>
@@ -292,7 +305,7 @@ export default function WorkersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWorkers.map((worker) => (
+                {workers.map((worker) => (
                   <TableRow key={worker.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -356,6 +369,50 @@ export default function WorkersPage() {
             </Table>
           )}
         </CardContent>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-muted/5">
+            <p className="text-sm text-muted-foreground italic">
+              Showing <span className="font-bold">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold">{Math.min(currentPage * limit, totalCount)}</span> of <span className="font-bold">{totalCount}</span> workers
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(p)}
+                    disabled={isLoading}
+                    className={`h-8 w-8 p-0 ${currentPage === p ? 'bg-primary text-white' : ''}`}
+                  >
+                    {p}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || isLoading}
+                className="gap-1 h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
