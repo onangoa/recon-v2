@@ -17,7 +17,8 @@ import {
   AlertCircle,
   ChevronLeft,
   CheckCircle2,
-  MinusCircle
+  MinusCircle,
+  Eye
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -347,12 +348,12 @@ export default function InventoryPage() {
                 {inventory.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
+                      <Link href={`/contractor/inventory/${item.id}`} className="flex items-center gap-3 group/link">
+                        <div className="p-2 bg-primary/10 rounded-lg group-hover/link:bg-primary/20 transition-colors">
                           <Package className="size-4 text-primary" />
                         </div>
-                        <span className="font-bold text-sm text-foreground">{item.name}</span>
-                      </div>
+                        <span className="font-bold text-sm text-foreground group-hover/link:text-primary transition-colors">{item.name}</span>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       {item.categoryRel ? (
@@ -395,6 +396,14 @@ export default function InventoryPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onClick={() => {
+                              router.push(`/contractor/inventory/${item.id}`);
+                            }}
+                          >
+                            <Eye className="size-4" /> View Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer text-amber-600"
                             onClick={() => {

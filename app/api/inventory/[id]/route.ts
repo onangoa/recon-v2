@@ -11,6 +11,11 @@ export async function GET(
       where: { id },
       include: {
         categoryRel: true,
+        movements: {
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
         site: {
           include: {
             contractor: true
