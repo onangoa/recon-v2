@@ -22,14 +22,31 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, companyName, location, phoneNumber, licenseNo, subscriptionPlanId } = body;
+    const { name, email, companyName, location, phoneNumber, licenseNo, subscriptionPlanId, password } = body;
+
+    // Validate plan
+    if (!subscriptionPlanId) {
+      return NextResponse.json({ error: 'Subscription plan is mandatory' }, { status: 400 });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'A user with this email address already exists' },
+        { status: 400 }
+      );
+    }
 
     // Create user first
     const user = await prisma.user.create({
       data: {
         email,
         name,
-        password: crypto.randomBytes(8).toString('hex'), // Random password for now
+        password: password || crypto.randomBytes(8).toString('hex'),
         role: 'contractor',
       },
     });

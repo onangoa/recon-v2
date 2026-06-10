@@ -15,7 +15,10 @@ import {
   ShieldCheck,
   ExternalLink,
   Filter,
-  Download
+  Download,
+  RefreshCw,
+  Copy,
+  Lock
 } from 'lucide-react';
 import { 
   Card, 
@@ -61,7 +64,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from 'sonner';
+import { useToast } from "@/hooks/use-toast";
 
 interface Contractor {
   id: string;
@@ -86,12 +89,15 @@ interface Plan {
 }
 
 export default function ContractorsPage() {
+  const { toast } = useToast();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
 
   // Form states
@@ -103,7 +109,23 @@ export default function ContractorsPage() {
     phoneNumber: '',
     licenseNo: '',
     subscriptionPlanId: '',
+    password: '',
   });
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({ ...prev, password }));
+  };
+
+  useEffect(() => {
+    if (isCreateDialogOpen) {
+      generatePassword();
+    }
+  }, [isCreateDialogOpen]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -117,7 +139,11 @@ export default function ContractorsPage() {
       setContractors(contractorsData);
       setPlans(plansData);
     } catch (error) {
-      toast.error('Failed to load data');
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -129,14 +155,31 @@ export default function ContractorsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.subscriptionPlanId) {
+      toast({
+        title: "Required",
+        description: "Please select a subscription plan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreating(true);
     try {
       const res = await fetch('/api/superadmin/contractors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+
+      const data = await res.json();
+
       if (res.ok) {
-        toast.success('Contractor created successfully');
+        toast({
+          title: "Success",
+          description: "Contractor created successfully",
+        });
         setIsCreateDialogOpen(false);
         setFormData({
           name: '',
@@ -146,19 +189,31 @@ export default function ContractorsPage() {
           phoneNumber: '',
           licenseNo: '',
           subscriptionPlanId: '',
+          password: '',
         });
         fetchData();
       } else {
-        toast.error('Failed to create contractor');
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create contractor",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContractor) return;
+    setIsUpdating(true);
     try {
       const res = await fetch(`/api/superadmin/contractors/${selectedContractor.id}`, {
         method: 'PATCH',
@@ -166,15 +221,28 @@ export default function ContractorsPage() {
         body: JSON.stringify(formData),
       });
       if (res.ok) {
-        toast.success('Contractor updated successfully');
+        toast({
+          title: "Success",
+          description: "Contractor updated successfully",
+        });
         setIsEditDialogOpen(false);
         setSelectedContractor(null);
         fetchData();
       } else {
-        toast.error('Failed to update contractor');
+        toast({
+          title: "Error",
+          description: "Failed to update contractor",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -185,13 +253,24 @@ export default function ContractorsPage() {
         method: 'DELETE',
       });
       if (res.ok) {
-        toast.success('Contractor deleted');
+        toast({
+          title: "Deleted",
+          description: "Contractor deleted",
+        });
         fetchData();
       } else {
-        toast.error('Failed to delete contractor');
+        toast({
+          title: "Error",
+          description: "Failed to delete contractor",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast({
+        title: "Error",
+        description: "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -205,6 +284,7 @@ export default function ContractorsPage() {
       phoneNumber: contractor.phoneNumber,
       licenseNo: contractor.licenseNo,
       subscriptionPlanId: contractor.subscriptionPlanId,
+      password: '',
     });
     setIsEditDialogOpen(true);
   };
@@ -248,6 +328,46 @@ export default function ContractorsPage() {
                     <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" required />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Login Password (Generated)</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="password" 
+                        value={formData.password} 
+                        onChange={e => setFormData({...formData, password: e.target.value})} 
+                        className="pl-9 font-mono bg-muted/30"
+                        required 
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={generatePassword}
+                      title="Regenerate Password"
+                      className="h-10 w-10"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(formData.password);
+                        toast.success('Password copied to clipboard');
+                      }}
+                      title="Copy Password"
+                      className="h-10 w-10"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
                   <Input id="companyName" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} placeholder="Legal Company Name" required />
@@ -264,11 +384,11 @@ export default function ContractorsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="licenseNo">License Number</Label>
+                    <Label htmlFor="licenseNo">License Number *</Label>
                     <Input id="licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} placeholder="NCA-..." required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="plan">Subscription Plan</Label>
+                    <Label htmlFor="plan">Subscription Plan *</Label>
                     <Select value={formData.subscriptionPlanId} onValueChange={val => setFormData({...formData, subscriptionPlanId: val})}>
                       <SelectTrigger id="plan">
                         <SelectValue placeholder="Select Plan" />
@@ -282,8 +402,17 @@ export default function ContractorsPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit">Create Contractor</Button>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>Cancel</Button>
+                  <Button type="submit" disabled={isCreating}>
+                    {isCreating ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Contractor'
+                    )}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -461,8 +590,17 @@ export default function ContractorsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isUpdating}>Cancel</Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
