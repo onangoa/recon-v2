@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -79,6 +80,18 @@ export async function POST(request: Request) {
         },
       });
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: contractorId,
+      action: 'CREATE',
+      module: 'SITES',
+      description: `Created new site: ${site.name}`,
+      targetId: site.id,
+      details: { name: site.name, location: site.location }
+    });
+
     return NextResponse.json(site);
   } catch (error) {
     console.error('Failed to create site:', error);

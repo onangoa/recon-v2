@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -9,6 +10,7 @@ export async function GET(
     const { id } = await params;
     const visitor = await prisma.visitor.findUnique({
       where: { id },
+      include: { site: true }
     });
 
     if (!visitor) {
@@ -41,6 +43,17 @@ export async function PUT(
         attachmentName: body.attachmentName,
         attachmentUrl: body.attachmentUrl,
       },
+      include: { site: true }
+    });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: visitor.site.contractorId,
+      action: 'UPDATE',
+      module: 'VISITORS',
+      description: `Updated visitor: ${visitor.name}`,
+      targetId: visitor.id,
+      details: { name: visitor.name, checkOutTime: visitor.checkOutTime }
     });
 
     return NextResponse.json(visitor);
@@ -56,6 +69,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const visitor = await prisma.visitor.findUnique({
+      where: { id },
+      include: { site: true }
+    });
+
+    if (visitor && visitor.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: visitor.site.contractorId,
+        action: 'DELETE',
+        module: 'VISITORS',
+        description: `Deleted visitor: ${visitor.name}`,
+        targetId: visitor.id,
+        details: { name: visitor.name, company: visitor.company }
+      });
+    }
+
     await prisma.visitor.delete({
       where: { id },
     });

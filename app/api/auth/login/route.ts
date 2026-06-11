@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { email, password } = body;
 
-    // Find user
+    // Find user with contractor relation
     const user = await prisma.user.findUnique({
       where: { email },
+      include: { contractor: true }
     });
 
     if (!user || user.password !== password) {
@@ -25,6 +27,17 @@ export async function POST(request: NextRequest) {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
+
+    // Log login activity if contractor exists
+    if (user.contractor) {
+      await ActivityLogger.log({
+        userId: user.id,
+        contractorId: user.contractor.id,
+        action: 'LOGIN',
+        module: 'SETTINGS',
+        description: `${user.name} logged in`,
+      });
+    }
 
     // Set session cookie
     const response = NextResponse.json(

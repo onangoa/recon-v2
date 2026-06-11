@@ -145,12 +145,21 @@ export default function ContractorDashboard() {
           workers: visitorsData.visitors ? visitorsData.visitors.length : (Array.isArray(visitorsData) ? visitorsData.length : 0),
         });
 
-        setActivities([
-          { id: '1', action: 'received 50 bags of cement', timestamp: '2 hours ago', user: 'Antwon', type: 'create' },
-          { id: '2', action: 'updated task "Excavation" status', timestamp: '4 hours ago', user: 'James', type: 'update' },
-          { id: '3', action: 'added new visitor log', timestamp: '5 hours ago', user: 'Antwon', type: 'create' },
-          { id: '4', action: 'deleted outdated report', timestamp: '1 day ago', user: 'System', type: 'delete' },
-        ]);
+        // Fetch real activity logs
+        const contractorIdParam = activeSite ? `&contractorId=${activeSite.contractorId}` : '';
+        const logsRes = await fetch(`/api/activity-logs?limit=5${contractorIdParam}`);
+        const logsData = await logsRes.json();
+        if (logsData.logs) {
+          setActivities(logsData.logs.map((log: any) => ({
+            id: log.id,
+            action: log.description,
+            timestamp: getTimeLabel(log.createdAt),
+            user: log.user.name,
+            type: log.action.toLowerCase() === 'create' ? 'create' : 
+                  log.action.toLowerCase() === 'update' ? 'update' : 
+                  log.action.toLowerCase() === 'delete' ? 'delete' : 'info'
+          })));
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -159,6 +168,17 @@ export default function ContractorDashboard() {
     };
     fetchData();
   }, [activeSite]);
+
+  const getTimeLabel = (date: string) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return d.toLocaleDateString();
+  };
 
   const MetricCard = ({ label, value, icon: Icon, trend, trendValue, colorClass }: any) => (
     <Card className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +28,6 @@ export async function GET(request: NextRequest) {
       prisma.payrollPeriod.count({ where })
     ]);
 
-    // Enrich periods with accurate worker count
     const enrichedPeriods = await Promise.all(periods.map(async (period) => {
       let workerCount = period.totalEmployees;
       
@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
     let contractorId = body.contractorId;
     if (!contractorId || contractorId === 'placeholder-id') {
       const firstContractor = await prisma.contractor.findFirst();
@@ -93,6 +92,17 @@ export async function POST(request: NextRequest) {
         status: 'draft',
       },
     });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: period.contractorId,
+      action: 'CREATE',
+      module: 'PAYROLL',
+      description: `Created payroll period: ${period.name}`,
+      targetId: period.id,
+      details: { name: period.name, paymentFrequency: period.paymentFrequency, status: period.status }
+    });
+
     return NextResponse.json(period, { status: 201 });
   } catch (error) {
     console.error('Failed to create payroll period:', error);

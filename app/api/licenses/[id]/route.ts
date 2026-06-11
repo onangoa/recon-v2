@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -9,6 +10,7 @@ export async function GET(
     const { id } = await params;
     const license = await prisma.license.findUnique({
       where: { id },
+      include: { site: true }
     });
 
     if (!license) {
@@ -43,7 +45,20 @@ export async function PATCH(
         status: body.status,
         notes: body.notes,
       },
+      include: { site: true }
     });
+
+    if (license.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: license.site.contractorId,
+        action: 'UPDATE',
+        module: 'DOCUMENTS',
+        description: `Updated license: ${license.name}`,
+        targetId: license.id,
+        details: { name: license.name, status: license.status }
+      });
+    }
 
     return NextResponse.json(license);
   } catch (error) {
@@ -58,6 +73,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const license = await prisma.license.findUnique({
+      where: { id },
+      include: { site: true }
+    });
+
+    if (license && license.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: license.site.contractorId,
+        action: 'DELETE',
+        module: 'DOCUMENTS',
+        description: `Deleted license: ${license.name}`,
+        targetId: license.id,
+        details: { name: license.name, licenseNumber: license.licenseNumber }
+      });
+    }
+
     await prisma.license.delete({
       where: { id },
     });

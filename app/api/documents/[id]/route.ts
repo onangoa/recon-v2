@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -9,6 +10,7 @@ export async function GET(
     const { id } = await params;
     const document = await prisma.document.findUnique({
       where: { id },
+      include: { site: true }
     });
 
     if (!document) {
@@ -38,6 +40,17 @@ export async function PUT(
         fileUrl: body.fileUrl,
         notes: body.notes || null,
       },
+      include: { site: true }
+    });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: document.site.contractorId,
+      action: 'UPDATE',
+      module: 'DOCUMENTS',
+      description: `Updated document: ${document.name}`,
+      targetId: document.id,
+      details: { name: document.name, type: document.type }
     });
 
     return NextResponse.json(document);
@@ -53,6 +66,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const document = await prisma.document.findUnique({
+      where: { id },
+      include: { site: true }
+    });
+
+    if (document && document.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: document.site.contractorId,
+        action: 'DELETE',
+        module: 'DOCUMENTS',
+        description: `Deleted document: ${document.name}`,
+        targetId: document.id,
+        details: { name: document.name, type: document.type }
+      });
+    }
+
     await prisma.document.delete({
       where: { id },
     });

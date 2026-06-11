@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,25 @@ export async function POST(request: NextRequest) {
         { error: 'No session found' },
         { status: 401 }
       );
+    }
+
+    // Get session with user and contractor details before deleting
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { user: { include: { contractor: true } } }
+    });
+
+    if (session) {
+      // Log logout activity if contractor exists
+      if (session.user.contractor) {
+        await ActivityLogger.log({
+          userId: session.user.id,
+          contractorId: session.user.contractor.id,
+          action: 'LOGOUT',
+          module: 'SETTINGS',
+          description: `${session.user.name} logged out`,
+        });
+      }
     }
 
     // Delete session

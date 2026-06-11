@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -59,6 +60,16 @@ export async function PUT(
       });
     });
 
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: updatedSite.contractorId,
+      action: 'UPDATE',
+      module: 'SITES',
+      description: `Updated site: ${updatedSite.name}`,
+      targetId: updatedSite.id,
+    });
+
     return NextResponse.json(updatedSite);
   } catch (error: any) {
     console.error('Failed to update site:', error);
@@ -112,6 +123,16 @@ export async function DELETE(
 
     await prisma.site.delete({
       where: { id },
+    });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: site.contractorId,
+      action: 'DELETE',
+      module: 'SITES',
+      description: `Deleted site: ${site.name}`,
+      targetId: site.id,
     });
 
     return NextResponse.json({ message: 'Site deleted successfully' });

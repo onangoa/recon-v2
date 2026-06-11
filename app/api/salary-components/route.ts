@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '100'); // Default 100 for components as they are usually few
+    const limit = parseInt(searchParams.get('limit') || '100');
     const skip = (page - 1) * limit;
 
     const where = contractorId ? { contractorId } : {};
@@ -56,6 +57,17 @@ export async function POST(request: NextRequest) {
         contractorId: body.contractorId,
       },
     });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: component.contractorId,
+      action: 'CREATE',
+      module: 'PAYROLL',
+      description: `Created salary component: ${component.name}`,
+      targetId: component.id,
+      details: { name: component.name, type: component.type, calculationType: component.calculationType }
+    });
+
     return NextResponse.json(component, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create salary component' }, { status: 500 });

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -9,6 +10,7 @@ export async function GET(
     const { id } = await params;
     const equipment = await prisma.equipment.findUnique({
       where: { id },
+      include: { site: true }
     });
 
     if (!equipment) {
@@ -47,6 +49,17 @@ export async function PATCH(
         status: body.status,
         notes: body.notes,
       },
+      include: { site: true }
+    });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: equipment.site.contractorId,
+      action: 'UPDATE',
+      module: 'EQUIPMENT',
+      description: `Updated equipment: ${equipment.name}`,
+      targetId: equipment.id,
+      details: { name: equipment.name, type: equipment.type, status: equipment.status }
     });
 
     return NextResponse.json(equipment);
@@ -62,6 +75,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const equipment = await prisma.equipment.findUnique({
+      where: { id },
+      include: { site: true }
+    });
+
+    if (equipment) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: equipment.site.contractorId,
+        action: 'DELETE',
+        module: 'EQUIPMENT',
+        description: `Deleted equipment: ${equipment.name}`,
+        targetId: equipment.id,
+        details: { name: equipment.name, type: equipment.type, serialNo: equipment.serialNo }
+      });
+    }
+
     await prisma.equipment.delete({
       where: { id },
     });

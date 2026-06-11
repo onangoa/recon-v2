@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -12,6 +13,7 @@ export async function GET(
       include: {
         supplier: true,
         items: true,
+        site: true,
       },
     });
 
@@ -55,7 +57,7 @@ export async function PATCH(
           orderDate: poData.orderDate ? new Date(poData.orderDate) : undefined,
           expectedDeliveryDate: poData.expectedDeliveryDate ? new Date(poData.expectedDeliveryDate) : undefined,
           items: items ? {
-            deleteMany: {}, // Simplest way to update items: delete and recreate
+            deleteMany: {},
             create: items.map((item: any) => ({
               description: item.description,
               quantity: item.quantity || 1,
@@ -68,6 +70,7 @@ export async function PATCH(
         include: {
           items: true,
           supplier: true,
+          site: true,
         }
       });
 
@@ -87,7 +90,7 @@ export async function PATCH(
                 where: { id: item.materialId },
                 data: {
                   quantity: newQuantity,
-                  totalCost: newQuantity * material.unitCost, // Keep total cost in sync
+                  totalCost: newQuantity * material.unitCost,
                   status: 'received',
                   updatedAt: new Date(),
                 }
@@ -111,6 +114,18 @@ export async function PATCH(
       return updatedPO;
     });
 
+    if (result.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: result.site.contractorId,
+        action: 'UPDATE',
+        module: 'PURCHASE_ORDERS',
+        description: `Updated purchase order: ${result.orderNumber}`,
+        targetId: result.id,
+        details: { orderNumber: result.orderNumber, status: result.status, total: result.total }
+      });
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('Failed to update purchase order:', error);
@@ -124,6 +139,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: { site: true }
+    });
+
+    if (purchaseOrder && purchaseOrder.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: purchaseOrder.site.contractorId,
+        action: 'DELETE',
+        module: 'PURCHASE_ORDERS',
+        description: `Deleted purchase order: ${purchaseOrder.orderNumber}`,
+        targetId: purchaseOrder.id,
+        details: { orderNumber: purchaseOrder.orderNumber }
+      });
+    }
+
     await prisma.purchaseOrder.delete({
       where: { id },
     });

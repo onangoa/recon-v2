@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -59,7 +60,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Role is required' }, { status: 400 });
     }
 
-    // Get the first contractor for now
     const contractor = await prisma.contractor.findFirst();
     if (!contractor) {
       return NextResponse.json({ error: 'No contractor found' }, { status: 404 });
@@ -74,6 +74,16 @@ export async function POST(request: Request) {
         phone: body.phone || null,
         status: body.status || 'Active',
       },
+    });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: contractor.id,
+      action: 'CREATE',
+      module: 'TEAM',
+      description: `Added team member: ${member.name}`,
+      targetId: member.id,
+      details: { name: member.name, role: member.role, email: member.email, phone: member.phone }
     });
 
     return NextResponse.json(member);

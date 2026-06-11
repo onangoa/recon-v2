@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -63,6 +64,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'License number is required' }, { status: 400 });
     }
 
+    const site = body.siteId ? await prisma.site.findUnique({
+      where: { id: body.siteId }
+    }) : null;
+
     const license = await prisma.license.create({
       data: {
         site: body.siteId ? { connect: { id: body.siteId } } : undefined,
@@ -79,6 +84,18 @@ export async function POST(request: Request) {
         notes: body.notes || null,
       },
     });
+
+    if (site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: site.contractorId,
+        action: 'CREATE',
+        module: 'DOCUMENTS',
+        description: `Added license: ${license.name}`,
+        targetId: license.id,
+        details: { name: license.name, licenseNumber: license.licenseNumber, status: license.status }
+      });
+    }
 
     return NextResponse.json(license);
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -67,6 +68,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Purpose is required' }, { status: 400 });
     }
 
+    const site = await prisma.site.findUnique({
+      where: { id: body.siteId }
+    });
+
     const visitor = await prisma.visitor.create({
       data: {
         site: {
@@ -82,6 +87,18 @@ export async function POST(request: Request) {
         attachmentUrl: body.attachmentUrl || null,
       },
     });
+
+    if (site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: site.contractorId,
+        action: 'CREATE',
+        module: 'VISITORS',
+        description: `Checked in visitor: ${visitor.name}`,
+        targetId: visitor.id,
+        details: { name: visitor.name, company: visitor.company, purpose: visitor.purpose }
+      });
+    }
 
     return NextResponse.json(visitor);
   } catch (error) {

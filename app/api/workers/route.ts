@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,6 +85,18 @@ export async function POST(request: NextRequest) {
         designation: true,
       },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', // In a real app, get from session
+      contractorId: contractorId,
+      action: 'CREATE',
+      module: 'WORKERS',
+      description: `Added new worker: ${worker.name}`,
+      targetId: worker.id,
+      details: { name: worker.name, designation: worker.designation?.title }
+    });
+
     return NextResponse.json(worker, { status: 201 });
   } catch (error) {
     console.error('Failed to create worker:', error);

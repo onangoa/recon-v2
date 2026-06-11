@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: NextRequest,
@@ -45,6 +46,18 @@ export async function PUT(
         contractorId: contractorId, // Update if provided/resolved
       },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: designation.contractorId,
+      action: 'UPDATE',
+      module: 'DESIGNATIONS',
+      description: `Updated designation: ${designation.title}`,
+      targetId: designation.id,
+      details: { title: designation.title, active: designation.isActive }
+    });
+
     return NextResponse.json(designation);
   } catch (error) {
     console.error('Failed to update designation:', error);
@@ -58,9 +71,20 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.designation.delete({
+    const designation = await prisma.designation.delete({
       where: { id },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: designation.contractorId,
+      action: 'DELETE',
+      module: 'DESIGNATIONS',
+      description: `Deleted designation: ${designation.title}`,
+      targetId: designation.id,
+    });
+
     return NextResponse.json({ message: 'Designation deleted' });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete designation' }, { status: 500 });

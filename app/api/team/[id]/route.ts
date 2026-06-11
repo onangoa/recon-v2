@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: Request,
@@ -41,6 +42,16 @@ export async function PATCH(
       },
     });
 
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: member.contractorId,
+      action: 'UPDATE',
+      module: 'TEAM',
+      description: `Updated team member: ${member.name}`,
+      targetId: member.id,
+      details: { name: member.name, role: member.role, status: member.status }
+    });
+
     return NextResponse.json(member);
   } catch (error) {
     console.error('Failed to update team member:', error);
@@ -54,6 +65,22 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const member = await prisma.teamMember.findUnique({
+      where: { id }
+    });
+
+    if (member) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: member.contractorId,
+        action: 'DELETE',
+        module: 'TEAM',
+        description: `Deleted team member: ${member.name}`,
+        targetId: member.id,
+        details: { name: member.name, role: member.role }
+      });
+    }
+
     await prisma.teamMember.delete({
       where: { id },
     });

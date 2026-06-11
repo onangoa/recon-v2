@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/notification-service';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,6 +65,17 @@ export async function POST(request: NextRequest) {
       message: `A new ${incident.type} has been reported at ${incident.site.name}: ${incident.title}`,
       type: 'safety',
       link: '/contractor/safety'
+    });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: incident.site.contractor.userId,
+      contractorId: incident.site.contractorId,
+      action: 'CREATE',
+      module: 'SAFETY',
+      description: `Reported safety incident: ${incident.title}`,
+      targetId: incident.id,
+      details: { site: incident.site.name, severity: incident.severity }
     });
 
     return NextResponse.json(incident, { status: 201 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,6 +41,18 @@ export async function POST(request: NextRequest) {
         contractorId: contractorId,
       },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: contractorId,
+      action: 'CREATE',
+      module: 'DESIGNATIONS',
+      description: `Created designation: ${designation.title}`,
+      targetId: designation.id,
+      details: { title: designation.title, salary: designation.salary }
+    });
+
     return NextResponse.json(designation, { status: 201 });
   } catch (error) {
     console.error('Failed to create designation:', error);

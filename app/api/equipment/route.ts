@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -67,6 +68,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Machine type is required' }, { status: 400 });
     }
 
+    const site = await prisma.site.findUnique({
+      where: { id: body.siteId }
+    });
+
     const equipment = await prisma.equipment.create({
       data: {
         site: {
@@ -87,6 +92,18 @@ export async function POST(request: Request) {
         notes: body.notes || null,
       },
     });
+
+    if (site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: site.contractorId,
+        action: 'CREATE',
+        module: 'EQUIPMENT',
+        description: `Added equipment: ${equipment.name}`,
+        targetId: equipment.id,
+        details: { name: equipment.name, type: equipment.type, serialNo: equipment.serialNo, status: equipment.status }
+      });
+    }
 
     return NextResponse.json(equipment);
   } catch (error) {

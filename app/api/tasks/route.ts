@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -44,6 +45,17 @@ export async function POST(request: NextRequest) {
         site: true,
       },
     });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: task.site.contractorId,
+      action: 'CREATE',
+      module: 'INVENTORY',
+      description: `Created task: ${task.title}`,
+      targetId: task.id,
+      details: { title: task.title, status: task.status, priority: task.priority }
+    });
+
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
     console.error('Failed to create task:', error);

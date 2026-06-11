@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,6 +61,17 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: material.site.contractorId,
+      action: 'CREATE',
+      module: 'INVENTORY',
+      description: `Added material: ${material.name}`,
+      targetId: material.id,
+      details: { name: material.name, quantity: material.quantity, unit: material.unit, status: material.status }
+    });
+
     return NextResponse.json(material, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create material' }, { status: 500 });

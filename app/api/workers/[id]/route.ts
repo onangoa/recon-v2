@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(
   request: NextRequest,
@@ -51,6 +52,18 @@ export async function PUT(
         designation: true,
       },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: worker.contractorId,
+      action: 'UPDATE',
+      module: 'WORKERS',
+      description: `Updated worker details: ${worker.name}`,
+      targetId: worker.id,
+      details: { name: worker.name, status: worker.status }
+    });
+
     return NextResponse.json(worker);
   } catch (error) {
     console.error('Failed to update worker:', error);
@@ -64,9 +77,20 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.worker.delete({
+    const worker = await prisma.worker.delete({
       where: { id },
     });
+
+    // Record activity log
+    await ActivityLogger.log({
+      userId: 'system', 
+      contractorId: worker.contractorId,
+      action: 'DELETE',
+      module: 'WORKERS',
+      description: `Deleted worker: ${worker.name}`,
+      targetId: worker.id,
+    });
+
     return NextResponse.json({ message: 'Worker deleted' });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete worker' }, { status: 500 });

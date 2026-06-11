@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -122,6 +123,16 @@ export async function POST(request: Request) {
           }
         },
       },
+    });
+
+    await ActivityLogger.log({
+      userId: 'system',
+      contractorId: inventoryItem.site.contractorId,
+      action: 'CREATE',
+      module: 'INVENTORY',
+      description: `Added inventory item: ${inventoryItem.name}`,
+      targetId: inventoryItem.id,
+      details: { name: inventoryItem.name, quantity: inventoryItem.quantity, unit: inventoryItem.unit, status: inventoryItem.status }
     });
 
     return NextResponse.json(inventoryItem);

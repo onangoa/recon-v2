@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -70,6 +71,22 @@ export async function POST(request: Request) {
           })
         )
       );
+
+      const site = await prisma.site.findUnique({
+        where: { id: body[0].siteId }
+      });
+
+      if (site) {
+        await ActivityLogger.log({
+          userId: 'system',
+          contractorId: site.contractorId,
+          action: 'CREATE',
+          module: 'DOCUMENTS',
+          description: `Bulk uploaded ${documents.length} documents`,
+          details: { count: documents.length }
+        });
+      }
+
       return NextResponse.json(documents);
     } else {
       // Single upload
@@ -89,6 +106,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Document type is required' }, { status: 400 });
       }
 
+      const site = await prisma.site.findUnique({
+        where: { id: body.siteId }
+      });
+
       const document = await prisma.document.create({
         data: {
           siteId: body.siteId,
@@ -99,6 +120,18 @@ export async function POST(request: Request) {
           uploadedAt: new Date(),
         },
       });
+
+      if (site) {
+        await ActivityLogger.log({
+          userId: 'system',
+          contractorId: site.contractorId,
+          action: 'CREATE',
+          module: 'DOCUMENTS',
+          description: `Uploaded document: ${document.name}`,
+          targetId: document.id,
+          details: { name: document.name, type: document.type }
+        });
+      }
 
       return NextResponse.json(document);
     }

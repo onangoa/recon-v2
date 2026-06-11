@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export async function GET(request: Request) {
   try {
@@ -100,6 +101,18 @@ export async function POST(request: Request) {
         site: true,
       },
     });
+
+    if (purchaseOrder.site) {
+      await ActivityLogger.log({
+        userId: 'system',
+        contractorId: purchaseOrder.site.contractorId,
+        action: 'CREATE',
+        module: 'PURCHASE_ORDERS',
+        description: `Created purchase order: ${purchaseOrder.orderNumber}`,
+        targetId: purchaseOrder.id,
+        details: { orderNumber: purchaseOrder.orderNumber, total: purchaseOrder.total, status: purchaseOrder.status }
+      });
+    }
 
     return NextResponse.json(purchaseOrder);
   } catch (error) {
