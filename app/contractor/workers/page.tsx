@@ -82,6 +82,11 @@ interface Worker {
   designation: {
     title: string;
   } | null;
+  shift: {
+    name: string;
+    startTime: string;
+    endTime: string;
+  } | null;
   joinedAt: string;
 }
 
@@ -299,6 +304,7 @@ export default function WorkersPage() {
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Worker</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Designation</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Shift</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">ID / Phone</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
                   <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
@@ -322,6 +328,16 @@ export default function WorkersPage() {
                       <Badge variant="outline" className="text-[10px] font-semibold">
                         {worker.designation?.title || 'Unassigned'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {worker.shift ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold">{worker.shift.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{worker.shift.startTime} - {worker.shift.endTime}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">No shift</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground font-medium">

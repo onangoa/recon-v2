@@ -26,6 +26,11 @@ interface Designation {
   title: string;
 }
 
+interface Shift {
+  id: string;
+  name: string;
+}
+
 export default function EditWorkerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
@@ -34,6 +39,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,6 +47,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     phone: '',
     nationalId: '',
     designationId: '',
+    shiftId: '',
     status: 'Active',
     joinedAt: ''
   });
@@ -49,24 +56,29 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [workerRes, designRes] = await Promise.all([
+        const [workerRes, designRes, shiftRes] = await Promise.all([
           fetch(`/api/workers/${id}`),
-          fetch('/api/designations')
+          fetch('/api/designations'),
+          fetch('/api/shifts?contractorId=placeholder-id')
         ]);
 
         if (!workerRes.ok) throw new Error('Failed to fetch worker');
         if (!designRes.ok) throw new Error('Failed to fetch designations');
+        if (!shiftRes.ok) throw new Error('Failed to fetch shifts');
 
         const worker = await workerRes.json();
         const designs = await designRes.json();
+        const shiftData = await shiftRes.json();
 
         setDesignations(designs);
+        setShifts(shiftData);
         setFormData({
           name: worker.name,
           email: worker.email || '',
           phone: worker.phone || '',
           nationalId: worker.nationalId || '',
           designationId: worker.designationId || '',
+          shiftId: worker.shiftId || '',
           status: worker.status,
           joinedAt: worker.joinedAt ? new Date(worker.joinedAt).toISOString().split('T')[0] : ''
         });
@@ -193,7 +205,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 border-t pt-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Job Designation *</label>
               <select
@@ -206,6 +218,20 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 <option value="">Select job role</option>
                 {designations.map((d) => (
                   <option key={d.id} value={d.id}>{d.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Assigned Shift</label>
+              <select
+                value={formData.shiftId}
+                onChange={(e) => setFormData({...formData, shiftId: e.target.value})}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">No shift assigned</option>
+                {shifts.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>

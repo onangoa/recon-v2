@@ -32,7 +32,8 @@ import {
   ExternalLink,
   MapPin,
   Briefcase,
-  ShieldAlert
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -92,6 +93,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen },
     { label: 'Payroll', href: '/contractor/payroll', icon: Coins },
     { label: 'Workers', href: '/contractor/workers', icon: Users },
+    { label: 'Shifts', href: '/contractor/shifts', icon: Clock },
     { label: 'Reports', href: '/contractor/reports', icon: BarChart3 },
     { label: 'Settings', href: '/contractor/settings', icon: Settings },
   ];

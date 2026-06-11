@@ -54,6 +54,8 @@ model Contractor {
   salaryComponents        SalaryComponent[]
   salarySlips             SalarySlip[]
   sites                   Site[]
+  shifts                  Shift[]
+  attendances             Attendance[]
   team                    TeamMember[]
   workers                 Worker[]
 
@@ -68,6 +70,7 @@ model Worker {
   phone                 String?
   nationalId            String?         @unique
   designationId         String?
+  shiftId               String?
   status                String          @default("Active")
   joinedAt              DateTime        @default(now())
   createdAt             DateTime        @default(now())
@@ -75,10 +78,55 @@ model Worker {
   payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")
   salarySlips           SalarySlip[]
   designation           Designation?    @relation(fields: [designationId], references: [id])
+  shift                 Shift?          @relation(fields: [shiftId], references: [id])
+  attendances           Attendance[]
   contractor            Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
   @@index([designationId])
+  @@index([shiftId])
+}
+
+model Shift {
+  id            String       @id @default(cuid())
+  contractorId  String
+  name          String
+  startTime     String // e.g., "08:00"
+  endTime       String // e.g., "17:00"
+  breakDuration Float        @default(0) // in minutes
+  workingDays   String // comma separated: "Monday,Tuesday,Wednesday,Thursday,Friday"
+  allowOvertime Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  contractor    Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  workers       Worker[]
+  attendances   Attendance[]
+
+  @@index([contractorId])
+}
+
+model Attendance {
+  id            String     @id @default(cuid())
+  contractorId  String
+  workerId      String
+  shiftId       String?
+  date          DateTime
+  checkIn       DateTime?
+  checkOut      DateTime?
+  totalHours    Float      @default(0)
+  overtimeHours Float      @default(0)
+  status        String     @default("Present") // Present, Absent, Late, Leave
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  worker        Worker     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  shift         Shift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([workerId, date])
+  @@index([contractorId])
+  @@index([workerId])
+  @@index([shiftId])
 }
 
 model Designation {

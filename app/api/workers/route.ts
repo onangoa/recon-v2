@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const [workers, total] = await Promise.all([
       prisma.worker.findMany({
         where,
-        include: { designation: true },
+        include: { designation: true, shift: true },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' }
@@ -77,12 +77,14 @@ export async function POST(request: NextRequest) {
         phone: body.phone,
         nationalId: body.nationalId,
         designationId: designationId,
+        shiftId: body.shiftId || null,
         contractorId: contractorId,
         status: body.status || 'Active',
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
       },
       include: {
         designation: true,
+        shift: true,
       },
     });
 

@@ -27,11 +27,17 @@ interface Designation {
   title: string;
 }
 
+interface Shift {
+  id: string;
+  name: string;
+}
+
 export default function CreateWorkerPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -39,23 +45,26 @@ export default function CreateWorkerPage() {
     phone: '',
     nationalId: '',
     designationId: '',
+    shiftId: '',
     status: 'Active',
     joinedAt: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
-    const fetchDesignations = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/designations');
-        if (response.ok) {
-          const data = await response.json();
-          setDesignations(data);
-        }
+        const [desigRes, shiftRes] = await Promise.all([
+          fetch('/api/designations'),
+          fetch('/api/shifts?contractorId=placeholder-id')
+        ]);
+        
+        if (desigRes.ok) setDesignations(await desigRes.json());
+        if (shiftRes.ok) setShifts(await shiftRes.json());
       } catch (error) {
-        console.error('Failed to fetch designations');
+        console.error('Failed to fetch data');
       }
     };
-    fetchDesignations();
+    fetchData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,6 +205,20 @@ export default function CreateWorkerPage() {
                 <option value="">Select job role</option>
                 {designations.map((d) => (
                   <option key={d.id} value={d.id}>{d.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Assigned Shift</label>
+              <select
+                value={formData.shiftId}
+                onChange={(e) => setFormData({...formData, shiftId: e.target.value})}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">No shift assigned</option>
+                {shifts.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>

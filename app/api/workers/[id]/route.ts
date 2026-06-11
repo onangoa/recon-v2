@@ -12,6 +12,7 @@ export async function GET(
       where: { id },
       include: {
         designation: true,
+        shift: true,
       },
     });
     if (!worker) {
@@ -45,11 +46,13 @@ export async function PUT(
         phone: body.phone,
         nationalId: body.nationalId,
         designationId: designationId,
+        shiftId: body.shiftId !== undefined ? body.shiftId : undefined,
         status: body.status,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
       },
       include: {
         designation: true,
+        shift: true,
       },
     });
 
