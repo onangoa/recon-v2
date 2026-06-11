@@ -78,6 +78,7 @@ interface Worker {
   email: string | null;
   phone: string | null;
   nationalId: string | null;
+  enrollId: string | null;
   status: string;
   designation: {
     title: string;
@@ -345,9 +346,9 @@ export default function WorkersPage() {
                           <CreditCard className="w-3 h-3 mr-1 opacity-60" />
                           ID: {worker.nationalId || 'N/A'}
                         </div>
-                        <div className="flex items-center">
-                          <Phone className="w-3 h-3 mr-1 opacity-60" />
-                          {worker.phone || 'N/A'}
+                        <div className="flex items-center text-primary">
+                          <Shield className="w-3 h-3 mr-1 opacity-60" />
+                          Enroll: {worker.enrollId || 'N/A'}
                         </div>
                       </div>
                     </TableCell>

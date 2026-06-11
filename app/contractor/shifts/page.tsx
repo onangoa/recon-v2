@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSite } from '@/hooks/use-site';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 interface Shift {
   id: string;
@@ -53,6 +53,7 @@ interface Shift {
 
 export default function ShiftsPage() {
   const { activeSite } = useSite();
+  const { toast } = useToast();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -88,7 +89,11 @@ export default function ShiftsPage() {
       setShifts(data);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load shifts');
+      toast({
+        title: 'Error',
+        description: 'Failed to load shifts',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -142,13 +147,20 @@ export default function ShiftsPage() {
 
       if (!res.ok) throw new Error(`Failed to ${editingShift ? 'update' : 'create'} shift`);
       
-      toast.success(`Shift ${editingShift ? 'updated' : 'created'} successfully`);
+      toast({
+        title: 'Success',
+        description: `Shift ${editingShift ? 'updated' : 'created'} successfully`
+      });
       setIsDialogOpen(false);
       fetchShifts();
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error(`Failed to ${editingShift ? 'update' : 'create'} shift`);
+      toast({
+        title: 'Error',
+        description: error.message || `Failed to ${editingShift ? 'update' : 'create'} shift`,
+        variant: 'destructive'
+      });
     }
   };
 
@@ -157,11 +169,18 @@ export default function ShiftsPage() {
     try {
       const res = await fetch(`/api/shifts/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete shift');
-      toast.success('Shift deleted');
+      toast({
+        title: 'Success',
+        description: 'Shift deleted'
+      });
       fetchShifts();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to delete shift');
+      toast({
+        title: 'Error',
+        description: 'Failed to delete shift',
+        variant: 'destructive'
+      });
     }
   };
 

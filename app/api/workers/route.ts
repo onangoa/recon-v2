@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
         email: body.email,
         phone: body.phone,
         nationalId: body.nationalId,
+        enrollId: body.enrollId || null,
         designationId: designationId,
         shiftId: body.shiftId || null,
         contractorId: contractorId,

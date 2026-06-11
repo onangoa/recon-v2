@@ -45,6 +45,7 @@ export async function PUT(
         email: body.email,
         phone: body.phone,
         nationalId: body.nationalId,
+        enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
         designationId: designationId,
         shiftId: body.shiftId !== undefined ? body.shiftId : undefined,
         status: body.status,

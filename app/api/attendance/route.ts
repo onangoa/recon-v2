@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
         worker: {
           select: { name: true, designation: { select: { title: true } } }
         },
-        shift: true
+        shift: true,
+        logs: {
+          orderBy: { timestamp: 'asc' }
+        }
       },
       orderBy: { date: 'desc' }
     });

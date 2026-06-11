@@ -46,6 +46,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     email: '',
     phone: '',
     nationalId: '',
+    enrollId: '',
     designationId: '',
     shiftId: '',
     status: 'Active',
@@ -77,6 +78,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           email: worker.email || '',
           phone: worker.phone || '',
           nationalId: worker.nationalId || '',
+          enrollId: worker.enrollId || '',
           designationId: worker.designationId || '',
           shiftId: worker.shiftId || '',
           status: worker.status,
@@ -170,15 +172,27 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">National ID</label>
-              <input
-                type="text"
-                value={formData.nationalId}
-                onChange={(e) => setFormData({...formData, nationalId: e.target.value})}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">National ID</label>
+                <input
+                  type="text"
+                  value={formData.nationalId}
+                  onChange={(e) => setFormData({...formData, nationalId: e.target.value})}
+                  disabled={isSubmitting}
+                  className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Enroll ID</label>
+                <input
+                  type="text"
+                  value={formData.enrollId}
+                  onChange={(e) => setFormData({...formData, enrollId: e.target.value})}
+                  disabled={isSubmitting}
+                  className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+              </div>
             </div>
           </div>
 
