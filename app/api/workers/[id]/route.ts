@@ -32,13 +32,50 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // Handle empty or invalid designationId
+    const worker = await prisma.worker.findUnique({
+      where: { id },
+      select: { contractorId: true }
+    });
+
+    if (!worker) {
+      return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+    }
+
     let designationId = body.designationId;
     if (designationId === "" || designationId === "null" || designationId === "undefined") {
       designationId = null;
     }
 
-    const worker = await prisma.worker.update({
+    let shiftId = body.shiftId;
+    if (shiftId === "" || shiftId === "null" || shiftId === "undefined") {
+      shiftId = null;
+    }
+
+    if (designationId) {
+      const designation = await prisma.designation.findFirst({
+        where: {
+          id: designationId,
+          contractorId: worker.contractorId
+        }
+      });
+      if (!designation) {
+        return NextResponse.json({ error: 'Invalid designation ID' }, { status: 400 });
+      }
+    }
+
+    if (shiftId) {
+      const shift = await prisma.shift.findFirst({
+        where: {
+          id: shiftId,
+          contractorId: worker.contractorId
+        }
+      });
+      if (!shift) {
+        return NextResponse.json({ error: 'Invalid shift ID' }, { status: 400 });
+      }
+    }
+
+    const updatedWorker = await prisma.worker.update({
       where: { id },
       data: {
         name: body.name,
@@ -46,8 +83,8 @@ export async function PUT(
         phone: body.phone,
         nationalId: body.nationalId,
         enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
-        designationId: designationId,
-        shiftId: body.shiftId !== undefined ? body.shiftId : undefined,
+        designationId,
+        shiftId,
         status: body.status,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
       },
@@ -57,18 +94,17 @@ export async function PUT(
       },
     });
 
-    // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
+      userId: 'system',
       contractorId: worker.contractorId,
       action: 'UPDATE',
       module: 'WORKERS',
-      description: `Updated worker details: ${worker.name}`,
-      targetId: worker.id,
-      details: { name: worker.name, status: worker.status }
+      description: `Updated worker details: ${updatedWorker.name}`,
+      targetId: updatedWorker.id,
+      details: { name: updatedWorker.name, status: updatedWorker.status }
     });
 
-    return NextResponse.json(worker);
+    return NextResponse.json(updatedWorker);
   } catch (error) {
     console.error('Failed to update worker:', error);
     return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 });

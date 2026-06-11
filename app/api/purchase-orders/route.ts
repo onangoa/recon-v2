@@ -38,7 +38,7 @@ export async function GET(request: Request) {
           site: true,
         },
         orderBy: {
-          orderDate: 'desc'
+          createdAt: 'desc'
         },
         skip,
         take: limit,

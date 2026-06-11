@@ -20,16 +20,16 @@ export async function GET(request: Request) {
     if (search) {
       where.OR = [
         { name: { contains: search } },
-        { categoryRel: { name: { contains: search } } },
-        { supplier: { contains: search } },
+        { sku: { contains: search } },
+        { category: { name: { contains: search } } },
       ];
     }
 
     const [inventory, total] = await Promise.all([
-      prisma.material.findMany({
+      prisma.inventory.findMany({
         where,
         include: {
-          categoryRel: true,
+          category: true,
           site: {
             include: {
               contractor: true
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
         skip,
         take: limit,
       }),
-      prisma.material.count({ where })
+      prisma.inventory.count({ where })
     ]);
 
     return NextResponse.json({
@@ -73,50 +73,30 @@ export async function POST(request: Request) {
     }
 
     const quantity = parseFloat(body.quantity) || 0;
-    const unitCost = parseFloat(body.unitCost) || 0;
-    
-    if (!body.categoryId) {
-      return NextResponse.json({ error: 'Category ID is required' }, { status: 400 });
-    }
     
     if (!body.unit) {
       return NextResponse.json({ error: 'Unit is required' }, { status: 400 });
     }
 
-    if (isNaN(quantity) || isNaN(unitCost)) {
-      return NextResponse.json({ error: 'Quantity and Unit Cost must be valid numbers' }, { status: 400 });
+    if (isNaN(quantity)) {
+      return NextResponse.json({ error: 'Quantity must be a valid number' }, { status: 400 });
     }
     
-    const inventoryItem = await prisma.material.create({
+    const inventoryItem = await prisma.inventory.create({
       data: {
-        site: {
-          connect: { id: body.siteId }
-        },
+        siteId: body.siteId,
         name: body.name,
         description: body.description || null,
         sku: body.sku || null,
-        barcode: body.barcode || null,
-        categoryRel: body.categoryId ? {
-          connect: { id: body.categoryId }
-        } : undefined,
-        unit: body.unit,
+        categoryId: body.categoryId || null,
         quantity: quantity,
-        unitCost: unitCost,
-        totalCost: quantity * unitCost,
-        minStockLevel: parseFloat(body.minStockLevel) || 0,
-        maxStockLevel: body.maxStockLevel ? parseFloat(body.maxStockLevel) : null,
-        reorderPoint: parseFloat(body.reorderPoint) || 0,
+        unit: body.unit,
+        minStock: parseFloat(body.minStock) || 0,
         location: body.location || null,
-        supplier: body.supplier || null,
-        supplierRel: body.supplierId ? {
-          connect: { id: body.supplierId }
-        } : undefined,
-        status: body.status || 'pending',
-        notes: body.notes || null,
+        status: body.status || 'in-stock',
       },
       include: {
-        categoryRel: true,
-        supplierRel: true,
+        category: true,
         site: {
           include: {
             contractor: true
