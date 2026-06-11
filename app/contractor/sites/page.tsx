@@ -75,6 +75,7 @@ interface Site {
   description: string | null;
   plan: string;
   contractorId: string;
+  isPrimary: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -268,7 +269,10 @@ export default function SitesManagementPage() {
                         </div>
                         <div className="flex flex-col">
                           <span className="font-bold text-sm text-foreground">{site.name}</span>
-                          {activeSite?.id === site.id && <span className="text-[9px] font-black text-primary uppercase">Current Active</span>}
+                          <div className="flex items-center gap-1">
+                            {site.isPrimary && <Badge variant="secondary" className="text-[9px] font-black bg-primary/10 text-primary border-primary/20 uppercase px-1 h-3.5">Primary</Badge>}
+                            {activeSite?.id === site.id && <span className="text-[9px] font-black text-emerald-600 uppercase">Active</span>}
+                          </div>
                         </div>
                       </div>
                     </TableCell>

@@ -30,18 +30,41 @@ export async function PUT(
     const body = await request.json();
     const { id } = await params;
     
-    const site = await prisma.site.update({
-      where: { id },
-      data: {
-        name: body.name,
-        location: body.location,
-        description: body.description,
-      },
+    const updatedSite = await prisma.$transaction(async (tx) => {
+      const site = await tx.site.findUnique({
+        where: { id },
+        select: { contractorId: true },
+      });
+
+      if (!site) {
+        throw new Error('Site not found');
+      }
+
+      // If this site is being set as primary, unset any other primary sites for this contractor
+      if (body.isPrimary) {
+        await tx.site.updateMany({
+          where: { contractorId: site.contractorId, isPrimary: true },
+          data: { isPrimary: false },
+        });
+      }
+
+      return await tx.site.update({
+        where: { id },
+        data: {
+          name: body.name,
+          location: body.location,
+          description: body.description,
+          isPrimary: body.isPrimary,
+        },
+      });
     });
 
-    return NextResponse.json(site);
-  } catch (error) {
+    return NextResponse.json(updatedSite);
+  } catch (error: any) {
     console.error('Failed to update site:', error);
+    if (error.message === 'Site not found') {
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Failed to update site' }, { status: 500 });
   }
 }

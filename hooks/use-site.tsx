@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface Site {
   id: string;
@@ -9,6 +10,7 @@ interface Site {
   plan?: string;
   contractorId: string;
   logo?: any;
+  isPrimary?: boolean;
 }
 
 interface SiteContextType {
@@ -24,31 +26,43 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const [activeSite, setActiveSiteState] = useState<Site | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchSites = async () => {
       try {
         const response = await fetch('/api/sites');
-        const sitesData = await response.json();
+        const data = await response.json();
         
-        if (Array.isArray(sitesData)) {
-          const transformedSites = sitesData.map((site: any) => ({
-            id: site.id,
-            name: site.name,
-            location: site.location,
-            plan: undefined,
-            contractorId: site.contractorId,
-          }));
-          setSites(transformedSites);
-          
-          const savedSite = localStorage.getItem('activeSite');
-          if (savedSite) {
-            const parsed = JSON.parse(savedSite);
-            const found = transformedSites.find(s => s.id === parsed.id);
-            setActiveSiteState(found || (transformedSites.length > 0 ? transformedSites[0] : null));
-          } else {
-            setActiveSiteState(transformedSites.length > 0 ? transformedSites[0] : null);
-          }
+        // Handle both array and object responses (pagination)
+        const rawSites = Array.isArray(data) ? data : (data.sites || []);
+        
+        if (rawSites.length === 0 && !pathname.includes('/sites/create') && !pathname.includes('/auth') && pathname.startsWith('/contractor')) {
+          router.push('/contractor/sites/create');
+          return;
+        }
+
+        const transformedSites = rawSites.map((site: any) => ({
+          id: site.id,
+          name: site.name,
+          location: site.location,
+          plan: undefined,
+          contractorId: site.contractorId,
+          isPrimary: site.isPrimary,
+        }));
+        
+        setSites(transformedSites);
+        
+        const primarySite = transformedSites.find((s: any) => s.isPrimary);
+        const savedSite = localStorage.getItem('activeSite');
+        
+        if (savedSite) {
+          const parsed = JSON.parse(savedSite);
+          const found = transformedSites.find((s: any) => s.id === parsed.id);
+          setActiveSiteState(found || primarySite || (transformedSites.length > 0 ? transformedSites[0] : null));
+        } else {
+          setActiveSiteState(primarySite || (transformedSites.length > 0 ? transformedSites[0] : null));
         }
       } catch (e) {
         console.error("Failed to load sites", e);
@@ -58,7 +72,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchSites();
-  }, []);
+  }, [router, pathname]);
 
   const setActiveSite = (site: Site) => {
     setActiveSiteState(site);

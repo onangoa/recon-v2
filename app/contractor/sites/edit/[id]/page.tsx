@@ -26,6 +26,7 @@ interface Site {
   name: string;
   location: string;
   description: string | null;
+  isPrimary: boolean;
 }
 
 export default function EditSitePage() {
@@ -39,6 +40,7 @@ export default function EditSitePage() {
     location: '',
     description: '',
     category: '',
+    isPrimary: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +56,7 @@ export default function EditSitePage() {
             location: site.location,
             description: site.description || '',
             category: '', // Category not currently in DB
+            isPrimary: site.isPrimary || false,
           });
         } else {
           toast({
@@ -113,6 +116,7 @@ export default function EditSitePage() {
           name: formData.name,
           location: formData.location,
           description: formData.description,
+          isPrimary: formData.isPrimary,
         }),
       });
 
@@ -248,6 +252,22 @@ export default function EditSitePage() {
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
+          </div>
+
+          {/* Primary Site Checkbox */}
+          <div className="flex items-center gap-3 bg-primary/5 p-4 rounded-lg border border-primary/10">
+            <input
+              type="checkbox"
+              id="isPrimary"
+              checked={formData.isPrimary}
+              onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
+              disabled={isSubmitting}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+            />
+            <label htmlFor="isPrimary" className="text-sm font-semibold text-gray-900 cursor-pointer select-none">
+              Mark as Primary Site
+              <span className="block text-xs font-normal text-gray-500 mt-0.5">This site will be selected by default when you log in.</span>
+            </label>
           </div>
 
           {/* Buttons */}

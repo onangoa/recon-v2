@@ -71,6 +71,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('user');
+    localStorage.removeItem('activeSite');
     router.push('/');
   };
 

@@ -221,6 +221,7 @@ model Site {
   name        String
   location    String
   description String?
+  isPrimary   Boolean  @default(false)
   materials   Material[]
   tasks       Task[]
   equipment   Equipment[]

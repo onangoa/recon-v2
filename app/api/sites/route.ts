@@ -60,13 +60,24 @@ export async function POST(request: Request) {
       }
     }
     
-    const site = await prisma.site.create({
-      data: {
-        name: body.name,
-        location: body.location,
-        contractorId: contractorId,
-        description: body.description,
-      },
+    const site = await prisma.$transaction(async (tx) => {
+      // If this site is being set as primary, unset any other primary sites for this contractor
+      if (body.isPrimary) {
+        await tx.site.updateMany({
+          where: { contractorId: contractorId, isPrimary: true },
+          data: { isPrimary: false },
+        });
+      }
+
+      return await tx.site.create({
+        data: {
+          name: body.name,
+          location: body.location,
+          contractorId: contractorId,
+          description: body.description,
+          isPrimary: body.isPrimary || false,
+        },
+      });
     });
     return NextResponse.json(site);
   } catch (error) {
