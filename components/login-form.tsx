@@ -72,14 +72,6 @@ export function LoginForm() {
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-[440px] space-y-8">
-        {/* Logo & Header */}
-        <div className="text-center space-y-2">
-          <div className="bg-primary text-white w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20">
-            <Building2 className="w-7 h-7" />
-          </div>
-          <h1 className="text-3xl font-black tracking-tighter text-primary">ReconSMI</h1>
-          <p className="text-muted-foreground font-medium italic text-sm">Smart Site Management Platform</p>
-        </div>
 
         <Card className="border-none shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           <CardHeader className="bg-primary text-white p-8 text-center">
