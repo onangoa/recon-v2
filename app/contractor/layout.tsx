@@ -31,7 +31,8 @@ import {
   CheckCircle2,
   ExternalLink,
   MapPin,
-  Briefcase
+  Briefcase,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -63,6 +64,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SiteProvider, useSite } from '@/hooks/use-site';
 
+import NotificationBell from '@/components/notification-bell';
+
 function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -77,7 +80,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: 'Dashboard', href: '/contractor', icon: LayoutDashboard },
-    { label: 'Company Profile', href: '/contractor/company', icon: Building2 },
+    { label: 'Safety & Incidents', href: '/contractor/safety', icon: ShieldAlert },
     { label: 'Inventory', href: '/contractor/inventory', icon: Package },
     { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake },
     { label: 'Wallets', href: '/contractor/wallets', icon: Wallet },
@@ -296,10 +299,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
             </div>
             
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative h-9 w-9">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full border border-background"></span>
-              </Button>
+              <NotificationBell />
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
                 <MessageSquare className="w-4 h-4" />
               </Button>

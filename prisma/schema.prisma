@@ -22,6 +22,7 @@ model User {
 
   contractor Contractor?
   sessions   Session[]
+  notifications Notification[]
 }
 
 model Session {
@@ -44,6 +45,8 @@ model Contractor {
   licenseNo   String
   subscriptionPlanId String
   subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  subscriptionStatus String   @default("active") // "active", "past_due", "canceled"
+  subscriptionEndDate DateTime?
   safetyScore Float      @default(0)
   sites       Site[]
   team        TeamMember[]
@@ -52,6 +55,7 @@ model Contractor {
   payrollPeriods PayrollPeriod[]
   salaryComponents SalaryComponent[]
   salarySlips SalarySlip[]
+  notificationPreferences NotificationPreference[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -231,6 +235,7 @@ model Site {
   licenses    License[]
   purchaseOrders PurchaseOrder[]
   metrics     Metric[]
+  incidents   SafetyIncident[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -512,4 +517,49 @@ model Transaction {
   @@index([walletId])
   @@index([type])
   @@index([externalId])
+}
+
+model SafetyIncident {
+  id            String   @id @default(cuid())
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title         String
+  description   String
+  type          String   // "Near Miss", "Injury", "Property Damage", "Environmental"
+  severity      String   // "Low", "Medium", "High", "Critical"
+  status        String   @default("Reported") // "Reported", "Under Investigation", "Resolved"
+  incidentDate  DateTime
+  reportedBy    String
+  attachments   String?  // JSON string of file URLs
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([siteId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        String   // "system", "payroll", "safety", "inventory"
+  isRead      Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id            String     @id @default(cuid())
+  contractorId  String
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  type          String     // "payroll", "safety", "inventory", "team"
+  emailEnabled  Boolean    @default(true)
+  pushEnabled   Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([contractorId, type])
 }
