@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       data: {
         title: body.title,
         description: body.description,
-        minSalary: body.minSalary,
-        maxSalary: body.maxSalary,
+        salary: body.salary,
+        paymentFrequency: body.paymentFrequency,
         isActive: body.isActive ?? true,
         contractorId: body.contractorId,
       },

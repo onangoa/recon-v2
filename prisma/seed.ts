@@ -133,12 +133,12 @@ async function main() {
     const designations = [];
     for (const contractor of contractors) {
       const designData = [
-        { title: 'Site Manager', description: 'Oversees entire site operations', minSalary: 150000, maxSalary: 250000 },
-        { title: 'Project Engineer', description: 'Handles engineering aspects', minSalary: 120000, maxSalary: 180000 },
-        { title: 'Foreman', description: 'Leads worker teams', minSalary: 60000, maxSalary: 90000 },
-        { title: 'Mason', description: 'Stone and brick work', minSalary: 45000, maxSalary: 65000 },
-        { title: 'Electrician', description: 'Electrical installations', minSalary: 50000, maxSalary: 75000 },
-        { title: 'Laborer', description: 'General site work', minSalary: 25000, maxSalary: 35000 },
+        { title: 'Site Manager', description: 'Oversees entire site operations', salary: 200000, paymentFrequency: 'monthly' },
+        { title: 'Project Engineer', description: 'Handles engineering aspects', salary: 150000, paymentFrequency: 'monthly' },
+        { title: 'Foreman', description: 'Leads worker teams', salary: 75000, paymentFrequency: 'monthly' },
+        { title: 'Mason', description: 'Stone and brick work', salary: 55000, paymentFrequency: 'monthly' },
+        { title: 'Electrician', description: 'Electrical installations', salary: 60000, paymentFrequency: 'monthly' },
+        { title: 'Laborer', description: 'General site work', salary: 30000, paymentFrequency: 'daily' },
       ];
 
       for (const data of designData) {
@@ -475,7 +475,7 @@ async function main() {
         const supplier = suppliers[i % suppliers.length];
         await prisma.purchaseOrder.create({
           data: {
-            site: { connect: { id: site.id } },
+            siteId: site.id,
             orderNumber: `PO-${site.id.substring(site.id.length - 8)}-${i}`,
             supplierId: supplier.id,
             status: i === 0 ? 'completed' : 'pending',

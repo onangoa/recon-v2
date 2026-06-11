@@ -72,6 +72,8 @@ interface Visitor {
   purpose: string;
   checkInTime: Date;
   checkOutTime: Date | null;
+  notes: string | null;
+  attachmentName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

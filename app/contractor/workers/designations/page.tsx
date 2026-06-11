@@ -64,8 +64,8 @@ interface Designation {
   id: string;
   title: string;
   description: string | null;
-  minSalary: number | null;
-  maxSalary: number | null;
+  salary: number | null;
+  paymentFrequency: string | null;
   isActive: boolean;
 }
 
@@ -81,8 +81,8 @@ export default function DesignationsPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    minSalary: '',
-    maxSalary: '',
+    salary: '',
+    paymentFrequency: 'monthly',
     isActive: true
   });
 
@@ -113,8 +113,7 @@ export default function DesignationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          minSalary: formData.minSalary ? parseFloat(formData.minSalary) : null,
-          maxSalary: formData.maxSalary ? parseFloat(formData.maxSalary) : null,
+          salary: formData.salary ? parseFloat(formData.salary) : null,
           contractorId: 'placeholder-id' // In a real app, this would come from auth/context
         }),
       });
@@ -123,7 +122,7 @@ export default function DesignationsPage() {
 
       toast({ title: "Success", description: "Designation saved successfully" });
       setIsDialogOpen(false);
-      setFormData({ title: '', description: '', minSalary: '', maxSalary: '', isActive: true });
+      setFormData({ title: '', description: '', salary: '', paymentFrequency: 'monthly', isActive: true });
       fetchDesignations();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -182,12 +181,23 @@ export default function DesignationsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="minSalary">Min Salary (KES)</Label>
-                    <Input id="minSalary" type="number" value={formData.minSalary} onChange={e => setFormData({...formData, minSalary: e.target.value})} placeholder="0" />
+                    <Label htmlFor="salary">Salary (KES)</Label>
+                    <Input id="salary" type="number" value={formData.salary} onChange={e => setFormData({...formData, salary: e.target.value})} placeholder="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="maxSalary">Max Salary (KES)</Label>
-                    <Input id="maxSalary" type="number" value={formData.maxSalary} onChange={e => setFormData({...formData, maxSalary: e.target.value})} placeholder="0" />
+                    <Label htmlFor="paymentFrequency">Payment Frequency</Label>
+                    <select 
+                      id="paymentFrequency"
+                      value={formData.paymentFrequency}
+                      onChange={e => setFormData({...formData, paymentFrequency: e.target.value})}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="bi-weekly">Bi-Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="annually">Annually</option>
+                    </select>
                   </div>
                 </div>
                 <DialogFooter>
@@ -236,7 +246,7 @@ export default function DesignationsPage() {
               <TableHeader className="bg-muted/30">
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Designation Title</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Salary Range</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Salary</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
                   <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
@@ -251,9 +261,12 @@ export default function DesignationsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 text-xs font-mono">
-                        <DollarSign className="w-3 h-3 text-emerald-600" />
-                        <span>{formatCurrency(design.minSalary)} - {formatCurrency(design.maxSalary)}</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-xs font-mono">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          <span>{formatCurrency(design.salary)}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground capitalize">{design.paymentFrequency || 'N/A'}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate payroll
     const calculation = PayrollCalculator.calculate({
-      basicSalary: designation.minSalary || 0, // Using minSalary as basic for now
+      basicSalary: designation.salary || 0,
       components: components as unknown as SalaryComponentData[],
       includePersonalRelief: true,
     });

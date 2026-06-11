@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
 import { 
   ArrowLeft, 
   Save, 
@@ -27,8 +27,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSite } from '@/hooks/use-site';
 
-export default function CreateVisitorPage() {
+export default function EditVisitorPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { id } = use(params);
   const { toast } = useToast();
   const { activeSite } = useSite();
   
@@ -36,13 +37,46 @@ export default function CreateVisitorPage() {
     name: '',
     company: '',
     purpose: '',
-    checkInTime: new Date().toISOString().slice(0, 16),
+    checkInTime: '',
+    checkOutTime: '',
     notes: '',
     attachmentName: '',
     attachmentUrl: '',
   });
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    const fetchVisitor = async () => {
+      try {
+        const response = await fetch(`/api/visitors/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch visitor data');
+        const data = await response.json();
+        setFormData({
+          name: data.name || '',
+          company: data.company || '',
+          purpose: data.purpose || '',
+          checkInTime: data.checkInTime ? new Date(data.checkInTime).toISOString().slice(0, 16) : '',
+          checkOutTime: data.checkOutTime ? new Date(data.checkOutTime).toISOString().slice(0, 16) : '',
+          notes: data.notes || '',
+          attachmentName: data.attachmentName || '',
+          attachmentUrl: data.attachmentUrl || '',
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        router.push('/contractor/visitors');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVisitor();
+  }, [id, router, toast]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,15 +121,6 @@ export default function CreateVisitorPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!activeSite) {
-      toast({
-        title: "Error",
-        description: "Please select an active site first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
@@ -117,23 +142,18 @@ export default function CreateVisitorPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/visitors', {
-        method: 'POST',
+      const response = await fetch(`/api/visitors/${id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          siteId: activeSite.id,
-        }),
+        body: JSON.stringify(formData),
       });
-
-      const result = await response.json();
 
       if (response.ok) {
         toast({
           title: "Success!",
-          description: `Visitor "${result.name}" has been checked in.`,
+          description: `Visitor details for "${formData.name}" have been updated.`,
           variant: "success",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -144,7 +164,8 @@ export default function CreateVisitorPage() {
         router.push('/contractor/visitors');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to check in visitor');
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update visitor');
       }
     } catch (error: any) {
       toast({
@@ -162,6 +183,14 @@ export default function CreateVisitorPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -175,15 +204,15 @@ export default function CreateVisitorPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Check In Visitor</BreadcrumbPage>
+            <BreadcrumbPage>Edit Visitor</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Check In Visitor</h1>
-          <p className="text-sm text-gray-500">Record a new visitor entry.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Visitor</h1>
+          <p className="text-sm text-gray-500">Update visitor information.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => router.back()} className="gap-2">
@@ -235,15 +264,27 @@ export default function CreateVisitorPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Check In Time</label>
-            <input
-              type="datetime-local"
-              value={formData.checkInTime}
-              onChange={(e) => setFormData({ ...formData, checkInTime: e.target.value })}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Check In Time</label>
+              <input
+                type="datetime-local"
+                value={formData.checkInTime}
+                onChange={(e) => setFormData({ ...formData, checkInTime: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Check Out Time</label>
+              <input
+                type="datetime-local"
+                value={formData.checkOutTime}
+                onChange={(e) => setFormData({ ...formData, checkOutTime: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
           </div>
 
           <div>
@@ -290,15 +331,30 @@ export default function CreateVisitorPage() {
                 </label>
               </div>
               {formData.attachmentName && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
-                  type="button"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                   {formData.attachmentUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="text-primary border-primary/20 hover:bg-primary/5"
+                    >
+                      <a href={formData.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                        <FileText className="w-4 h-4 mr-1" />
+                        View
+                      </a>
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
+                    type="button"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -317,7 +373,7 @@ export default function CreateVisitorPage() {
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  Check In
+                  Save Changes
                 </>
               )}
             </Button>

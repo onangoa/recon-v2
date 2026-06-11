@@ -70,7 +70,7 @@ export async function PUT(
 
         // Calculate
         const calc = PayrollCalculator.calculate({
-          basicSalary: worker.designation.minSalary || 0,
+          basicSalary: worker.designation.salary || 0,
           components: components as unknown as SalaryComponentData[],
           includePersonalRelief: true,
         });

@@ -37,6 +37,9 @@ export async function PUT(
         company: body.company,
         purpose: body.purpose,
         checkOutTime: body.checkOutTime ? new Date(body.checkOutTime) : null,
+        notes: body.notes,
+        attachmentName: body.attachmentName,
+        attachmentUrl: body.attachmentUrl,
       },
     });
 

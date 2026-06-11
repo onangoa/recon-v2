@@ -85,8 +85,8 @@ model Designation {
   contractor  Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  minSalary   Float?
-  maxSalary   Float?
+  salary      Float?
+  paymentFrequency String?
   isActive    Boolean  @default(true)
   workers     Worker[]
   salarySlips SalarySlip[]
@@ -374,16 +374,19 @@ model Photo {
 }
 
 model Visitor {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name        String
-  company     String?
-  purpose     String   // "inspection", "meeting", "delivery", "other"
-  checkInTime DateTime
-  checkOutTime DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  siteId          String
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name            String
+  company         String?
+  purpose         String    // "inspection", "meeting", "delivery", "other"
+  checkInTime     DateTime
+  checkOutTime    DateTime?
+  notes           String?
+  attachmentName  String?
+  attachmentUrl   String?   // Can store base64 or a path
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([siteId])
 }
