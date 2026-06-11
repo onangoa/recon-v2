@@ -54,11 +54,26 @@ export async function PATCH(
 
     const updateData: any = {
       name: body.name,
-      categoryId: body.categoryId,
-      unit: body.unit,
+      description: body.description,
+      sku: body.sku,
+      barcode: body.barcode,
+      categoryRel: body.categoryId ? {
+        connect: { id: body.categoryId }
+      } : undefined,
+      unit: body.unit !== undefined ? (body.unit || undefined) : undefined,
+      minStockLevel: body.minStockLevel !== undefined ? parseFloat(body.minStockLevel) : undefined,
+      maxStockLevel: body.maxStockLevel !== undefined ? (body.maxStockLevel ? parseFloat(body.maxStockLevel) : null) : undefined,
+      reorderPoint: body.reorderPoint !== undefined ? parseFloat(body.reorderPoint) : undefined,
+      location: body.location,
       supplier: body.supplier,
+      supplierRel: body.supplierId ? {
+        connect: { id: body.supplierId }
+      } : undefined,
       status: body.status,
+      notes: body.notes,
     };
+
+    if (updateData.unit === null) delete updateData.unit; // Ensure unit is never set to null
 
     if (quantity !== undefined) updateData.quantity = quantity;
     if (unitCost !== undefined) updateData.unitCost = unitCost;
@@ -76,6 +91,7 @@ export async function PATCH(
         data: updateData,
         include: {
           categoryRel: true,
+          supplierRel: true,
           site: {
             include: {
               contractor: true

@@ -301,7 +301,7 @@ async function main() {
       for (let i = 0; i < taskNames.length; i++) {
         await prisma.task.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             title: taskNames[i],
             description: `${taskNames[i]} phase of ${site.name}`,
             status: statuses[i],
@@ -327,7 +327,7 @@ async function main() {
         const totalCost = material.quantity * material.unitCost;
         await prisma.material.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             name: material.name,
             quantity: material.quantity,
             unit: material.unit,
@@ -354,7 +354,7 @@ async function main() {
       for (const equip of equipment) {
         await prisma.equipment.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             name: equip.name,
             type: equip.type,
             dailyRate: equip.dailyRate,
@@ -378,7 +378,7 @@ async function main() {
       for (const doc of documents) {
         await prisma.document.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             name: doc.name,
             type: doc.type,
             fileUrl: `/documents/${doc.name.replace(/\s+/g, '-').toLowerCase()}.pdf`,
@@ -408,7 +408,7 @@ async function main() {
         const purposes = ['inspection', 'meeting', 'delivery', 'other'];
         await prisma.visitor.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             name: `Visitor ${i + 1}`,
             company: `Company ${i + 1}`,
             purpose: purposes[i % purposes.length],
@@ -427,7 +427,7 @@ async function main() {
       for (const type of metricTypes) {
         await prisma.metric.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             type: type,
             value: type === 'progress' ? Math.random() * 100 : 85 + Math.random() * 15,
             unit: type === 'cost' ? 'KES' : '%',
@@ -458,7 +458,7 @@ async function main() {
       for (let i = 0; i < 2; i++) {
         await prisma.license.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             name: licenseNames[i % licenseNames.length],
             licenseNumber: `LIC-${site.id.substring(site.id.length - 8)}-${i}`,
             status: 'active',
@@ -475,7 +475,7 @@ async function main() {
         const supplier = suppliers[i % suppliers.length];
         await prisma.purchaseOrder.create({
           data: {
-            siteId: site.id,
+            site: { connect: { id: site.id } },
             orderNumber: `PO-${site.id.substring(site.id.length - 8)}-${i}`,
             supplierId: supplier.id,
             status: i === 0 ? 'completed' : 'pending',

@@ -99,6 +99,42 @@ export default function CreateInventoryItemPage() {
       return;
     }
 
+    if (!formData.categoryId) {
+      toast({
+        title: "Validation Error",
+        description: "Category is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.unit.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Unit is required (e.g., bags, kg, meters).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.quantity || isNaN(parseFloat(formData.quantity))) {
+      toast({
+        title: "Validation Error",
+        description: "Quantity is required and must be a number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.unitPrice || isNaN(parseFloat(formData.unitPrice))) {
+      toast({
+        title: "Validation Error",
+        description: "Unit Price is required and must be a number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!activeSite?.id) {
       toast({
         title: "Error",
@@ -124,10 +160,11 @@ export default function CreateInventoryItemPage() {
         body: JSON.stringify({
           ...formData,
           siteId: activeSite.id,
-          quantity: parseInt(formData.quantity) || 0,
-          minStockLevel: parseInt(formData.minStockLevel) || 0,
-          maxStockLevel: formData.maxStockLevel ? parseInt(formData.maxStockLevel) : null,
-          reorderPoint: parseInt(formData.reorderPoint) || 0,
+          quantity: parseFloat(formData.quantity) || 0,
+          unitCost: parseFloat(formData.unitPrice) || 0,
+          minStockLevel: parseFloat(formData.minStockLevel) || 0,
+          maxStockLevel: formData.maxStockLevel ? parseFloat(formData.maxStockLevel) : null,
+          reorderPoint: parseFloat(formData.reorderPoint) || 0,
         }),
       });
 
@@ -217,7 +254,7 @@ export default function CreateInventoryItemPage() {
           {/* Category and Supplier Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category *</label>
               <select 
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
@@ -275,7 +312,7 @@ export default function CreateInventoryItemPage() {
           {/* Unit and Quantity Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit *</label>
               <input
                 type="text"
                 value={formData.unit}
@@ -286,7 +323,7 @@ export default function CreateInventoryItemPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Quantity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Quantity *</label>
               <input
                 type="number"
                 value={formData.quantity}
@@ -299,13 +336,24 @@ export default function CreateInventoryItemPage() {
           </div>
 
           {/* Stock Levels Row */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Min Stock Level</label>
               <input
                 type="number"
                 value={formData.minStockLevel}
                 onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Max Stock Level</label>
+              <input
+                type="number"
+                value={formData.maxStockLevel}
+                onChange={(e) => setFormData({ ...formData, maxStockLevel: e.target.value })}
                 placeholder="0"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -327,7 +375,7 @@ export default function CreateInventoryItemPage() {
           {/* Unit Price and Location Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit Price</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit Price *</label>
               <input
                 type="number"
                 value={formData.unitPrice}

@@ -37,6 +37,8 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
     condition: '',
     purchaseDate: '',
     purchasePrice: '',
+    lastMaintenanceDate: '',
+    nextMaintenanceDate: '',
     status: '',
     notes: '',
   });
@@ -63,6 +65,8 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
           condition: data.condition || '',
           purchaseDate: data.purchaseDate ? new Date(data.purchaseDate).toISOString().split('T')[0] : '',
           purchasePrice: data.purchasePrice?.toString() || '',
+          lastMaintenanceDate: data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate).toISOString().split('T')[0] : '',
+          nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate).toISOString().split('T')[0] : '',
           status: data.status || '',
           notes: data.notes || '',
         });
@@ -88,6 +92,15 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
       toast({
         title: "Validation Error",
         description: "Equipment name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.machineType) {
+      toast({
+        title: "Validation Error",
+        description: "Machine type is required.",
         variant: "destructive",
       });
       return;
@@ -276,16 +289,53 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Purchase Price</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Purchase Price (KES)</label>
               <input
                 type="number"
+                step="0.01"
                 value={formData.purchasePrice}
                 onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
-                placeholder="Enter purchase price"
+                placeholder="0.00"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Last Maintenance Date</label>
+              <input
+                type="date"
+                value={formData.lastMaintenanceDate}
+                onChange={(e) => setFormData({ ...formData, lastMaintenanceDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Next Maintenance Date</label>
+              <input
+                type="date"
+                value={formData.nextMaintenanceDate}
+                onChange={(e) => setFormData({ ...formData, nextMaintenanceDate: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Enter any additional notes"
+              rows={4}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
           </div>
 
           <div className="flex gap-4 pt-4 border-t border-gray-100">

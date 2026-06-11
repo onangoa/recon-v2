@@ -78,20 +78,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Category ID is required' }, { status: 400 });
     }
     
+    if (!body.unit) {
+      return NextResponse.json({ error: 'Unit is required' }, { status: 400 });
+    }
+
+    if (isNaN(quantity) || isNaN(unitCost)) {
+      return NextResponse.json({ error: 'Quantity and Unit Cost must be valid numbers' }, { status: 400 });
+    }
+    
     const inventoryItem = await prisma.material.create({
       data: {
-        siteId: body.siteId,
+        site: {
+          connect: { id: body.siteId }
+        },
         name: body.name,
-        categoryId: body.categoryId,
-        unit: body.unit || null,
+        description: body.description || null,
+        sku: body.sku || null,
+        barcode: body.barcode || null,
+        categoryRel: body.categoryId ? {
+          connect: { id: body.categoryId }
+        } : undefined,
+        unit: body.unit,
         quantity: quantity,
         unitCost: unitCost,
         totalCost: quantity * unitCost,
+        minStockLevel: parseFloat(body.minStockLevel) || 0,
+        maxStockLevel: body.maxStockLevel ? parseFloat(body.maxStockLevel) : null,
+        reorderPoint: parseFloat(body.reorderPoint) || 0,
+        location: body.location || null,
         supplier: body.supplier || null,
+        supplierRel: body.supplierId ? {
+          connect: { id: body.supplierId }
+        } : undefined,
         status: body.status || 'pending',
+        notes: body.notes || null,
       },
       include: {
         categoryRel: true,
+        supplierRel: true,
         site: {
           include: {
             contractor: true

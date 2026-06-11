@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     const license = await prisma.license.create({
       data: {
-        siteId: body.siteId || null,
+        site: body.siteId ? { connect: { id: body.siteId } } : undefined,
         name: body.name,
         licenseNumber: body.licenseNumber,
         issuingAuthority: body.issuingAuthority || null,

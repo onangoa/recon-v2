@@ -69,7 +69,9 @@ export async function POST(request: Request) {
 
     const visitor = await prisma.visitor.create({
       data: {
-        siteId: body.siteId,
+        site: {
+          connect: { id: body.siteId }
+        },
         name: body.name,
         company: body.company || null,
         purpose: body.purpose,

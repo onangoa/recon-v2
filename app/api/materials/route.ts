@@ -31,15 +31,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    if (!body.unit) {
+      return NextResponse.json({ error: 'Unit is required' }, { status: 400 });
+    }
+    
     const material = await prisma.material.create({
       data: {
-        siteId: body.siteId,
+        site: {
+          connect: { id: body.siteId }
+        },
         name: body.name,
-        categoryId: body.categoryId,
-        quantity: body.quantity,
+        categoryRel: body.categoryId ? {
+          connect: { id: body.categoryId }
+        } : undefined,
+        quantity: body.quantity || 0,
         unit: body.unit,
-        unitCost: body.unitCost,
-        totalCost: body.quantity * body.unitCost,
+        unitCost: body.unitCost || 0,
+        totalCost: (body.quantity || 0) * (body.unitCost || 0),
         supplier: body.supplier,
         status: body.status || 'pending',
       },

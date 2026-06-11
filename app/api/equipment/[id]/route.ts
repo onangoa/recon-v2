@@ -34,11 +34,18 @@ export async function PATCH(
       where: { id },
       data: {
         name: body.name,
-        type: body.type || body.machineType,
+        type: body.machineType || body.type,
+        model: body.model,
         serialNo: body.serialNo || body.serialNumber,
+        condition: body.condition,
+        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : undefined,
+        purchasePrice: body.purchasePrice ? parseFloat(body.purchasePrice) : undefined,
+        lastMaintenanceDate: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : undefined,
+        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : undefined,
         rentalCost: body.rentalCost ? parseFloat(body.rentalCost) : undefined,
         dailyRate: body.dailyRate ? parseFloat(body.dailyRate) : undefined,
         status: body.status,
+        notes: body.notes,
       },
     });
 

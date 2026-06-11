@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSite } from '@/hooks/use-site';
 
 interface Task {
   id: string;
@@ -9,19 +10,22 @@ interface Task {
   status: string;
   priority: string;
   dueDate?: string;
-  project: {
+  site: {
     name: string;
   };
 }
 
 export default function TasksPage() {
+  const { activeSite } = useSite();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTasks = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/tasks');
+        const url = `/api/tasks${activeSite ? `?siteId=${activeSite.id}` : ''}`;
+        const res = await fetch(url);
         const data = await res.json();
         setTasks(data);
       } catch (error) {
@@ -32,7 +36,7 @@ export default function TasksPage() {
     };
 
     fetchTasks();
-  }, []);
+  }, [activeSite]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -99,7 +103,7 @@ export default function TasksPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground">{task.title}</h3>
-                  <p className="text-xs text-muted-foreground">{task.project.name}</p>
+                  <p className="text-xs text-muted-foreground">{task.site.name}</p>
                   {task.description && (
                     <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
                   )}

@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
-        siteId: body.siteId || null,
+        site: body.siteId ? { connect: { id: body.siteId } } : undefined,
         orderNumber: body.orderNumber,
         supplierId: body.supplierId,
         orderDate: body.orderDate ? new Date(body.orderDate) : new Date(),

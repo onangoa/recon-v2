@@ -126,48 +126,6 @@ export default function MaterialsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-md bg-emerald-500/5 border border-emerald-500/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-xl">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Received</p>
-                <h3 className="text-3xl font-black text-foreground">{totalCount}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-md bg-amber-500/5 border border-amber-500/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-amber-500/10 rounded-xl">
-                <Clock className="w-6 h-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">Expected Soon</p>
-                <h3 className="text-3xl font-black text-foreground">--</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-md bg-primary/5 border border-primary/10">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <Package className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-[10px] text-primary font-black uppercase tracking-widest">Total Value</p>
-                <h3 className="text-3xl font-black text-foreground">KES --</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-none shadow-md overflow-hidden">
         <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -260,7 +218,7 @@ export default function MaterialsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" className="gap-2 text-primary hover:bg-primary/5" asChild>
-                        <Link href={`/contractor/purchase-orders/edit/${delivery.id}`}>
+                        <Link href={`/contractor/purchase-orders/${delivery.id}`}>
                           <FileText className="w-4 h-4" />
                           <span className="text-xs font-bold">View</span>
                         </Link>

@@ -58,11 +58,19 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
   
   const [formData, setFormData] = useState({
     name: '',
+    description: '',
+    sku: '',
+    barcode: '',
     categoryId: '',
     unit: '',
     quantity: '',
-    unitCost: '',
-    supplier: '',
+    minStockLevel: '',
+    maxStockLevel: '',
+    reorderPoint: '',
+    unitPrice: '',
+    location: '',
+    supplierId: '',
+    notes: '',
   });
   
   const [categories, setCategories] = useState<Category[]>([]);
@@ -85,11 +93,19 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
         setMaterial(data);
         setFormData({
           name: data.name || '',
+          description: data.description || '',
+          sku: data.sku || '',
+          barcode: data.barcode || '',
           categoryId: data.categoryId || '',
           unit: data.unit || '',
           quantity: data.quantity?.toString() || '0',
-          unitCost: data.unitCost?.toString() || '0',
-          supplier: data.supplier || '',
+          minStockLevel: data.minStockLevel?.toString() || '0',
+          maxStockLevel: data.maxStockLevel?.toString() || '',
+          reorderPoint: data.reorderPoint?.toString() || '0',
+          unitPrice: data.unitCost?.toString() || '0',
+          location: data.location || '',
+          supplierId: data.supplierId || '',
+          notes: data.notes || '',
         });
       } catch (error: any) {
         toast({
@@ -153,25 +169,49 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
       return;
     }
 
+    if (!formData.unit.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Unit is required (e.g., bags, kg, meters).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.quantity || isNaN(parseFloat(formData.quantity))) {
+      toast({
+        title: "Validation Error",
+        description: "Quantity is required and must be a number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.unitPrice || isNaN(parseFloat(formData.unitPrice))) {
+      toast({
+        title: "Validation Error",
+        description: "Unit Price is required and must be a number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const quantity = parseFloat(formData.quantity) || 0;
-      const unitCost = parseFloat(formData.unitCost) || 0;
-
       const response = await fetch(`/api/inventory/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
-          categoryId: formData.categoryId,
-          unit: formData.unit || null,
-          quantity: quantity,
-          unitCost: unitCost,
-          totalCost: quantity * unitCost,
-          supplier: formData.supplier || null,
+          ...formData,
+          quantity: parseFloat(formData.quantity) || 0,
+          unitCost: parseFloat(formData.unitPrice) || 0,
+          totalCost: (parseFloat(formData.quantity) || 0) * (parseFloat(formData.unitPrice) || 0),
+          minStockLevel: parseInt(formData.minStockLevel) || 0,
+          maxStockLevel: formData.maxStockLevel ? parseInt(formData.maxStockLevel) : null,
+          reorderPoint: parseInt(formData.reorderPoint) || 0,
         }),
       });
 
@@ -258,6 +298,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
 
       <div className="rounded-lg border border-gray-200 bg-white p-8">
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+          {/* Name Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Name *</label>
             <input
@@ -270,6 +311,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
             />
           </div>
 
+          {/* Category and Supplier Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Category *</label>
@@ -285,11 +327,52 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Supplier</label>
+              <select 
+                value={formData.supplierId}
+                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
+          {/* SKU and Barcode Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">SKU</label>
+              <input
+                type="text"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Enter SKU"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Barcode</label>
+              <input
+                type="text"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                placeholder="Enter barcode"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Unit and Quantity Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit *</label>
               <input
                 type="text"
                 value={formData.unit}
@@ -300,7 +383,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Quantity</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Quantity *</label>
               <input
                 type="number"
                 value={formData.quantity}
@@ -312,33 +395,93 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          {/* Stock Levels Row */}
+          <div className="grid grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit Cost</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Min Stock Level</label>
               <input
                 type="number"
-                step="0.01"
-                value={formData.unitCost}
-                onChange={(e) => setFormData({ ...formData, unitCost: e.target.value })}
+                value={formData.minStockLevel}
+                onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Max Stock Level</label>
+              <input
+                type="number"
+                value={formData.maxStockLevel}
+                onChange={(e) => setFormData({ ...formData, maxStockLevel: e.target.value })}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Reorder Point</label>
+              <input
+                type="number"
+                value={formData.reorderPoint}
+                onChange={(e) => setFormData({ ...formData, reorderPoint: e.target.value })}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Unit Price and Location Row */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Unit Price *</label>
+              <input
+                type="number"
+                value={formData.unitPrice}
+                onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
                 placeholder="0.00"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Supplier</label>
-              <select 
-                value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Enter location"
                 disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.name}>{supplier.name}</option>
-                ))}
-              </select>
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
             </div>
+          </div>
+
+          {/* Description Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter item description"
+              rows={4}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
+          </div>
+
+          {/* Notes Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Enter any additional notes"
+              rows={3}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
           </div>
 
           <div className="flex gap-4 pt-4 border-t border-gray-100">

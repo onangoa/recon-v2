@@ -69,13 +69,22 @@ export async function POST(request: Request) {
 
     const equipment = await prisma.equipment.create({
       data: {
-        siteId: body.siteId,
+        site: {
+          connect: { id: body.siteId }
+        },
         name: body.name,
-        type: body.type || body.machineType || 'general',
+        type: body.machineType || body.type || 'general',
+        model: body.model || null,
         serialNo: body.serialNumber || body.serialNo || null,
+        condition: body.condition || null,
+        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
+        purchasePrice: body.purchasePrice ? parseFloat(body.purchasePrice) : null,
+        lastMaintenanceDate: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : null,
+        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
         rentalCost: body.rentalCost ? parseFloat(body.rentalCost) : null,
         dailyRate: body.dailyRate ? parseFloat(body.dailyRate) : null,
         status: body.status || 'idle',
+        notes: body.notes || null,
       },
     });
 

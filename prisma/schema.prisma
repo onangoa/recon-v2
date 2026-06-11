@@ -272,20 +272,31 @@ model Material {
   siteId      String
   site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name        String
+  description String?
+  sku         String?
+  barcode     String?
   categoryId  String?
   categoryRel InventoryCategory? @relation(fields: [categoryId], references: [id])
   quantity    Float
   unit        String   // "bags", "tons", "cubic meters", "pieces"
   unitCost    Float
   totalCost   Float
-  supplier    String?
+  minStockLevel Float    @default(0)
+  maxStockLevel Float?
+  reorderPoint  Float    @default(0)
+  location      String?
+  supplier      String?  // Legacy or simple supplier name
+  supplierId    String?
+  supplierRel   Supplier? @relation(fields: [supplierId], references: [id])
   status      String   // "pending", "ordered", "received"
+  notes       String?
   movements   StockMovement[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([siteId])
   @@index([categoryId])
+  @@index([supplierId])
 }
 
 model StockMovement {
@@ -316,17 +327,24 @@ model InventoryCategory {
 }
 
 model Equipment {
-  id         String   @id @default(cuid())
-  siteId     String
-  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name       String   // "Excavator", "Crane", "Concrete Mixer", etc.
-  type       String
-  serialNo   String?
-  rentalCost Float?
-  dailyRate  Float?
-  status     String   // "in-use", "idle", "maintenance"
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  siteId              String
+  site                Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name                String    // "Excavator", "Crane", "Concrete Mixer", etc.
+  type                String
+  model               String?
+  serialNo            String?
+  condition           String?   // "excellent", "good", "fair", "needs-repair"
+  purchaseDate        DateTime?
+  purchasePrice       Float?
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDate DateTime?
+  rentalCost          Float?
+  dailyRate           Float?
+  status              String    @default("idle") // "in-use", "idle", "maintenance"
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([siteId])
 }
@@ -419,6 +437,7 @@ model Supplier {
   website       String?
   notes         String?
   purchaseOrders PurchaseOrder[]
+  materials     Material[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

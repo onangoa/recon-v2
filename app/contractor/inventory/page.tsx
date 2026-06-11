@@ -341,7 +341,6 @@ export default function InventoryPage() {
                   <TableHead className="font-bold text-xs uppercase text-center">Unit</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-right">Unit Cost</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-right">Total Cost</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
                   <TableHead className="text-right w-[100px] font-bold text-xs uppercase">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -376,18 +375,6 @@ export default function InventoryPage() {
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">
                       KSh {item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-[10px] font-black uppercase px-2 py-0 border-none ${
-                          item.status === 'received' ? 'bg-green-500/10 text-green-600' :
-                          item.status === 'ordered' ? 'bg-blue-500/10 text-blue-600' :
-                          'bg-yellow-500/10 text-yellow-600'
-                        }`}
-                      >
-                        {item.status}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
