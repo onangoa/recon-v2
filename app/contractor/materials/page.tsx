@@ -44,6 +44,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useSite } from '@/hooks/use-site';
 
 interface PurchaseOrderItem {
   id: string;
@@ -64,6 +65,7 @@ interface PurchaseOrder {
 }
 
 export default function MaterialsPage() {
+  const { activeSite } = useSite();
   const [deliveries, setDeliveries] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function MaterialsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/purchase-orders?status=delivered&page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/api/purchase-orders?status=delivered&page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch deliveries');
       const data = await response.json();
       setDeliveries(data.purchaseOrders);
@@ -93,7 +95,7 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     fetchDeliveries();
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, activeSite]);
 
   return (
     <div className="space-y-6">

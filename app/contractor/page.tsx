@@ -42,6 +42,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSite } from '@/hooks/use-site';
 
 interface DashboardData {
   inventory: number;
@@ -110,6 +111,7 @@ const walletConfig = {
 };
 
 export default function ContractorDashboard() {
+  const { activeSite } = useSite();
   const [data, setData] = useState<DashboardData>({
     inventory: 0,
     machines: 0,
@@ -121,24 +123,26 @@ export default function ContractorDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const [materialsRes, tasksRes, contractorsRes, visitorsRes] = await Promise.all([
-          fetch('/api/materials'),
-          fetch('/api/tasks'),
-          fetch('/api/contractors'),
-          fetch('/api/visitors'),
+        const query = activeSite ? `?siteId=${activeSite.id}` : '';
+        const [materialsRes, tasksRes, poRes, visitorsRes] = await Promise.all([
+          fetch(`/api/materials${query}`),
+          fetch(`/api/tasks${query}`),
+          fetch(`/api/purchase-orders${query}`),
+          fetch(`/api/visitors${query}`),
         ]);
 
         const materials = await materialsRes.json();
         const tasks = await tasksRes.json();
-        const contractors = await contractorsRes.json();
-        const visitors = await visitorsRes.json();
+        const poData = await poRes.json();
+        const visitorsData = await visitorsRes.json();
 
         setData({
           inventory: Array.isArray(materials) ? materials.length : 0,
-          machines: Array.isArray(tasks) ? tasks.length : 0,
-          purchaseOrders: Array.isArray(contractors) ? contractors.length : 0,
-          workers: Array.isArray(visitors) ? visitors.length : 0,
+          machines: tasks.tasks ? tasks.tasks.length : (Array.isArray(tasks) ? tasks.length : 0),
+          purchaseOrders: poData.purchaseOrders ? poData.purchaseOrders.length : (Array.isArray(poData) ? poData.length : 0),
+          workers: visitorsData.visitors ? visitorsData.visitors.length : (Array.isArray(visitorsData) ? visitorsData.length : 0),
         });
 
         setActivities([
@@ -153,9 +157,8 @@ export default function ContractorDashboard() {
         setLoading(false);
       }
     };
-
     fetchData();
-  }, []);
+  }, [activeSite]);
 
   const MetricCard = ({ label, value, icon: Icon, trend, trendValue, colorClass }: any) => (
     <Card className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg">
@@ -188,7 +191,7 @@ export default function ContractorDashboard() {
       {/* Page Header */}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Overview</h1>
-        <p className="text-muted-foreground">Real-time performance and resource monitoring for Karen Plains Road Project.</p>
+        <p className="text-muted-foreground">Real-time performance and resource monitoring for {activeSite?.name || 'All Sites'}.</p>
       </div>
 
       {/* Metric Cards */}

@@ -23,10 +23,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { useSite } from '@/hooks/use-site';
 
 export default function CreateLicensePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -116,6 +118,15 @@ export default function CreateLicensePage() {
       return;
     }
 
+    if (!activeSite?.id) {
+      toast({
+        title: "Error",
+        description: "No active site selected. Please select a site from the sidebar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -124,7 +135,10 @@ export default function CreateLicensePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          siteId: activeSite.id,
+        }),
       });
 
       const result = await response.json();

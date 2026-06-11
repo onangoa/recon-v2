@@ -67,6 +67,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useSite } from '@/hooks/use-site';
 
 interface PurchaseOrder {
   id: string;
@@ -84,6 +85,7 @@ interface PurchaseOrder {
 export default function PurchaseOrdersList() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function PurchaseOrdersList() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/purchase-orders?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/api/purchase-orders?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch purchase orders');
       const data = await response.json();
       setOrders(data.purchaseOrders);
@@ -125,11 +127,11 @@ export default function PurchaseOrdersList() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, activeSite]);
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage]);
+  }, [currentPage, activeSite]);
 
   const handleDelete = async () => {
     if (!orderToDelete) return;

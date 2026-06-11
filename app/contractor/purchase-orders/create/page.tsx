@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 
 interface OrderItem {
   id: string;
@@ -48,6 +49,7 @@ interface InventoryItem {
 export default function CreatePurchaseOrder() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [formData, setFormData] = useState({
     orderNumber: '',
@@ -69,7 +71,7 @@ export default function CreatePurchaseOrder() {
       try {
         const [suppliersRes, inventoryRes] = await Promise.all([
           fetch('/api/suppliers?limit=100'),
-          fetch('/api/inventory?limit=1000')
+          fetch(`/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`)
         ]);
         
         const suppliersData = await suppliersRes.json();
@@ -137,6 +139,15 @@ export default function CreatePurchaseOrder() {
       return;
     }
 
+    if (!activeSite?.id) {
+      toast({
+        title: "Error",
+        description: "No active site selected. Please select a site from the sidebar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (items.length === 0 || items.every(item => !item.description.trim())) {
       toast({
         title: "Validation Error",
@@ -156,6 +167,7 @@ export default function CreatePurchaseOrder() {
         },
         body: JSON.stringify({
           ...formData,
+          siteId: activeSite.id,
           items: items.filter(item => item.description.trim()),
           subtotal: totalAmount,
           tax: 0,

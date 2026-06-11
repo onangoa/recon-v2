@@ -7,15 +7,22 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    const siteId = searchParams.get('siteId');
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
+    const where: any = {};
+    
+    if (siteId) {
+      where.siteId = siteId;
+    }
+
+    if (search) {
+      where.OR = [
         { name: { contains: search } },
         { licenseNumber: { contains: search } },
         { issuingAuthority: { contains: search } },
-      ],
-    } : {};
+      ];
+    }
 
     const [licenses, total] = await Promise.all([
       prisma.license.findMany({
@@ -58,6 +65,7 @@ export async function POST(request: Request) {
 
     const license = await prisma.license.create({
       data: {
+        siteId: body.siteId || null,
         name: body.name,
         licenseNumber: body.licenseNumber,
         issuingAuthority: body.issuingAuthority || null,

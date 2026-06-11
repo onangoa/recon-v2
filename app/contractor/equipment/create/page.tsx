@@ -219,7 +219,7 @@ export default function CreateMachinePage() {
               <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Site</label>
               <input
                 type="text"
-                value="Karen plains Road Project"
+                value={activeSite?.name || 'No site selected'}
                 disabled
                 className="w-full rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm text-gray-600"
               />

@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useSite } from '@/hooks/use-site';
 
 interface License {
   id: string;
@@ -87,6 +88,7 @@ interface License {
 export default function LicensesPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,7 +108,7 @@ export default function LicensesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/licenses?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/api/licenses?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch licenses');
       const data = await response.json();
       setLicenses(data.licenses);
@@ -126,7 +128,7 @@ export default function LicensesPage() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, activeSite]);
 
   useEffect(() => {
     fetchLicenses();

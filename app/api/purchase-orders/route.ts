@@ -8,10 +8,15 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status');
+    const siteId = searchParams.get('siteId');
     const skip = (page - 1) * limit;
 
     const where: any = {};
     
+    if (siteId) {
+      where.siteId = siteId;
+    }
+
     if (status) {
       where.status = status;
     }
@@ -29,6 +34,7 @@ export async function GET(request: Request) {
         include: {
           supplier: true,
           items: true,
+          site: true,
         },
         orderBy: {
           orderDate: 'desc'
@@ -68,6 +74,7 @@ export async function POST(request: Request) {
 
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
+        siteId: body.siteId || null,
         orderNumber: body.orderNumber,
         supplierId: body.supplierId,
         orderDate: body.orderDate ? new Date(body.orderDate) : new Date(),
@@ -90,6 +97,7 @@ export async function POST(request: Request) {
       include: {
         supplier: true,
         items: true,
+        site: true,
       },
     });
 

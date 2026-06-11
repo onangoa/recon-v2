@@ -226,6 +226,8 @@ model Site {
   equipment   Equipment[]
   visitors    Visitor[]
   documents   Document[]
+  licenses    License[]
+  purchaseOrders PurchaseOrder[]
   metrics     Metric[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -384,6 +386,8 @@ model Metric {
 
 model License {
   id               String   @id @default(cuid())
+  siteId           String?
+  site             Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
   name             String
   licenseNumber    String   @unique
   issuingAuthority String?
@@ -397,6 +401,8 @@ model License {
   notes            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([siteId])
 }
 
 model Supplier {
@@ -418,6 +424,8 @@ model Supplier {
 
 model PurchaseOrder {
   id                   String              @id @default(cuid())
+  siteId               String?
+  site                 Site?               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   orderNumber          String              @unique
   supplierId           String
   supplier             Supplier            @relation(fields: [supplierId], references: [id])
@@ -433,6 +441,7 @@ model PurchaseOrder {
   updatedAt            DateTime            @updatedAt
 
   @@index([supplierId])
+  @@index([siteId])
 }
 
 model PurchaseOrderItem {

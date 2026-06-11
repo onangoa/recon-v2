@@ -15,9 +15,14 @@ async function main() {
     await prisma.visitor.deleteMany({});
     await prisma.photo.deleteMany({});
     await prisma.document.deleteMany({});
+    await prisma.license.deleteMany({});
     await prisma.equipment.deleteMany({});
+    await prisma.purchaseOrderItem.deleteMany({});
+    await prisma.purchaseOrder.deleteMany({});
+    await prisma.supplier.deleteMany({});
     await prisma.material.deleteMany({});
     await prisma.task.deleteMany({});
+    await prisma.inventoryCategory.deleteMany({});
     await prisma.site.deleteMany({});
     await prisma.contractor.deleteMany({});
     await prisma.session.deleteMany({});
@@ -432,6 +437,60 @@ async function main() {
     }
 
     console.log('Created metrics');
+
+    // Create suppliers
+    const suppliers = [];
+    const supplierData = [
+      { name: 'Bamburi Cement', email: 'sales@bamburi.co.ke', phone: '+254700123456' },
+      { name: 'Devki Steel', email: 'info@devki.co.ke', phone: '+254700654321' },
+      { name: 'Apex Steel', email: 'orders@apex.co.ke', phone: '+254700987654' },
+    ];
+
+    for (const data of supplierData) {
+      const supplier = await prisma.supplier.create({ data });
+      suppliers.push(supplier);
+    }
+    console.log('Created suppliers');
+
+    // Create licenses for each site
+    for (const site of sites) {
+      const licenseNames = ['NEMA Compliance', 'County Construction Permit', 'NCA Registration', 'Fire Safety Certificate'];
+      for (let i = 0; i < 2; i++) {
+        await prisma.license.create({
+          data: {
+            siteId: site.id,
+            name: licenseNames[i % licenseNames.length],
+            licenseNumber: `LIC-${site.id.substring(site.id.length - 8)}-${i}`,
+            status: 'active',
+            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+    }
+    console.log('Created site licenses');
+
+    // Create purchase orders for each site
+    for (const site of sites) {
+      for (let i = 0; i < 2; i++) {
+        const supplier = suppliers[i % suppliers.length];
+        await prisma.purchaseOrder.create({
+          data: {
+            siteId: site.id,
+            orderNumber: `PO-${site.id.substring(site.id.length - 8)}-${i}`,
+            supplierId: supplier.id,
+            status: i === 0 ? 'completed' : 'pending',
+            total: 50000 + Math.random() * 100000,
+            items: {
+              create: [
+                { description: 'Material A', quantity: 10, unitPrice: 1000, totalPrice: 10000 },
+                { description: 'Material B', quantity: 5, unitPrice: 2000, totalPrice: 10000 },
+              ]
+            }
+          },
+        });
+      }
+    }
+    console.log('Created site purchase orders');
 
     // Create 100 dummy inventory categories
     const categoryNames = [

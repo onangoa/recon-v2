@@ -73,6 +73,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useSite } from '@/hooks/use-site';
 
 interface InventoryItem {
   id: string;
@@ -96,12 +97,12 @@ interface InventoryItem {
 export default function InventoryPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [siteId, setSiteId] = useState<string>('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -124,7 +125,7 @@ export default function InventoryPage() {
     try {
       let url = `/api/inventory?page=${currentPage}&limit=${limit}`;
       if (searchQuery) url += `&search=${searchQuery}`;
-      if (siteId) url += `&siteId=${siteId}`;
+      if (activeSite) url += `&siteId=${activeSite.id}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch inventory');
@@ -204,7 +205,7 @@ export default function InventoryPage() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, siteId]);
+  }, [searchQuery, activeSite]);
 
   useEffect(() => {
     fetchInventory();

@@ -127,11 +127,11 @@ export default function EquipmentPage() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, activeSite]);
 
   useEffect(() => {
     fetchEquipment();
-  }, [currentPage]);
+  }, [currentPage, activeSite]);
 
   const handleDelete = async () => {
     if (!equipmentToDelete) return;
