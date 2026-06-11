@@ -63,6 +63,7 @@ interface PayrollPeriod {
   name: string;
   startDate: string;
   endDate: string;
+  paymentFrequency: string;
   status: string;
   totalEmployees: number;
   totalGrossPay: number;
@@ -254,6 +255,7 @@ export default function PayrollPage() {
               <TableHeader className="bg-muted/30">
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Period Name</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Frequency</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Dates</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Workers</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Total Net Pay</TableHead>
@@ -271,6 +273,11 @@ export default function PayrollPage() {
                         </div>
                         <span className="font-bold text-sm">{period.name}</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">
+                        {period.paymentFrequency || 'monthly'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-[10px] text-muted-foreground font-medium">

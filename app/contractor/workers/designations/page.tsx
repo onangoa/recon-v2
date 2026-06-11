@@ -76,6 +76,7 @@ export default function DesignationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -108,8 +109,11 @@ export default function DesignationsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const response = await fetch('/api/designations', {
-        method: 'POST',
+      const url = editingId ? `/api/designations/${editingId}` : '/api/designations';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
@@ -118,17 +122,34 @@ export default function DesignationsPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save designation');
+      if (!response.ok) throw new Error(`Failed to ${editingId ? 'update' : 'save'} designation`);
 
-      toast({ title: "Success", description: "Designation saved successfully" });
+      toast({ title: "Success", description: `Designation ${editingId ? 'updated' : 'saved'} successfully` });
       setIsDialogOpen(false);
-      setFormData({ title: '', description: '', salary: '', paymentFrequency: 'monthly', isActive: true });
+      resetForm();
       fetchDesignations();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleEdit = (design: Designation) => {
+    setEditingId(design.id);
+    setFormData({
+      title: design.title,
+      description: design.description || '',
+      salary: design.salary?.toString() || '',
+      paymentFrequency: design.paymentFrequency || 'monthly',
+      isActive: design.isActive
+    });
+    setIsDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({ title: '', description: '', salary: '', paymentFrequency: 'monthly', isActive: true });
   };
 
   const formatCurrency = (amount: number | null) => {
@@ -161,14 +182,19 @@ export default function DesignationsPage() {
           <Button asChild variant="outline">
             <Link href="/contractor/workers"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Workers</Link>
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
-              <Button className="gap-2"><Plus className="w-4 h-4" /> Add Designation</Button>
+              <Button onClick={() => resetForm()} className="gap-2"><Plus className="w-4 h-4" /> Add Designation</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Add New Designation</DialogTitle>
-                <DialogDescription>Create a new job role with its pay grade.</DialogDescription>
+                <DialogTitle>{editingId ? 'Edit Designation' : 'Add New Designation'}</DialogTitle>
+                <DialogDescription>
+                  {editingId ? 'Modify the details of this job role.' : 'Create a new job role with its pay grade.'}
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -204,7 +230,7 @@ export default function DesignationsPage() {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={isSaving}>
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Save Designation
+                    {editingId ? 'Update' : 'Save'} Designation
                   </Button>
                 </DialogFooter>
               </form>
@@ -280,7 +306,9 @@ export default function DesignationsPage() {
                           <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem><Pencil className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(design)}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

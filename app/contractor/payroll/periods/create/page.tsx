@@ -32,6 +32,7 @@ export default function CreatePayrollPeriodPage() {
     name: '',
     startDate: '',
     endDate: '',
+    paymentFrequency: 'monthly',
     description: ''
   });
 
@@ -145,6 +146,23 @@ export default function CreatePayrollPeriodPage() {
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Payment Frequency *</label>
+            <select
+              value={formData.paymentFrequency}
+              onChange={(e) => setFormData({...formData, paymentFrequency: e.target.value})}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              required
+            >
+              <option value="monthly">Monthly</option>
+              <option value="weekly">Weekly</option>
+              <option value="daily">Daily</option>
+              <option value="all">All Workers (Regardless of frequency)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500 italic">This will filter which workers are included when processing this payroll period.</p>
           </div>
 
           <div>

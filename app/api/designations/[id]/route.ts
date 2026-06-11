@@ -26,12 +26,28 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    
+    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
+    let contractorId = body.contractorId;
+    if (contractorId === 'placeholder-id') {
+      const firstContractor = await prisma.contractor.findFirst();
+      contractorId = firstContractor?.id;
+    }
+
     const designation = await prisma.designation.update({
       where: { id },
-      data: body,
+      data: {
+        title: body.title,
+        description: body.description,
+        salary: body.salary,
+        paymentFrequency: body.paymentFrequency,
+        isActive: body.isActive,
+        contractorId: contractorId, // Update if provided/resolved
+      },
     });
     return NextResponse.json(designation);
   } catch (error) {
+    console.error('Failed to update designation:', error);
     return NextResponse.json({ error: 'Failed to update designation' }, { status: 500 });
   }
 }

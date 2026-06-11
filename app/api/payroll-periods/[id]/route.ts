@@ -24,7 +24,28 @@ export async function GET(
     if (!period) {
       return NextResponse.json({ error: 'Payroll period not found' }, { status: 404 });
     }
-    return NextResponse.json(period);
+
+    // Ensure accurate worker count
+    let workerCount = period.totalEmployees;
+    if (period.status === 'draft') {
+      const workerWhere: any = { 
+        contractorId: period.contractorId, 
+        status: 'Active' 
+      };
+      if (period.paymentFrequency && period.paymentFrequency !== 'all') {
+        workerWhere.designation = {
+          paymentFrequency: period.paymentFrequency
+        };
+      }
+      workerCount = await prisma.worker.count({ where: workerWhere });
+    } else if (period.salarySlips.length > 0) {
+      workerCount = period.salarySlips.length;
+    }
+
+    return NextResponse.json({
+      ...period,
+      totalEmployees: workerCount
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch payroll period' }, { status: 500 });
   }
@@ -49,9 +70,20 @@ export async function PUT(
 
       if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 });
 
-      // 2. Fetch all active workers for this contractor
+      // 2. Fetch all active workers for this contractor, filtered by payment frequency
+      const workerWhere: any = { 
+        contractorId: period.contractorId, 
+        status: 'Active' 
+      };
+
+      if (period.paymentFrequency && period.paymentFrequency !== 'all') {
+        workerWhere.designation = {
+          paymentFrequency: period.paymentFrequency
+        };
+      }
+
       const workers = await prisma.worker.findMany({
-        where: { contractorId: period.contractorId, status: 'Active' },
+        where: workerWhere,
         include: { designation: true }
       });
 
@@ -156,21 +188,26 @@ export async function PUT(
     }
 
     // Default update behavior
-    const period = await prisma.payrollPeriod.update({
+    const updateData: any = {
+      name: body.name,
+      startDate: body.startDate ? new Date(body.startDate) : undefined,
+      endDate: body.endDate ? new Date(body.endDate) : undefined,
+      paymentFrequency: body.paymentFrequency,
+      status: status,
+      description: body.description,
+    };
+
+    // Only update totals if they are explicitly provided (usually from a processing run)
+    if (body.totalEmployees !== undefined) updateData.totalEmployees = body.totalEmployees;
+    if (body.totalGrossPay !== undefined) updateData.totalGrossPay = body.totalGrossPay;
+    if (body.totalNetPay !== undefined) updateData.totalNetPay = body.totalNetPay;
+    if (body.totalDeductions !== undefined) updateData.totalDeductions = body.totalDeductions;
+
+    const updatedPeriod = await prisma.payrollPeriod.update({
       where: { id },
-      data: {
-        name: body.name,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-        status: status,
-        description: body.description,
-        totalEmployees: body.totalEmployees,
-        totalGrossPay: body.totalGrossPay,
-        totalNetPay: body.totalNetPay,
-        totalDeductions: body.totalDeductions,
-      },
+      data: updateData,
     });
-    return NextResponse.json(period);
+    return NextResponse.json(updatedPeriod);
   } catch (error) {
     console.error('Failed to update payroll period:', error);
     return NextResponse.json({ error: 'Failed to update payroll period' }, { status: 500 });

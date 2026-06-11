@@ -51,14 +51,32 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
+    let contractorId = body.contractorId;
+    if (!contractorId || contractorId === 'placeholder-id') {
+      const firstContractor = await prisma.contractor.findFirst();
+      contractorId = firstContractor?.id;
+    }
+
+    if (!contractorId) {
+      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
+    }
+
+    // Handle empty or invalid designationId
+    let designationId = body.designationId;
+    if (designationId === "" || designationId === "null" || designationId === "undefined") {
+      designationId = null;
+    }
+
     const worker = await prisma.worker.create({
       data: {
         name: body.name,
         email: body.email,
         phone: body.phone,
         nationalId: body.nationalId,
-        designationId: body.designationId,
-        contractorId: body.contractorId,
+        designationId: designationId,
+        contractorId: contractorId,
         status: body.status || 'Active',
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
       },

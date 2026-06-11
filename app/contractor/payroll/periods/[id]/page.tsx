@@ -100,6 +100,7 @@ interface PayrollPeriod {
   name: string;
   startDate: string;
   endDate: string;
+  paymentFrequency: string;
   status: string;
   totalEmployees: number;
   totalGrossPay: number;
@@ -206,13 +207,18 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight text-primary">{period.name}</h1>
-              <Badge className={`
-                uppercase text-[10px] font-bold
-                ${period.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 
-                  period.status === 'processing' ? 'bg-amber-500/10 text-amber-600' : 'bg-slate-500/10 text-slate-600'}
-              `}>
-                {period.status}
-              </Badge>
+              <div className="flex gap-2">
+                <Badge className="bg-primary/10 text-primary border-none uppercase text-[10px] font-bold">
+                  {period.paymentFrequency || 'monthly'}
+                </Badge>
+                <Badge className={`
+                  uppercase text-[10px] font-bold
+                  ${period.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 
+                    period.status === 'processing' ? 'bg-amber-500/10 text-amber-600' : 'bg-slate-500/10 text-slate-600'}
+                `}>
+                  {period.status}
+                </Badge>
+              </div>
             </div>
             <p className="text-muted-foreground text-sm flex items-center gap-2 mt-1">
               <Calendar className="w-3.5 h-3.5" />

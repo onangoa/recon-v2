@@ -18,6 +18,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
+    let contractorId = body.contractorId;
+    if (!contractorId || contractorId === 'placeholder-id') {
+      const firstContractor = await prisma.contractor.findFirst();
+      contractorId = firstContractor?.id;
+    }
+
+    if (!contractorId) {
+      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
+    }
+
     const designation = await prisma.designation.create({
       data: {
         title: body.title,
@@ -25,11 +37,12 @@ export async function POST(request: NextRequest) {
         salary: body.salary,
         paymentFrequency: body.paymentFrequency,
         isActive: body.isActive ?? true,
-        contractorId: body.contractorId,
+        contractorId: contractorId,
       },
     });
     return NextResponse.json(designation, { status: 201 });
   } catch (error) {
+    console.error('Failed to create designation:', error);
     return NextResponse.json({ error: 'Failed to create designation' }, { status: 500 });
   }
 }

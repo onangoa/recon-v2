@@ -103,6 +103,7 @@ model PayrollPeriod {
   name            String
   startDate       DateTime
   endDate         DateTime
+  paymentFrequency String?  @default("monthly") // "monthly", "weekly", "daily", "all"
   status          String   @default("draft") // "draft", "processing", "completed", "cancelled"
   description     String?
   totalEmployees  Int      @default(0)

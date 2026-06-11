@@ -29,6 +29,13 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+
+    // Handle empty or invalid designationId
+    let designationId = body.designationId;
+    if (designationId === "" || designationId === "null" || designationId === "undefined") {
+      designationId = null;
+    }
+
     const worker = await prisma.worker.update({
       where: { id },
       data: {
@@ -36,7 +43,7 @@ export async function PUT(
         email: body.email,
         phone: body.phone,
         nationalId: body.nationalId,
-        designationId: body.designationId,
+        designationId: designationId,
         status: body.status,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
       },
@@ -46,6 +53,7 @@ export async function PUT(
     });
     return NextResponse.json(worker);
   } catch (error) {
+    console.error('Failed to update worker:', error);
     return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 });
   }
 }
