@@ -13,7 +13,8 @@ model User {
   email         String         @unique
   password      String
   name          String
-  role          String         @default("user") // superadmin, contractor, user
+  role          String         @default("user")
+  avatar        String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   contractor    Contractor?
@@ -448,6 +449,7 @@ model Inventory {
   sku          String?            @unique
   categoryId   String?
   quantity     Float              @default(0)
+  unitCost     Float              @default(0)
   unit         String
   minStock     Float              @default(0)
   location     String?
@@ -594,17 +596,22 @@ model Supplier {
 }
 
 model PurchaseOrder {
-  id           String              @id @default(cuid())
-  siteId       String
-  supplierId   String
-  orderNumber  String              @unique
-  status       String // pending, approved, completed, cancelled
-  total        Float
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  site         Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  supplier     Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  items        PurchaseOrderItem[]
+  id                    String              @id @default(cuid())
+  siteId                String
+  supplierId            String
+  orderNumber           String              @unique
+  status                String // pending, approved, completed, cancelled
+  subtotal              Float               @default(0)
+  tax                   Float               @default(0)
+  total                 Float               @default(0)
+  orderDate             DateTime            @default(now())
+  expectedDeliveryDate  DateTime?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  site                  Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  supplier              Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items                 PurchaseOrderItem[]
 
   @@index([siteId])
   @@index([supplierId])
@@ -617,6 +624,7 @@ model PurchaseOrderItem {
   quantity        Float
   unitPrice       Float
   totalPrice      Float
+  materialId      String?
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@index([purchaseOrderId])

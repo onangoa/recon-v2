@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export async function POST(request: Request) {
   try {
@@ -11,13 +14,22 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
-    const base64 = buffer.toString('base64');
-    
+
+    const uploadsDir = join(process.cwd(), 'public', 'uploads');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = `${uniqueSuffix}-${file.name}`;
+    const filepath = join(uploadsDir, filename);
+
+    await writeFile(filepath, buffer);
+
     return NextResponse.json({ 
+      url: `/uploads/${filename}`,
       fileName: file.name,
       fileType: file.type,
-      fileData: `data:${file.type};base64,${base64}`,
     });
   } catch (error) {
     console.error('Failed to upload file:', error);

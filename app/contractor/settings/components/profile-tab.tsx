@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { User, Loader2, Save } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, Loader2, Save, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -14,26 +14,25 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ProfileTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [contractor, setContractor] = useState<any>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    companyName: '',
     phoneNumber: '',
-    location: '',
-    licenseNo: '',
   });
 
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
-      // In a real app, the ID would come from the session
-      // For now, we'll fetch the first contractor for demo purposes
       const response = await fetch('/api/contractors?limit=1');
       const data = await response.json();
       const profile = data.contractors[0];
@@ -43,11 +42,9 @@ export default function ProfileTab() {
         setFormData({
           name: profile.user.name,
           email: profile.user.email,
-          companyName: profile.companyName,
           phoneNumber: profile.phoneNumber,
-          location: profile.location,
-          licenseNo: profile.licenseNo,
         });
+        setAvatarUrl(profile.user.avatar || '');
       }
     } catch (err) {
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
@@ -60,6 +57,43 @@ export default function ProfileTab() {
     fetchProfile();
   }, []);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "File size must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) throw new Error('Failed to upload image');
+
+      const data = await response.json();
+      setAvatarUrl(data.url);
+      
+      toast({ title: "Success", description: "Profile picture uploaded. Click Save to apply changes." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractor) return;
@@ -70,14 +104,12 @@ export default function ProfileTab() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: formData.companyName,
           phoneNumber: formData.phoneNumber,
-          location: formData.location,
-          licenseNo: formData.licenseNo,
           user: {
             update: {
               name: formData.name,
               email: formData.email,
+              avatar: avatarUrl,
             }
           }
         }),
@@ -86,6 +118,7 @@ export default function ProfileTab() {
       if (!response.ok) throw new Error('Failed to update profile');
 
       toast({ title: "Success", description: "Profile updated successfully" });
+      window.location.reload();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -115,75 +148,76 @@ export default function ProfileTab() {
       </CardHeader>
       <form onSubmit={handleSave}>
         <CardContent className="space-y-8 pb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input 
-                id="name" 
-                value={formData.name} 
-                onChange={e => setFormData({...formData, name: e.target.value})}
-                className="bg-muted/30 border-none" 
-              />
+          <div className="flex items-start gap-6">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarUrl} alt="Profile" />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
+                  {formData.name?.charAt(0).toUpperCase() || 'A'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="gap-2"
+                >
+                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  Upload Photo
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Max 5MB.</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail Address</Label>
-              <Input 
-                id="email" 
-                type="email"
-                value={formData.email} 
-                onChange={e => setFormData({...formData, email: e.target.value})}
-                className="bg-muted/30 border-none" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input 
-                id="phoneNumber" 
-                value={formData.phoneNumber} 
-                onChange={e => setFormData({...formData, phoneNumber: e.target.value})}
-                className="bg-muted/30 border-none" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Account Role</Label>
-              <Input 
-                id="role" 
-                value={contractor?.user?.role || 'Contractor'} 
-                disabled
-                className="bg-muted/10 border-none italic opacity-70" 
-              />
-            </div>
-          </div>
 
-          <div className="pt-4 border-t">
-            <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4">Company Association</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input 
-                  id="companyName" 
-                  value={formData.companyName} 
-                  onChange={e => setFormData({...formData, companyName: e.target.value})}
-                  className="bg-muted/30 border-none" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Headquarters Location</Label>
-                <Input 
-                  id="location" 
-                  value={formData.location} 
-                  onChange={e => setFormData({...formData, location: e.target.value})}
-                  className="bg-muted/30 border-none" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="licenseNo">NCA License Number</Label>
-                <Input 
-                  id="licenseNo" 
-                  value={formData.licenseNo} 
-                  onChange={e => setFormData({...formData, licenseNo: e.target.value})}
-                  className="bg-muted/30 border-none" 
-                />
+            <div className="flex-1 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})}
+                    className="bg-muted/30 border-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail Address</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={formData.email} 
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    className="bg-muted/30 border-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input 
+                    id="phoneNumber" 
+                    value={formData.phoneNumber} 
+                    onChange={e => setFormData({...formData, phoneNumber: e.target.value})}
+                    className="bg-muted/30 border-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Account Role</Label>
+                  <Input 
+                    id="role" 
+                    value={contractor?.user?.role || 'Contractor'} 
+                    disabled
+                    className="bg-muted/10 border-none italic opacity-70" 
+                  />
+                </div>
               </div>
             </div>
           </div>

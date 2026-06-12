@@ -60,7 +60,7 @@ export default function CreatePurchaseOrder() {
     notes: '',
   });
   const [items, setItems] = useState<OrderItem[]>([
-    { id: '1', description: '', quantity: 1, unitPrice: 0 }
+    { id: '1', description: '', quantity: 1, unitPrice: 0, materialId: '' }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -96,7 +96,8 @@ export default function CreatePurchaseOrder() {
       id: Math.random().toString(36).substr(2, 9),
       description: '',
       quantity: 1,
-      unitPrice: 0
+      unitPrice: 0,
+      materialId: ''
     }]);
   };
 
@@ -314,7 +315,7 @@ export default function CreatePurchaseOrder() {
                     <tr key={item.id}>
                       <td className="px-4 py-2">
                         <select
-                          value={item.materialId || ''}
+                          value={item.materialId}
                           onChange={(e) => updateItem(item.id, 'materialId', e.target.value)}
                           disabled={isSubmitting}
                           className="w-full rounded border-gray-300 text-xs focus:ring-primary focus:border-primary"

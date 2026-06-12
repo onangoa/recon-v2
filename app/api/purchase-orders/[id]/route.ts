@@ -63,7 +63,7 @@ export async function PATCH(
               quantity: item.quantity || 1,
               unitPrice: item.unitPrice || 0,
               totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-              materialId: item.materialId || null,
+              id: item.id || null,
             }))
           } : undefined,
         },
@@ -74,11 +74,11 @@ export async function PATCH(
         }
       });
 
-      // 2. If status just transitioned to "delivered", update the associated materials
+      // 2. If status just transitioned to "completed", update the associated materials
       if (currentPO.status !== 'delivered' && updatedPO.status === 'delivered') {
         for (const item of updatedPO.items) {
           if (item.materialId) {
-            const material = await tx.material.findUnique({
+            const material = await tx.inventory.findUnique({
               where: { id: item.materialId }
             });
 
@@ -86,12 +86,12 @@ export async function PATCH(
               const newQuantity = material.quantity + item.quantity;
               
               // Update material stock
-              await tx.material.update({
+              await tx.inventory.update({
                 where: { id: item.materialId },
                 data: {
                   quantity: newQuantity,
-                  totalCost: newQuantity * material.unitCost,
-                  status: 'received',
+                  unitCost: item.unitPrice,
+                  status: 'in-stock',
                   updatedAt: new Date(),
                 }
               });
@@ -99,7 +99,7 @@ export async function PATCH(
               // Record stock movement
               await tx.stockMovement.create({
                 data: {
-                  materialId: item.materialId,
+                  inventoryId: item.materialId,
                   quantity: newQuantity,
                   change: item.quantity,
                   type: 'in',

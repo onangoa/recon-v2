@@ -79,13 +79,19 @@ export async function POST(request: Request) {
         supplierId: body.supplierId,
         orderNumber: body.orderNumber,
         status: body.status || 'pending',
+        subtotal: body.subtotal || 0,
+        tax: body.tax || 0,
         total: body.total || 0,
+        orderDate: body.orderDate ? new Date(body.orderDate) : new Date(),
+        expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : null,
+        notes: body.notes || null,
         items: body.items ? {
           create: body.items.map((item: any) => ({
             description: item.description,
             quantity: item.quantity || 1,
             unitPrice: item.unitPrice || 0,
             totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+            materialId: item.materialId || null,
           }))
         } : undefined,
       },

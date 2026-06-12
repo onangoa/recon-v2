@@ -260,11 +260,6 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2" asChild>
-                    <Link href="/contractor/settings/profile">
-                      <Users className="size-4" /> Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2" asChild>
                     <Link href="/contractor/settings">
                       <Settings className="size-4" /> Settings
                     </Link>
