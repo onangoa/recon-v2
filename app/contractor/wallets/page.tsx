@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +60,7 @@ interface WalletData {
 
 export default function WalletsPage() {
   const { toast } = useToast();
+  const { user, contractor } = useAuth();
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,11 @@ export default function WalletsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchWallets = async () => {
+    if (!contractor) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/wallets');
@@ -82,11 +89,11 @@ export default function WalletsPage() {
 
   useEffect(() => {
     fetchWallets();
-  }, []);
+  }, [contractor]);
 
   const handleDelete = async () => {
     if (!walletToDelete) return;
-    
+
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/wallets/${walletToDelete.id}`, {
@@ -115,6 +122,16 @@ export default function WalletsPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (!contractor) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <p className="text-muted-foreground">Please log in to access wallets</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

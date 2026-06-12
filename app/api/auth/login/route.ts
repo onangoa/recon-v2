@@ -47,6 +47,14 @@ export async function POST(request: Request) {
         email: user.email,
         role: user.role,
         name: user.name,
+        contractor: user.contractor ? {
+          id: user.contractor.id,
+          companyName: user.contractor.companyName,
+          location: user.contractor.location,
+          phoneNumber: user.contractor.phoneNumber,
+          licenseNo: user.contractor.licenseNo,
+          userId: user.contractor.userId,
+        } : null,
       },
       { status: 200 }
     );

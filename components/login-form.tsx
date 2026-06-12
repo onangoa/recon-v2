@@ -51,8 +51,20 @@ export function LoginForm() {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('user', JSON.stringify(data));
-        
-        // Redirect based on role
+
+        if (data.contractor) {
+          const contractor = data.contractor;
+          localStorage.setItem('contractor', JSON.stringify(contractor));
+
+          fetch(`/api/sites?contractorId=${contractor.id}`)
+            .then(res => res.json())
+            .then(sitesData => {
+              const sites = Array.isArray(sitesData.sites) ? sitesData.sites : sitesData;
+              localStorage.setItem('sites', JSON.stringify(sites));
+            })
+            .catch(err => console.error('Failed to fetch sites:', err));
+        }
+
         if (data.role === 'superadmin') {
           router.push('/superadmin');
         } else {
