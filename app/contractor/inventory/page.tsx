@@ -80,11 +80,11 @@ interface InventoryItem {
   name: string;
   quantity: number;
   unit: string;
-  unitCost: number;
-  totalCost: number;
-  supplier: string | null;
+  minStock: number;
+  description: string | null;
   status: string;
-  categoryRel: {
+  sku: string | null;
+  category: {
     id: string;
     name: string;
   } | null;
@@ -333,17 +333,17 @@ export default function InventoryPage() {
             </div>
           ) : (
             <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="font-bold text-xs uppercase">Item Name</TableHead>
-                  <TableHead className="font-bold text-xs uppercase">Category</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-center">Quantity</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-center">Unit</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-right">Unit Cost</TableHead>
-                  <TableHead className="font-bold text-xs uppercase text-right">Total Cost</TableHead>
-                  <TableHead className="text-right w-[100px] font-bold text-xs uppercase">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+               <TableHeader className="bg-muted/30">
+                 <TableRow>
+                   <TableHead className="font-bold text-xs uppercase">Item Name</TableHead>
+                   <TableHead className="font-bold text-xs uppercase">Category</TableHead>
+                   <TableHead className="font-bold text-xs uppercase text-center">Quantity</TableHead>
+                   <TableHead className="font-bold text-xs uppercase text-center">Unit</TableHead>
+                   <TableHead className="font-bold text-xs uppercase text-center">Min Stock</TableHead>
+                   <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
+                   <TableHead className="text-right w-[100px] font-bold text-xs uppercase">Actions</TableHead>
+                 </TableRow>
+               </TableHeader>
               <TableBody>
                 {inventory.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
@@ -355,27 +355,35 @@ export default function InventoryPage() {
                         <span className="font-bold text-sm text-foreground group-hover/link:text-primary transition-colors">{item.name}</span>
                       </Link>
                     </TableCell>
-                    <TableCell>
-                      {item.categoryRel ? (
-                        <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-black uppercase px-2 py-0">
-                          {item.categoryRel.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center font-bold text-sm">
-                      {item.quantity}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="text-xs text-muted-foreground">{item.unit}</span>
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-sm">
-                      KSh {item.unitCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-sm">
-                      KSh {item.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
+                     <TableCell>
+                       {item.category ? (
+                         <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-black uppercase px-2 py-0">
+                           {item.category.name}
+                         </Badge>
+                       ) : (
+                         <span className="text-xs text-muted-foreground">-</span>
+                       )}
+                     </TableCell>
+                     <TableCell className="text-center font-bold text-sm">
+                       {item.quantity}
+                     </TableCell>
+                     <TableCell className="text-center">
+                       <span className="text-xs text-muted-foreground">{item.unit}</span>
+                     </TableCell>
+                     <TableCell className="text-center font-bold text-sm">
+                       {item.minStock}
+                     </TableCell>
+                     <TableCell className="text-center">
+                       <Badge 
+                         variant={item.status === 'in-stock' ? 'default' : 'secondary'}
+                         className={item.status === 'in-stock' 
+                           ? 'text-[10px] font-black uppercase px-2 py-0 bg-green-100 text-green-700' 
+                           : 'text-[10px] font-black uppercase px-2 py-0 bg-red-100 text-red-700'
+                         }
+                       >
+                         {item.status}
+                       </Badge>
+                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

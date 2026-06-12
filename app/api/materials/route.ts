@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
       where.siteId = siteId;
     }
 
-    const materials = await prisma.material.findMany({
+    const inventory = await prisma.inventory.findMany({
       where,
       include: {
-        categoryRel: true,
+        category: true,
         site: {
           include: {
             contractor: true
@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-    return NextResponse.json(materials);
+    return NextResponse.json(inventory);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch materials' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch inventory' }, { status: 500 });
   }
 }
 
@@ -36,24 +36,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unit is required' }, { status: 400 });
     }
     
-    const material = await prisma.material.create({
+    const inventory = await prisma.inventory.create({
       data: {
-        site: {
-          connect: { id: body.siteId }
-        },
+        siteId: body.siteId,
         name: body.name,
-        categoryRel: body.categoryId ? {
-          connect: { id: body.categoryId }
-        } : undefined,
+        description: body.description,
+        categoryId: body.categoryId,
         quantity: body.quantity || 0,
         unit: body.unit,
-        unitCost: body.unitCost || 0,
-        totalCost: (body.quantity || 0) * (body.unitCost || 0),
-        supplier: body.supplier,
-        status: body.status || 'pending',
+        minStock: body.minStock || 0,
+        location: body.location,
+        status: body.status || 'in-stock',
       },
       include: {
-        categoryRel: true,
+        category: true,
         site: {
           include: {
             contractor: true
@@ -64,16 +60,16 @@ export async function POST(request: NextRequest) {
 
     await ActivityLogger.log({
       userId: 'system',
-      contractorId: material.site.contractorId,
+      contractorId: inventory.site.contractorId,
       action: 'CREATE',
       module: 'INVENTORY',
-      description: `Added material: ${material.name}`,
-      targetId: material.id,
-      details: { name: material.name, quantity: material.quantity, unit: material.unit, status: material.status }
+      description: `Added inventory item: ${inventory.name}`,
+      targetId: inventory.id,
+      details: { name: inventory.name, quantity: inventory.quantity, unit: inventory.unit, status: inventory.status }
     });
 
-    return NextResponse.json(material, { status: 201 });
+    return NextResponse.json(inventory, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create material' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create inventory item' }, { status: 500 });
   }
 }

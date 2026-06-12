@@ -313,6 +313,8 @@ model Site {
   purchaseOrders  PurchaseOrder[]
   visitorEntities Visitor[]
   photos          Photo[]
+  transfersFrom    StockTransfer[] @relation("TransferFrom")
+  transfersTo      StockTransfer[] @relation("TransferTo")
 
   @@index([projectId])
   @@index([contractorId])
@@ -454,6 +456,8 @@ model Inventory {
   updatedAt    DateTime           @updatedAt
   site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   category     InventoryCategory? @relation(fields: [categoryId], references: [id])
+  transfers    StockTransfer[]
+  movements    StockMovement[]
 
   @@index([siteId])
   @@index([categoryId])
@@ -492,6 +496,45 @@ model License {
   site             Site?     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId])
+}
+
+model StockTransfer {
+  id             String   @id @default(cuid())
+  inventoryId    String
+  fromSiteId     String
+  toSiteId       String
+  quantity       Float
+  status         String   @default("pending") // pending, approved, rejected, completed
+  requestedBy    String
+  approvedBy     String?
+  approvedAt     DateTime?
+  notes          String?
+  rejectionReason String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  inventory      Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  fromSite       Site      @relation("TransferFrom", fields: [fromSiteId], references: [id], onDelete: Cascade)
+  toSite         Site      @relation("TransferTo", fields: [toSiteId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@index([fromSiteId])
+  @@index([toSiteId])
+  @@index([status])
+}
+
+model StockMovement {
+  id           String   @id @default(cuid())
+  inventoryId  String
+  quantity     Float
+  change       Float    // Positive for in, negative for out
+  type         String   // in, out, adjustment
+  notes        String?
+  createdAt    DateTime @default(now())
+  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@index([createdAt])
+  @@index([type])
 }
 
 model Document {

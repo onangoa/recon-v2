@@ -20,9 +20,9 @@ async function main() {
     await prisma.purchaseOrderItem.deleteMany({});
     await prisma.purchaseOrder.deleteMany({});
     await prisma.supplier.deleteMany({});
-    await prisma.material.deleteMany({});
     await prisma.task.deleteMany({});
     await prisma.inventoryCategory.deleteMany({});
+    await prisma.inventory.deleteMany({});
     await prisma.site.deleteMany({});
     await prisma.contractor.deleteMany({});
     await prisma.session.deleteMany({});
@@ -314,33 +314,53 @@ async function main() {
 
     console.log('Created tasks');
 
-    // Create materials for each site
+    // Create inventory categories
+    const cementCategory = await prisma.inventoryCategory.create({
+      data: { name: 'Cement', description: 'Cement and concrete materials' }
+    });
+
+    const sandCategory = await prisma.inventoryCategory.create({
+      data: { name: 'Sand', description: 'Sand and aggregates' }
+    });
+
+    const steelCategory = await prisma.inventoryCategory.create({
+      data: { name: 'Steel', description: 'Steel and metal materials' }
+    });
+
+    const bricksCategory = await prisma.inventoryCategory.create({
+      data: { name: 'Bricks', description: 'Bricks and masonry' }
+    });
+
+    console.log('Created inventory categories');
+
+    // Create inventory items for each site
     for (const site of sites) {
-      const materials = [
-        { name: 'Cement (50kg)', category: 'cement', quantity: 1000, unit: 'bags', unitCost: 800 },
-        { name: 'Sand', category: 'sand', quantity: 500, unit: 'cubic meters', unitCost: 3000 },
-        { name: 'Steel Rebar', category: 'steel', quantity: 50, unit: 'tons', unitCost: 45000 },
-        { name: 'Bricks', category: 'bricks', quantity: 50000, unit: 'pieces', unitCost: 15 },
+      const inventoryItems = [
+        { name: 'Cement (50kg)', categoryId: cementCategory.id, quantity: 1000, unit: 'bags', minStock: 100, description: 'Portland cement bags' },
+        { name: 'Sand', categoryId: sandCategory.id, quantity: 500, unit: 'cubic meters', minStock: 50, description: 'River sand' },
+        { name: 'Steel Rebar', categoryId: steelCategory.id, quantity: 50, unit: 'tons', minStock: 10, description: 'Steel reinforcement bars' },
+        { name: 'Bricks', categoryId: bricksCategory.id, quantity: 50000, unit: 'pieces', minStock: 5000, description: 'Standard bricks' },
       ];
 
-      for (const material of materials) {
-        const totalCost = material.quantity * material.unitCost;
-        await prisma.material.create({
+      for (const item of inventoryItems) {
+        await prisma.inventory.create({
           data: {
-            site: { connect: { id: site.id } },
-            name: material.name,
-            quantity: material.quantity,
-            unit: material.unit,
-            unitCost: material.unitCost,
-            totalCost: totalCost,
-            supplier: 'Local Supplier',
-            status: 'received',
+            siteId: site.id,
+            contractorId: site.contractorId,
+            name: item.name,
+            categoryId: item.categoryId,
+            quantity: item.quantity,
+            unit: item.unit,
+            minStock: item.minStock,
+            description: item.description,
+            status: 'in-stock',
+            sku: `${item.name.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 8)}`,
           },
         });
       }
     }
 
-    console.log('Created materials');
+    console.log('Created inventory');
 
     // Create equipment for each site
     for (const site of sites) {

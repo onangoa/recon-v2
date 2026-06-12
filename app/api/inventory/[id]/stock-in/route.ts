@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -22,11 +22,7 @@ export async function POST(
       return NextResponse.json({ error: 'Inventory item not found' }, { status: 404 });
     }
 
-    if (inventory.quantity < quantity) {
-      return NextResponse.json({ error: 'Insufficient stock' }, { status: 400 });
-    }
-
-    const newQuantity = inventory.quantity - quantity;
+    const newQuantity = inventory.quantity + quantity;
     const updatedInventory = await prisma.inventory.update({
       where: { id },
       data: {
@@ -41,15 +37,15 @@ export async function POST(
       data: {
         inventoryId: id,
         quantity: newQuantity,
-        change: -quantity,
-        type: 'out',
-        notes: notes || 'Usage recorded',
+        change: quantity,
+        type: 'in',
+        notes: notes || 'Stock added',
       },
     });
 
     return NextResponse.json(updatedInventory);
   } catch (error) {
-    console.error('Failed to record usage:', error);
-    return NextResponse.json({ error: 'Failed to record usage' }, { status: 500 });
+    console.error('Failed to record stock in:', error);
+    return NextResponse.json({ error: 'Failed to record stock in' }, { status: 500 });
   }
 }

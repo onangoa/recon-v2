@@ -21,9 +21,9 @@ export async function GET(request: Request) {
         where,
         include: {
           parent: true,
-          children: true,
+          subCategories: true,
           _count: {
-            select: { materials: true }
+            select: { inventory: true }
           }
         },
         orderBy: {

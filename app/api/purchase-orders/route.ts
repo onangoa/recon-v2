@@ -75,23 +75,17 @@ export async function POST(request: Request) {
 
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
-        site: body.siteId ? { connect: { id: body.siteId } } : undefined,
-        orderNumber: body.orderNumber,
+        siteId: body.siteId,
         supplierId: body.supplierId,
-        orderDate: body.orderDate ? new Date(body.orderDate) : new Date(),
-        expectedDeliveryDate: body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : null,
+        orderNumber: body.orderNumber,
         status: body.status || 'pending',
-        subtotal: body.subtotal || 0,
-        tax: body.tax || 0,
         total: body.total || 0,
-        notes: body.notes || null,
         items: body.items ? {
           create: body.items.map((item: any) => ({
             description: item.description,
             quantity: item.quantity || 1,
             unitPrice: item.unitPrice || 0,
             totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-            materialId: item.materialId || null,
           }))
         } : undefined,
       },
