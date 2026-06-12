@@ -81,7 +81,6 @@ export async function POST(request: Request) {
         status: body.status || 'active',
         fileName: body.fileName || null,
         fileData: body.fileData || null,
-        notes: body.notes || null,
       },
     });
 

@@ -1,9 +1,33 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const sessionId = request.cookies.get('sessionId')?.value;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { user: true }
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const contractor = await prisma.contractor.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    }
+
     const wallets = await prisma.wallet.findMany({
+      where: { contractorId: contractor.id },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -53,10 +77,33 @@ function getTimeAgo(date: Date): string {
   return 'Just now';
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const sessionId = request.cookies.get('sessionId')?.value;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { user: true }
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const contractor = await prisma.contractor.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    }
+
     const body = await request.json();
-    
+
     if (!body.name) {
       return NextResponse.json({ error: 'Wallet name is required' }, { status: 400 });
     }
@@ -68,6 +115,7 @@ export async function POST(request: Request) {
         balance: 0,
         currency: 'KES',
         status: 'active',
+        contractorId: contractor.id,
       },
     });
 
