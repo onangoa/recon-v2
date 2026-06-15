@@ -82,34 +82,44 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[440px] space-y-8">
+    <div className="min-h-screen bg-[#FFF8DC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#8B4513]/5 rounded-full blur-[100px]"></div>
+      </div>
 
-        <Card className="border-none shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CardHeader className="bg-primary text-white p-8 text-center">
-            <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-              <ShieldCheck className="w-6 h-6" /> Welcome Back
-            </CardTitle>
-            <CardDescription className="text-primary-foreground/80 italic">Enter your credentials to access your portal.</CardDescription>
+      <div className="w-full max-w-[440px] space-y-8 z-10">
+
+        <Card className="border-[#8B4513]/20 bg-white/70 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <CardHeader className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white p-8 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+            </div>
+            <div className="relative z-10">
+              <div className="flex justify-center mb-4">
+                <img src="https://recon.code-work.space/storage/logos/light-logo.png" alt="ReconSMI" className="h-12" />
+              </div>
+              <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+              <CardDescription className="text-white/90 italic mt-1">Enter your credentials to access your portal</CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="rounded-lg bg-destructive/10 p-3 text-xs font-medium text-destructive flex items-center gap-2 animate-in shake-1">
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs font-medium text-red-700 flex items-center gap-2 animate-in shake-1">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   {error}
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</Label>
+                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">Email Address</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
                   <Input 
                     id="email" 
                     type="email" 
                     placeholder="name@company.com" 
-                    className="pl-10 h-12 border-muted-foreground/20 focus:border-primary"
+                    className="pl-10 h-12 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
@@ -119,18 +129,18 @@ export function LoginForm() {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
-                  <Link href="/forgot-password" className="text-[10px] font-black uppercase tracking-tighter text-primary hover:underline">
+                  <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">Password</Label>
+                  <Link href="/forgot-password" className="text-[10px] font-black uppercase tracking-tighter text-[#8B4513] hover:text-[#6D3710] hover:underline">
                     Forgot Password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
                   <Input 
                     id="password" 
                     type="password" 
                     placeholder="••••••••" 
-                    className="pl-10 h-12 border-muted-foreground/20 focus:border-primary"
+                    className="pl-10 h-12 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -140,7 +150,7 @@ export function LoginForm() {
 
               <Button 
                 type="submit" 
-                className="w-full h-12 text-md font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 gap-2 transition-all"
+                className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all"
                 disabled={loading}
               >
                 {loading ? (
@@ -156,9 +166,9 @@ export function LoginForm() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="bg-muted/30 p-6 flex flex-col items-center gap-3 border-t">
-            <p className="text-xs text-muted-foreground font-medium">Don't have a contractor account?</p>
-            <Button variant="outline" className="w-full h-11 font-bold border-primary/20 text-primary hover:bg-primary/5 gap-2" asChild>
+          <CardFooter className="bg-[#FFF8DC]/50 p-6 flex flex-col items-center gap-3 border-t border-[#8B4513]/10">
+            <p className="text-xs text-[#5D4037] font-medium">Don't have a contractor account?</p>
+            <Button variant="outline" className="w-full h-11 font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 hover:border-[#8B4513] gap-2" asChild>
               <Link href="/register">
                 Register Your Firm <ChevronRight className="w-4 h-4" />
               </Link>
@@ -167,24 +177,24 @@ export function LoginForm() {
         </Card>
 
         {/* Demo credentials info */}
-        <div className="rounded-xl border border-dashed border-primary/20 bg-primary/5 p-4 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+        <div className="rounded-xl border border-[#8B4513]/20 bg-[#8B4513]/5 p-4 space-y-3 backdrop-blur-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#8B4513] flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" /> Demo Credentials
           </p>
-          <div className="grid grid-cols-1 gap-2 text-[11px] text-muted-foreground">
-            <div className="flex justify-between border-b border-primary/5 pb-1">
+          <div className="grid grid-cols-1 gap-2 text-[11px] text-[#5D4037]">
+            <div className="flex justify-between border-b border-[#8B4513]/10 pb-1">
               <span className="font-bold">Superadmin:</span>
-              <code className="text-primary font-bold">admin@constructionhub.ke</code>
+              <code className="text-[#8B4513] font-bold">admin@constructionhub.ke</code>
             </div>
-            <div className="flex justify-between border-b border-primary/5 pb-1">
+            <div className="flex justify-between border-b border-[#8B4513]/10 pb-1">
               <span className="font-bold">Contractor:</span>
-              <code className="text-primary font-bold">info@nairobibuilders.ke</code>
+              <code className="text-[#8B4513] font-bold">info@nairobibuilders.ke</code>
             </div>
-            <div className="text-[9px] italic opacity-70">Password for all demo accounts: <span className="font-black text-foreground">12345678</span></div>
+            <div className="text-[9px] italic opacity-70">Password for all demo accounts: <span className="font-black text-[#3E2723]">12345678</span></div>
           </div>
         </div>
 
-        <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+        <p className="text-center text-[10px] text-[#5D4037] font-medium uppercase tracking-tighter">
           &copy; 2026 ReconSMI Systems. All rights reserved.
         </p>
       </div>

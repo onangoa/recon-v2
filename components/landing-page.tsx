@@ -47,7 +47,7 @@ export function LandingPage() {
             <Link href="/#features" className="hover:text-[#8B4513] transition-colors">Features</Link>
             <Link href="/#mobile" className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
             <Link href="/#pricing" className="hover:text-[#8B4513] transition-colors">Pricing</Link>
-            <Link href="/forgot-password" className="px-6 py-2 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
+            <Link href="/login" className="px-6 py-2 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
               Get Started
             </Link>
           </div>
