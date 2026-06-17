@@ -32,6 +32,7 @@ interface AuthContextType {
   user: User | null;
   contractor: Contractor | null;
   sites: Site[];
+  isInitialized: boolean;
   hasPermission: (permission: string) => boolean;
   setAuthData: (user: User | null, contractor: Contractor | null, sites: Site[]) => void;
   updateContractor: (contractor: Contractor | null) => void;
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [contractor, setContractor] = useState<Contractor | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -54,6 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser) setUser(JSON.parse(storedUser));
     if (storedContractor) setContractor(JSON.parse(storedContractor));
     if (storedSites) setSites(JSON.parse(storedSites));
+    
+    setIsInitialized(true);
   }, []);
 
   const setAuthData = (user: User | null, contractor: Contractor | null, sites: Site[]) => {
@@ -97,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, contractor, sites, hasPermission, setAuthData, updateContractor, updateSites, clearAuth }}>
+    <AuthContext.Provider value={{ user, contractor, sites, isInitialized, hasPermission, setAuthData, updateContractor, updateSites, clearAuth }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
 // @ts-ignore
-import MpesaPackage from 'secure-mpesa-service';
+import MpesaPackage from 'mpesa-servc';
 
 const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
 const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || '';
