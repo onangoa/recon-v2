@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  secure-mpesa-service: link:../../../AppData/Local/pnpm/global/5/node_modules/secure-mpesa-service
+
 importers:
 
   .:
@@ -152,6 +155,9 @@ importers:
       recharts:
         specifier: 2.15.0
         version: 2.15.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      secure-mpesa-service:
+        specifier: link:../../../AppData/Local/pnpm/global/5/node_modules/secure-mpesa-service
+        version: link:../../../AppData/Local/pnpm/global/5/node_modules/secure-mpesa-service
       sonner:
         specifier: ^1.7.1
         version: 1.7.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

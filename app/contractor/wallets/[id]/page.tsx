@@ -94,7 +94,7 @@ interface Transaction {
   type: 'credit' | 'debit';
   description: string | null;
   status: string;
-  referenceNumber: string | null;
+  reference: string | null;
   receiptNumber: string | null;
   createdAt: Date;
 }
@@ -395,7 +395,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                       <TableRow key={tx.id} className="hover:bg-muted/20">
                         <TableCell className="font-mono text-[10px]">
                           <div className="flex flex-col">
-                            <span className="opacity-50">{tx.referenceNumber || tx.id.slice(0, 8)}</span>
+                            <span className="opacity-50">{tx.reference || tx.id.slice(0, 8)}</span>
                             <span className="font-bold text-primary">{tx.receiptNumber || '-'}</span>
                           </div>
                         </TableCell>

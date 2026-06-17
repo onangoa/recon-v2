@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { initiateSTKPush, initiateB2C, initiateB2B } from '@/lib/mpesa';
+import { initiateSTKPush, initiateB2C, initiateB2B, initiateB2Pochi } from '@/lib/mpesa';
 import { WalletService } from '@/lib/wallet-service';
 
 export async function GET(
@@ -77,7 +77,7 @@ export async function POST(
           type,
           amount,
           description,
-          referenceNumber,
+          reference: referenceNumber,
           status: 'completed',
         },
       });
@@ -96,20 +96,11 @@ export async function POST(
       const stkResponse = await initiateSTKPush(
         referenceNumber, // phone number
         amount,
-        wallet.name,
+        resolvedParams.id, // Pass wallet ID
         description || 'Deposit to Wallet'
       );
 
-      const transaction = await WalletService.createPendingTransaction({
-        walletId: resolvedParams.id,
-        amount,
-        type: 'credit',
-        description: description || `M-Pesa STK Push from ${referenceNumber}`,
-        referenceNumber,
-        externalId: stkResponse.CheckoutRequestID,
-      });
-
-      return NextResponse.json({ transaction, mpesaResponse: stkResponse });
+      return NextResponse.json({ mpesaResponse: stkResponse });
     } else {
       // Payout
       if (wallet.balance < amount) {
@@ -117,13 +108,19 @@ export async function POST(
       }
 
       let payoutResponse;
-      if (payoutType === 'phone' || payoutType === 'pochi') {
+      if (payoutType === 'phone') {
         payoutResponse = await initiateB2C(
           referenceNumber, // phone number
           amount,
           'BusinessPayment',
           description || `Payment to ${referenceNumber}`,
-          payoutType
+          ''
+        );
+      } else if (payoutType === 'pochi') {
+        payoutResponse = await initiateB2Pochi(
+          referenceNumber, // phone number
+          amount,
+          description || `Pochi Payment to ${referenceNumber}`
         );
       } else if (payoutType === 'paybill' || payoutType === 'buygoods') {
         payoutResponse = await initiateB2B(
@@ -137,16 +134,7 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid payout type' }, { status: 400 });
       }
 
-      const transaction = await WalletService.createPendingTransaction({
-        walletId: resolvedParams.id,
-        amount,
-        type: 'debit',
-        description: description || `M-Pesa Payout to ${referenceNumber}`,
-        referenceNumber,
-        externalId: payoutResponse.ConversationID,
-      });
-
-      return NextResponse.json({ transaction, mpesaResponse: payoutResponse });
+      return NextResponse.json({ mpesaResponse: payoutResponse });
     }
   } catch (error: any) {
     console.error('Wallet Transaction Error:', error);

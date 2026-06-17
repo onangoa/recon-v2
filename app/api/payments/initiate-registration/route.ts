@@ -31,19 +31,9 @@ export async function POST(request: Request) {
     const stkResponse = await initiateSTKPush(
       phoneNumber,
       amount,
-      'Registration',
+      systemWallet.id, // Use wallet ID as reference
       `Subscription for ${email}`
     );
-
-    // 3. Create a pending transaction
-    await WalletService.createPendingTransaction({
-      walletId: systemWallet.id,
-      amount: amount,
-      type: 'credit',
-      description: `Registration subscription for ${email}`,
-      externalId: stkResponse.CheckoutRequestID,
-      referenceNumber: stkResponse.MerchantRequestID,
-    });
 
     return NextResponse.json({
       message: 'STK Push initiated',

@@ -5,3 +5,5 @@ allowBuilds:
   esbuild: true
   prisma: true
   sharp: true
+overrides:
+  secure-mpesa-service: link:../../../AppData/Local/pnpm/global/5/node_modules/secure-mpesa-service
