@@ -16,12 +16,17 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams } from 'next/navigation';
 import ProfileTab from './components/profile-tab';
 import NotificationsTab from './components/notifications-tab';
 import SecurityTab from './components/security-tab';
 import SubscriptionTab from './components/subscription-tab';
+import RolesTab from './components/roles-tab';
 
 export default function ContractorSettingsPage() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'profile';
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -45,7 +50,7 @@ export default function ContractorSettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue={defaultTab} key={defaultTab} className="w-full">
         <TabsList className="bg-muted/50 p-1 mb-8">
           <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <User className="w-4 h-4" /> Profile
@@ -58,6 +63,9 @@ export default function ContractorSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="subscription" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <CreditCard className="w-4 h-4" /> Subscription
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
+            <ShieldCheck className="w-4 h-4" /> Roles & Permissions
           </TabsTrigger>
         </TabsList>
 
@@ -75,6 +83,10 @@ export default function ContractorSettingsPage() {
 
         <TabsContent value="subscription" className="space-y-6">
           <SubscriptionTab />
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-6">
+          <RolesTab />
         </TabsContent>
       </Tabs>
     </div>
