@@ -7,6 +7,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  permissions?: string[];
 }
 
 interface Contractor {
@@ -31,6 +32,7 @@ interface AuthContextType {
   user: User | null;
   contractor: Contractor | null;
   sites: Site[];
+  hasPermission: (permission: string) => boolean;
   setAuthData: (user: User | null, contractor: Contractor | null, sites: Site[]) => void;
   updateContractor: (contractor: Contractor | null) => void;
   updateSites: (sites: Site[]) => void;
@@ -88,8 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('sites');
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (user.role === 'superadmin') return true;
+    return user.permissions?.includes(permission) || false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, contractor, sites, setAuthData, updateContractor, updateSites, clearAuth }}>
+    <AuthContext.Provider value={{ user, contractor, sites, hasPermission, setAuthData, updateContractor, updateSites, clearAuth }}>
       {children}
     </AuthContext.Provider>
   );

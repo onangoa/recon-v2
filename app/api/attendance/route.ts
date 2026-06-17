@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { startOfDay, endOfDay, differenceInMinutes, format } from 'date-fns';
+import { hasPermission, getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!await hasPermission('attendance:read')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
     const workerId = searchParams.get('workerId');
@@ -54,6 +58,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!await hasPermission('attendance:create')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const user = await getCurrentUser();
     const body = await request.json();
     const { workerId, contractorId, type, notes } = body; // type: 'CLOCK_IN' or 'CLOCK_OUT'
 
@@ -155,7 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
     await ActivityLogger.log({
-      userId: 'system',
+      userId: user?.id || 'system',
       contractorId,
       action: type,
       module: 'ATTENDANCE',

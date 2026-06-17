@@ -30,13 +30,30 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
   const [formData, setFormData] = useState({
     name: '',
     role: '',
+    roleId: '',
     email: '',
     phone: '',
     status: 'Active',
   });
+  const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [id, setId] = useState<string>('');
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch('/api/roles');
+        if (response.ok) {
+          const data = await response.json();
+          setRoles(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch roles:', err);
+      }
+    };
+    fetchRoles();
+  }, []);
 
   useEffect(() => {
     params.then(({ id: paramId }) => {
@@ -199,23 +216,20 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Role *</label>
+              <label className="text-[10px] font-black text-primary uppercase tracking-widest">Assigned Role *</label>
               <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                value={formData.roleId}
+                onChange={(e) => {
+                  const selectedRole = roles.find(r => r.id === e.target.value);
+                  setFormData({ ...formData, roleId: e.target.value, role: selectedRole?.name || '' });
+                }}
                 disabled={isSubmitting}
                 className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary shadow-sm"
               >
                 <option value="">Select Role</option>
-                <option value="Site Supervisor">Site Supervisor</option>
-                <option value="Safety Officer">Safety Officer</option>
-                <option value="Project Engineer">Project Engineer</option>
-                <option value="Foreman">Foreman</option>
-                <option value="Electrician">Electrician</option>
-                <option value="Plumber">Plumber</option>
-                <option value="Mason">Mason</option>
-                <option value="Carpenter">Carpenter</option>
-                <option value="General Worker">General Worker</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>{role.name}</option>
+                ))}
               </select>
             </div>
           </div>

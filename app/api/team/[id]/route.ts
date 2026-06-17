@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { hasPermission, getCurrentUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!await hasPermission('team:read')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
     const { id } = await params;
     const member = await prisma.teamMember.findUnique({
       where: { id },
@@ -28,6 +32,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!await hasPermission('team:update')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const user = await getCurrentUser();
     const { id } = await params;
     const body = await request.json();
 
@@ -36,14 +45,28 @@ export async function PATCH(
       data: {
         name: body.name,
         role: body.role,
+        roleId: body.roleId,
         email: body.email,
         phone: body.phone,
         status: body.status,
+        siteId: body.siteId,
       },
     });
 
+    // Sync with User account if exists
+    if (member.userId) {
+      await prisma.user.update({
+        where: { id: member.userId },
+        data: {
+          name: body.name,
+          email: body.email,
+          roleId: body.roleId,
+        }
+      });
+    }
+
     await ActivityLogger.log({
-      userId: 'system',
+      userId: user?.id || 'system',
       contractorId: member.contractorId,
       action: 'UPDATE',
       module: 'TEAM',
@@ -64,20 +87,34 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!await hasPermission('team:delete')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const user = await getCurrentUser();
     const { id } = await params;
     const member = await prisma.teamMember.findUnique({
       where: { id }
     });
 
-    if (member) {
-      await ActivityLogger.log({
-        userId: 'system',
-        contractorId: member.contractorId,
-        action: 'DELETE',
-        module: 'TEAM',
-        description: `Deleted team member: ${member.name}`,
-        targetId: member.id,
-        details: { name: member.name, role: member.role }
+    if (!member) {
+      return NextResponse.json({ error: 'Team member not found' }, { status: 404 });
+    }
+
+    await ActivityLogger.log({
+      userId: user?.id || 'system',
+      contractorId: member.contractorId,
+      action: 'DELETE',
+      module: 'TEAM',
+      description: `Deleted team member: ${member.name}`,
+      targetId: member.id,
+      details: { name: member.name, role: member.role }
+    });
+
+    // Delete corresponding user if exists
+    if (member.userId) {
+      await prisma.user.delete({
+        where: { id: member.userId }
       });
     }
 

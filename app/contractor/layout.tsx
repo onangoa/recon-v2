@@ -93,6 +93,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Licenses', href: '/contractor/licenses', icon: FileText },
     { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen },
     { label: 'Payroll', href: '/contractor/payroll', icon: Coins },
+    { label: 'Team Members', href: '/contractor/team', icon: Briefcase },
     { label: 'Workers', href: '/contractor/workers', icon: Users },
     { label: 'Shifts', href: '/contractor/shifts', icon: Clock },
     { label: 'Attendance', href: '/contractor/attendance', icon: Fingerprint },

@@ -11,10 +11,17 @@ export const WalletService = {
     description?: string;
     referenceNumber?: string;
     externalId?: string;
+    metadata?: any;
   }) {
     return await prisma.transaction.create({
       data: {
-        ...data,
+        walletId: data.walletId,
+        amount: data.amount,
+        type: data.type,
+        description: data.description,
+        reference: data.referenceNumber,
+        externalId: data.externalId,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : null,
         status: 'pending',
       },
     });
@@ -23,7 +30,7 @@ export const WalletService = {
   /**
    * Complete a transaction and update wallet balance
    */
-  async completeTransaction(externalId: string, receiptNumber?: string) {
+  async completeTransaction(externalId: string, receiptNumber?: string, metadata?: any) {
     return await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.findFirst({
         where: { externalId, status: 'pending' },
@@ -33,17 +40,16 @@ export const WalletService = {
         throw new Error(`Pending transaction with externalId ${externalId} not found`);
       }
 
-      // Update transaction
       const updatedTransaction = await tx.transaction.update({
         where: { id: transaction.id },
         data: {
           status: 'completed',
           receiptNumber,
+          metadata: metadata ? JSON.stringify(metadata) : transaction.metadata,
           updatedAt: new Date(),
         },
       });
 
-      // Update wallet balance
       const wallet = await tx.wallet.findUnique({
         where: { id: transaction.walletId },
       });

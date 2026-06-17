@@ -38,26 +38,28 @@ export async function POST(request: Request) {
         description: `${user.name} logged in`,
       });
     }
-
-    // Set session cookie
-    const response = NextResponse.json(
-      {
-        message: 'Login successful',
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-        contractor: user.contractor ? {
-          id: user.contractor.id,
-          companyName: user.contractor.companyName,
-          location: user.contractor.location,
-          phoneNumber: user.contractor.phoneNumber,
-          licenseNo: user.contractor.licenseNo,
-          userId: user.contractor.userId,
-        } : null,
-      },
-      { status: 200 }
-    );
+// Get permissions
+const { getPermissions } = await import('@/lib/rbac');
+const permissions = await getPermissions(user.id);
+const response = NextResponse.json(
+  {
+    message: 'Login successful',
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    permissions,
+    contractor: user.contractor ? {
+      id: user.contractor.id,
+      companyName: user.contractor.companyName,
+      location: user.contractor.location,
+      phoneNumber: user.contractor.phoneNumber,
+      licenseNo: user.contractor.licenseNo,
+      userId: user.contractor.userId,
+    } : null,
+  },
+  { status: 200 }
+);
 
     response.cookies.set('sessionId', session.id, {
       httpOnly: true,

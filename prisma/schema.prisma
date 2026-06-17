@@ -14,13 +14,38 @@ model User {
   password      String
   name          String
   role          String         @default("user")
+  roleId        String?
+  roleRelation  Role?          @relation(fields: [roleId], references: [id])
   avatar        String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   contractor    Contractor?
+  teamMember    TeamMember?
   activityLogs  ActivityLog[]
   notifications Notification[]
   sessions      Session[]
+}
+
+model Role {
+  id           String       @id @default(cuid())
+  name         String
+  description  String?
+  contractorId String?
+  contractor   Contractor?  @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  permissions  Permission[] @relation("RolePermissions")
+  users        User[]
+  teamMembers  TeamMember[]
+
+  @@index([contractorId])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  module      String
+  action      String
+  description String?
+  roles       Role[]   @relation("RolePermissions")
 }
 
 model Session {
@@ -62,6 +87,7 @@ model Contractor {
   activityLogs            ActivityLog[]
   projects                Project[]
   wallets                 Wallet[]
+  roles                   Role[]
 
   @@index([subscriptionPlanId])
 }
@@ -324,10 +350,14 @@ model Site {
 model TeamMember {
   id           String     @id @default(cuid())
   contractorId String
+  userId       String?    @unique
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   siteId       String?
   name         String
   email        String?
   phone        String?
+  roleId       String?
+  roleRelation Role?      @relation(fields: [roleId], references: [id])
   role         String
   status       String     @default("Active")
   joinedAt     DateTime   @default(now())
@@ -338,6 +368,7 @@ model TeamMember {
 
   @@index([contractorId])
   @@index([siteId])
+  @@index([userId])
 }
 
 model Task {
@@ -717,10 +748,14 @@ model Transaction {
   description  String?
   status       String @default("completed") // pending, completed, failed
   reference    String?
+  receiptNumber String?
+  externalId   String?
   metadata     String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   wallet       Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@index([walletId])
   @@index([createdAt])
+  @@index([externalId])
 }

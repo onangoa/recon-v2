@@ -27,9 +27,42 @@ async function main() {
     await prisma.contractor.deleteMany({});
     await prisma.session.deleteMany({});
     await prisma.user.deleteMany({});
+    await prisma.role.deleteMany({});
+    await prisma.permission.deleteMany({});
     await prisma.subscriptionPlan.deleteMany({});
 
     console.log('Cleared existing data');
+
+    // Create permissions
+    const modules = [
+      'WORKERS', 'ATTENDANCE', 'PAYROLL', 'PROJECTS', 'SITES', 'TASKS', 
+      'INVENTORY', 'EQUIPMENT', 'SAFETY', 'TEAM', 'WALLETS', 'REPORTS', 'SETTINGS'
+    ];
+    const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
+    
+    const permissions = [];
+    for (const module of modules) {
+      for (const action of actions) {
+        const permission = await prisma.permission.create({
+          data: {
+            name: `${module.toLowerCase()}:${action.toLowerCase()}`,
+            module,
+            action,
+            description: `Can ${action.toLowerCase()} ${module.toLowerCase()}`,
+          },
+        });
+        permissions.push(permission);
+      }
+    }
+    console.log('Created permissions');
+
+    // Create system roles
+    const superadminRole = await prisma.role.create({
+      data: {
+        name: 'Superadmin',
+        description: 'Global system administrator',
+      },
+    });
 
     // Create subscription plans first
     const basicPlan = await prisma.subscriptionPlan.create({
@@ -64,12 +97,13 @@ async function main() {
 
     console.log('Created subscription plans');
 
-    // Create Superadmin user (note: there's no superadmin model in schema, just a user with role)
+    // Create Superadmin user
     const superadminUser = await prisma.user.create({
       data: {
         email: 'admin@constructionhub.ke',
         password: '12345678',
         role: 'superadmin',
+        roleId: superadminRole.id,
         name: 'John Admin',
       },
     });
@@ -103,11 +137,22 @@ async function main() {
     ];
 
     for (const data of contractorData) {
+      const adminRole = await prisma.role.create({
+        data: {
+          name: 'Contractor Admin',
+          description: 'Full access to contractor dashboard',
+          permissions: {
+            connect: permissions.map(p => ({ id: p.id }))
+          }
+        }
+      });
+
       const user = await prisma.user.create({
         data: {
           email: data.email,
           password: '12345678',
           role: 'contractor',
+          roleId: adminRole.id,
           name: data.name,
         },
       });
@@ -124,10 +169,16 @@ async function main() {
         },
       });
 
+      // Update role with contractorId
+      await prisma.role.update({
+        where: { id: adminRole.id },
+        data: { contractorId: contractor.id }
+      });
+
       contractors.push(contractor);
     }
 
-    console.log('Created contractors');
+    console.log('Created contractors and admin roles');
 
     // Create Designations for each contractor
     const designations = [];
@@ -222,6 +273,20 @@ async function main() {
 
     // Create team members for each contractor
     for (const contractor of contractors) {
+      // Create a Manager role for each contractor
+      const managerRole = await prisma.role.create({
+        data: {
+          name: 'Manager',
+          description: 'Can manage most operations',
+          contractorId: contractor.id,
+          permissions: {
+            connect: permissions
+              .filter(p => !['DELETE', 'MANAGE'].includes(p.action))
+              .map(p => ({ id: p.id }))
+          }
+        }
+      });
+
       const teamData = [
         { name: 'James Mwangi', role: 'Site Supervisor', email: `james.m@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 111 222', status: 'On-Site' },
         { name: 'Sarah Chengo', role: 'Safety Officer', email: `sarah.c@${contractor.companyName.toLowerCase().replace(/\s+/g, '')}.ke`, phone: '+254 700 333 444', status: 'On-Site' },
@@ -231,16 +296,28 @@ async function main() {
       ];
 
       for (const data of teamData) {
+        const teamUser = await prisma.user.create({
+          data: {
+            email: data.email,
+            password: '12345678',
+            role: 'team_member',
+            roleId: managerRole.id,
+            name: data.name,
+          }
+        });
+
         await prisma.teamMember.create({
           data: {
             contractorId: contractor.id,
+            userId: teamUser.id,
+            roleId: managerRole.id,
             ...data,
           },
         });
       }
     }
 
-    console.log('Created team members');
+    console.log('Created team members and manager roles');
 
     // Create sites for each contractor
     const sites = [];

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { hasPermission, getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!await hasPermission('workers:read')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
     const search = searchParams.get('search');
@@ -51,10 +55,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!await hasPermission('workers:create')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const user = await getCurrentUser();
     const body = await request.json();
 
-    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
-    let contractorId = body.contractorId;
+    // Use user's contractorId if available, otherwise from body or fallback
+    let contractorId = user?.contractor?.id || user?.teamMember?.contractorId || body.contractorId;
+    
     if (!contractorId || contractorId === 'placeholder-id') {
       const firstContractor = await prisma.contractor.findFirst();
       contractorId = firstContractor?.id;
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', // In a real app, get from session
+      userId: user?.id || 'system',
       contractorId: contractorId,
       action: 'CREATE',
       module: 'WORKERS',
