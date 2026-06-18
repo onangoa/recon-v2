@@ -22,7 +22,7 @@ model User {
   contractor          Contractor?
   notifications       Notification[]
   passwordResetTokens PasswordResetToken[]
-  sessions            Session[]
+  refreshTokens       RefreshToken[]
   teamMember          TeamMember?
   roleRelation        Role?                @relation(fields: [roleId], references: [id])
 }
@@ -49,14 +49,17 @@ model Permission {
   roles       Role[]  @relation("RolePermissions")
 }
 
-model Session {
+model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
+  token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  isRevoked Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([token])
 }
 
 model Contractor {

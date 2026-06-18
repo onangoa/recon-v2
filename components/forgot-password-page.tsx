@@ -97,7 +97,7 @@ export function ForgotPasswordPage() {
             </div>
             <div className="relative z-10">
               <div className="flex justify-center mb-4">
-                <img src="https://recon.code-work.space/storage/logos/light-logo.png" alt="ReconSMI" className="h-12" />
+                <img src="/light-logo.png" alt="ReconSMI" className="h-12" />
               </div>
               <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
               <CardDescription className="text-white/90 italic mt-1">We'll send you instructions to reset your password</CardDescription>

@@ -11,9 +11,9 @@ export async function GET(
       where: { id },
       include: {
         parent: true,
-        children: true,
+        subCategories: true,
         _count: {
-          select: { materials: true }
+          select: { inventory: true }
         }
       }
     });
@@ -50,9 +50,9 @@ export async function PATCH(
       },
       include: {
         parent: true,
-        children: true,
+        subCategories: true,
         _count: {
-          select: { materials: true }
+          select: { inventory: true }
         }
       }
     });
@@ -75,7 +75,7 @@ export async function DELETE(
       where: { id },
       include: {
         _count: {
-          select: { materials: true }
+          select: { inventory: true }
         }
       }
     });
@@ -84,7 +84,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
-    if (categoryWithMaterials._count.materials > 0) {
+    if (categoryWithMaterials._count.inventory > 0) {
       return NextResponse.json({ 
         error: 'Cannot delete category with associated materials' 
       }, { status: 400 });

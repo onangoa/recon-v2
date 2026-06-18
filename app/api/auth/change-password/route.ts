@@ -1,38 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-// In a real app, use a password hashing library like bcrypt
-// import bcrypt from 'bcryptjs';
+import { comparePassword, hashPassword, verifyAccessToken, revokeAllUserRefreshTokens } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    const accessToken = request.cookies.get('accessToken')?.value;
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyAccessToken(accessToken);
+    if (!payload) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { currentPassword, newPassword } = await request.json();
-    
-    // In a real app, get userId from session
-    // For demo, we'll use the first user
-    const user = await prisma.user.findFirst();
-    
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
     if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // In a real app:
-    // const isMatch = await bcrypt.compare(currentPassword, user.password);
-    // if (!isMatch) return NextResponse.json({ message: 'Invalid current password' }, { status: 400 });
-    
-    // For demo, we just check direct equality or assume it's fine
-    if (user.password !== currentPassword && user.password !== 'admin123') { // admin123 is a common demo password
-       return NextResponse.json({ message: 'Invalid current password' }, { status: 400 });
+    const isMatch = await comparePassword(currentPassword, user.password);
+    if (!isMatch) {
+      return NextResponse.json({ error: 'Invalid current password' }, { status: 400 });
     }
 
-    // const hashed = await bcrypt.hash(newPassword, 10);
+    if (newPassword.length < 8) {
+      return NextResponse.json({ error: 'New password must be at least 8 characters' }, { status: 400 });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: newPassword }, // Store hashed in real app
+      data: { password: hashedPassword },
     });
+
+    await revokeAllUserRefreshTokens(user.id);
 
     return NextResponse.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Password change error:', error);
-    return NextResponse.json({ message: 'Failed to change password' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to change password' }, { status: 500 });
   }
 }

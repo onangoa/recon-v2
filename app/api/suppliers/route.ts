@@ -59,11 +59,6 @@ export async function POST(request: Request) {
         email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,
-        city: body.city || null,
-        country: body.country || null,
-        postalCode: body.postalCode || null,
-        website: body.website || null,
-        notes: body.notes || null,
       },
     });
 

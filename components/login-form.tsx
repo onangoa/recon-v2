@@ -24,9 +24,11 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
+import { useAuth } from '@/context/auth-context';
 
 export function LoginForm() {
   const router = useRouter();
+  const { setAuthData } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -42,6 +44,7 @@ export function LoginForm() {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -51,15 +54,7 @@ export function LoginForm() {
       if (response.ok) {
         const data = await response.json();
         
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        if (data.contractor) {
-          localStorage.setItem('contractor', JSON.stringify(data.contractor));
-        }
-        
-        if (data.sites) {
-          localStorage.setItem('sites', JSON.stringify(data.sites));
-        }
+        setAuthData(data.user, data.contractor, data.sites || [], data.needsOnboarding);
         
         if (data.selectedSiteId) {
           localStorage.setItem('selectedSiteId', data.selectedSiteId);
@@ -67,12 +62,14 @@ export function LoginForm() {
         
         if (data.user.role === 'superadmin') {
           router.push('/superadmin');
+        } else if (data.needsOnboarding) {
+          router.push('/contractor/sites/create');
         } else {
           router.push('/contractor');
         }
       } else {
-        const error = await response.json();
-        setError(error.error || 'Invalid credentials. Please try again.');
+        const err = await response.json();
+        setError(err.error || 'Invalid credentials. Please try again.');
       }
     } catch (err) {
       setError('A connection error occurred. Please check your network.');
@@ -96,7 +93,7 @@ export function LoginForm() {
             </div>
             <div className="relative z-10">
               <div className="flex justify-center mb-4">
-                <img src="https://recon.code-work.space/storage/logos/light-logo.png" alt="ReconSMI" className="h-12" />
+                <img src="/light-logo.png" alt="ReconSMI" className="h-12" />
               </div>
               <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
               <CardDescription className="text-white/90 italic mt-1">Enter your credentials to access your portal</CardDescription>

@@ -1,33 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyAuth } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get('sessionId')?.value;
+    const auth = await verifyAuth(request);
 
-    if (!sessionId) {
+    if (!auth.authenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { user: true }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const contractor = await prisma.contractor.findUnique({
-      where: { userId: session.user.id }
-    });
-
-    if (!contractor) {
+    if (!auth.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const wallets = await prisma.wallet.findMany({
-      where: { contractorId: contractor.id },
+      where: { contractorId: auth.contractorId },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -79,26 +67,13 @@ function getTimeAgo(date: Date): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get('sessionId')?.value;
+    const auth = await verifyAuth(request);
 
-    if (!sessionId) {
+    if (!auth.authenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { user: true }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const contractor = await prisma.contractor.findUnique({
-      where: { userId: session.user.id }
-    });
-
-    if (!contractor) {
+    if (!auth.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
@@ -112,14 +87,11 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         description: body.description || null,
-        balance: 0,
-        currency: 'KES',
-        status: 'active',
-        contractorId: contractor.id,
+        contractorId: auth.contractorId,
       },
     });
 
-    return NextResponse.json(wallet);
+    return NextResponse.json(wallet, { status: 201 });
   } catch (error) {
     console.error('Failed to create wallet:', error);
     return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 });

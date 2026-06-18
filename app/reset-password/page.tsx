@@ -114,9 +114,9 @@ export function ResetPasswordPage() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
               </div>
               <div className="relative z-10">
-                <div className="flex justify-center mb-4">
-                  <img src="https://recon.code-work.space/storage/logos/light-logo.png" alt="ReconSMI" className="h-12" />
-                </div>
+              <div className="flex justify-center mb-4">
+                <img src="/light-logo.png" alt="ReconSMI" className="h-12" />
+              </div>
                 <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
                 <CardDescription className="text-white/90 italic mt-1">Enter your new password below</CardDescription>
               </div>

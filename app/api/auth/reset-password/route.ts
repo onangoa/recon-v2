@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hashPassword } from '@/lib/jwt';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -45,18 +46,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const hashedPassword = await hashPassword(password);
+
     await prisma.user.update({
       where: { id: resetToken.userId },
-      data: { password },
+      data: { password: hashedPassword },
     });
 
     await prisma.passwordResetToken.delete({
       where: { id: resetToken.id },
     });
 
-    await prisma.session.deleteMany({
-      where: { userId: resetToken.userId },
-    });
+    const { revokeAllUserRefreshTokens } = await import('@/lib/jwt');
+    await revokeAllUserRefreshTokens(resetToken.userId);
 
     return NextResponse.json(
       { message: 'Password has been reset successfully' },

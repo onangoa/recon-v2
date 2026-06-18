@@ -41,11 +41,11 @@ export function LandingPage() {
       <nav className="fixed top-0 w-full z-50 px-6 py-4 bg-[#FFF8DC]/95 backdrop-blur-sm border-b border-[#8B4513]/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold tracking-tight text-[#8B4513]">
-            <img src="https://recon.code-work.space/storage/logos/default_full_logo.png" alt="ReconSMI" className="h-10" />
+            <img src="/default_full_logo.png" alt="ReconSMI" className="h-10" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#5D4037]">
             <Link href="/#features" className="hover:text-[#8B4513] transition-colors">Features</Link>
-            <Link href="/#mobile" className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
+            <Link href="/#apps" className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
             <Link href="/#pricing" className="hover:text-[#8B4513] transition-colors">Pricing</Link>
             <Link href="/login" className="px-6 py-2 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
               Get Started
@@ -68,7 +68,7 @@ export function LandingPage() {
       <div className={`fixed inset-0 bg-[#FFF8DC] z-40 transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
         <div className="flex flex-col items-center justify-center h-full gap-8 text-2xl font-medium">
           <Link href="/#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Features</Link>
-          <Link href="/#mobile" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
+          <Link href="/#apps" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
           <Link href="/#pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Pricing</Link>
           <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="px-8 py-3 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
             Start Free Trial
@@ -115,7 +115,7 @@ export function LandingPage() {
             <div className="absolute inset-0 bg-[#8B4513]/10 rounded-3xl blur-3xl group-hover:blur-2xl transition-all duration-700"></div>
             <div className="relative aspect-square md:aspect-[4/5] rounded-3xl overflow-hidden border border-[#8B4513]/20 shadow-2xl">
               <img 
-                src="https://recon.code-work.space/storage/construction-site-manager.webp" 
+                src="/construction-site-manager.webp" 
                 alt="Construction site manager using tablet on job site with workers and equipment in background" 
                 className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000"
               />
@@ -268,7 +268,7 @@ export function LandingPage() {
               <div className="absolute inset-0 bg-[#8B4513]/20 rounded-3xl blur-3xl"></div>
               <div className="relative">
                 <img 
-                  src="https://recon.code-work.space/storage/construction-workers.webp" 
+                  src="/construction-workers.webp" 
                   alt="Construction worker using Recon SMI mobile app on smartphone at job site to track project progress and log time" 
                   className="rounded-3xl border border-white/10 shadow-2xl"
                 />
@@ -387,7 +387,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <Link href="/" className="text-2xl font-bold text-[#D2691E]">
-              <img src="https://recon.code-work.space/storage/logos/light-logo.png" alt="ReconSMI" className="h-8" />
+              <img src="/light-logo.png" alt="ReconSMI" className="h-8" />
             </Link>
             
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm">

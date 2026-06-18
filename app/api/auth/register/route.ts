@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hashPassword } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password, name, role } = body;
 
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -18,11 +18,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user
+    const hashedPassword = await hashPassword(password);
+
     const user = await prisma.user.create({
       data: {
         email,
-        password, // In production, use bcrypt
+        password: hashedPassword,
         name,
         role,
       },

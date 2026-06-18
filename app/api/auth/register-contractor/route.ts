@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hashPassword, generateAccessToken, generateRefreshToken, saveRefreshToken } from '@/lib/jwt';
+import { getPermissions } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      email, 
-      password, 
-      name, 
-      companyName, 
-      phoneNumber, 
-      licenseNo, 
-      location, 
+    const {
+      email,
+      password,
+      name,
+      companyName,
+      phoneNumber,
+      licenseNo,
+      location,
       planId,
-      checkoutRequestId 
+      checkoutRequestId,
     } = body;
 
-    // 1. Verify Payment was successful
     const transaction = await prisma.transaction.findFirst({
       where: { externalId: checkoutRequestId, status: 'completed' },
     });
@@ -28,7 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -40,12 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Create User and Contractor in a transaction
+    const hashedPassword = await hashPassword(password);
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email,
-          password, // In production, use bcrypt
+          password: hashedPassword,
           name,
           role: 'contractor',
         },
@@ -65,14 +66,58 @@ export async function POST(request: NextRequest) {
       return { user, contractor };
     });
 
-    return NextResponse.json(
-      {
-        message: 'Contractor registered successfully',
-        userId: result.user.id,
-        contractorId: result.contractor.id,
+    const accessToken = generateAccessToken({
+      userId: result.user.id,
+      email: result.user.email,
+      role: result.user.role,
+      contractorId: result.contractor.id,
+    });
+
+    const refreshToken = generateRefreshToken(result.user.id);
+    await saveRefreshToken(result.user.id, refreshToken);
+
+    const permissions = await getPermissions(result.user.id);
+
+    const response = NextResponse.json({
+      message: 'Contractor registered successfully',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+        name: result.user.name,
+        avatar: result.user.avatar,
+        permissions,
       },
-      { status: 201 }
-    );
+      contractor: {
+        id: result.contractor.id,
+        companyName: result.contractor.companyName,
+        location: result.contractor.location,
+        phoneNumber: result.contractor.phoneNumber,
+        licenseNo: result.contractor.licenseNo,
+        userId: result.contractor.userId,
+      },
+      sites: [],
+      selectedSiteId: null,
+      needsOnboarding: true,
+    }, { status: 201 });
+
+    response.cookies.set('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60,
+      path: '/',
+    });
+
+    response.cookies.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Contractor Registration Error:', error.message);
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });

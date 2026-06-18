@@ -1,25 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyAuth } from '@/lib/auth-middleware';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const sessionId = request.headers.get('cookie')?.match(/sessionId=([^;]+)/)?.[1];
-    
-    if (!sessionId) {
+    const auth = await verifyAuth(request);
+
+    if (!auth.authenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { user: true }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!auth.contractorId) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const contractor = await prisma.contractor.findUnique({
-      where: { userId: session.user.id },
+      where: { id: auth.contractorId },
       include: {
         user: {
           select: {
@@ -50,21 +46,16 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const sessionId = request.headers.get('cookie')?.match(/sessionId=([^;]+)/)?.[1];
-    
-    if (!sessionId) {
+    const auth = await verifyAuth(request);
+
+    if (!auth.authenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { user: true }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!auth.contractorId) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const body = await request.json();
@@ -74,7 +65,7 @@ export async function PUT(request: Request) {
     }
 
     const contractor = await prisma.contractor.update({
-      where: { userId: session.user.id },
+      where: { id: auth.contractorId },
       data: {
         companyName: body.name,
         phoneNumber: body.phone,

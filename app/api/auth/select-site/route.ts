@@ -1,55 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAccessToken } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    const accessToken = request.cookies.get('accessToken')?.value;
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyAccessToken(accessToken);
+    if (!payload || !payload.contractorId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { siteId } = body;
 
-    const sessionId = request.cookies.get('sessionId')?.value;
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: 'No session found' },
-        { status: 401 }
-      );
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: {
-        user: {
-          include: { contractor: true }
-        }
-      }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      return NextResponse.json(
-        { error: 'Invalid or expired session' },
-        { status: 401 }
-      );
-    }
-
-    if (!session.user.contractor) {
-      return NextResponse.json(
-        { error: 'User has no contractor' },
-        { status: 400 }
-      );
+    if (!siteId) {
+      return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
     }
 
     const site = await prisma.site.findFirst({
       where: {
         id: siteId,
-        contractorId: session.user.contractor.id,
-      }
+        contractorId: payload.contractorId,
+      },
     });
 
     if (!site) {
-      return NextResponse.json(
-        { error: 'Site not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -58,9 +38,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Select site error:', error);
-    return NextResponse.json(
-      { error: 'Failed to select site' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to select site' }, { status: 500 });
   }
 }

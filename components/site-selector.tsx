@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Building2, ChevronDown } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/context/auth-context';
 
 export function SiteSelector() {
   const { sites, selectedSiteId, setSelectedSite, isLoading } = useAuth();

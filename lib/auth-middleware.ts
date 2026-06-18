@@ -1,74 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { verifyAccessToken, AccessTokenPayload } from '@/lib/jwt';
+import { prisma } from '@/lib/prisma';
+
+export interface AuthResult {
+  authenticated: boolean;
+  payload: AccessTokenPayload | null;
+  userId: string | null;
+  contractorId: string | null;
+}
+
+function extractToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  const cookieToken = request.cookies.get('accessToken')?.value;
+  if (cookieToken) return cookieToken;
+
+  return null;
+}
+
+export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
+  const token = extractToken(request);
+
+  if (!token) {
+    return { authenticated: false, payload: null, userId: null, contractorId: null };
+  }
+
+  const payload = verifyAccessToken(token);
+  if (!payload) {
+    return { authenticated: false, payload: null, userId: null, contractorId: null };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    include: { contractor: { select: { id: true } } },
+  });
+
+  if (!user) {
+    return { authenticated: false, payload: null, userId: null, contractorId: null };
+  }
+
+  return {
+    authenticated: true,
+    payload,
+    userId: payload.userId,
+    contractorId: payload.contractorId,
+  };
+}
 
 export async function withAuth(
   request: NextRequest,
-  handler: (request: NextRequest, session: any) => Promise<NextResponse>
+  handler: (request: NextRequest, auth: AuthResult) => Promise<NextResponse>
 ) {
-  const session = await getSession();
+  const auth = await verifyAuth(request);
 
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!auth.authenticated) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return handler(request, session);
+  return handler(request, auth);
 }
 
 export async function withContractorAuth(
   request: NextRequest,
-  handler: (request: NextRequest, session: any) => Promise<NextResponse>
+  handler: (request: NextRequest, auth: AuthResult) => Promise<NextResponse>
 ) {
-  const session = await getSession();
+  const auth = await verifyAuth(request);
 
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (!auth.authenticated) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!session.user.contractor) {
-    return NextResponse.json(
-      { error: 'Contractor account required' },
-      { status: 403 }
-    );
+  if (!auth.contractorId) {
+    return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
   }
 
-  return handler(request, session);
-}
-
-export async function checkClientAuth(request: NextRequest): Promise<{ authenticated: boolean; session: any | null }> {
-  try {
-    const sessionId = request.cookies.get('sessionId')?.value;
-
-    if (!sessionId) {
-      return { authenticated: false, session: null };
-    }
-
-    const { prisma } = await import('@/lib/prisma');
-    
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: {
-        user: {
-          include: { contractor: true }
-        }
-      }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      if (session) {
-        await prisma.session.delete({ where: { id: sessionId } });
-      }
-      return { authenticated: false, session: null };
-    }
-
-    return { authenticated: true, session };
-  } catch (error) {
-    console.error('Auth check error:', error);
-    return { authenticated: false, session: null };
-  }
+  return handler(request, auth);
 }

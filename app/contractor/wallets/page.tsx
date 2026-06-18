@@ -60,7 +60,7 @@ interface WalletData {
 
 export default function WalletsPage() {
   const { toast } = useToast();
-  const { user, contractor, isInitialized } = useAuth();
+  const { user, contractor, isLoading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export default function WalletsPage() {
     }
   };
 
-  if (!isInitialized) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center">

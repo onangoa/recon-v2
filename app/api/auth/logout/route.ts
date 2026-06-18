@@ -1,47 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revokeAllUserRefreshTokens } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { verifyAccessToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get('sessionId')?.value;
+    const accessToken = request.cookies.get('accessToken')?.value;
+    const refreshToken = request.cookies.get('refreshToken')?.value;
 
-    if (!sessionId) {
-      const response = NextResponse.json({
-        message: 'Logout successful',
-      });
-      
-      response.cookies.set('sessionId', '', { maxAge: 0 });
-      
-      return response;
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { user: { include: { contractor: true } } }
-    });
-
-    if (session) {
-      if (session.user.contractor) {
-        await ActivityLogger.log({
-          userId: session.user.id,
-          contractorId: session.user.contractor.id,
-          action: 'LOGOUT',
-          module: 'SETTINGS',
-          description: `${session.user.name} logged out`,
+    if (accessToken) {
+      const payload = verifyAccessToken(accessToken);
+      if (payload?.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: payload.userId },
+          include: { contractor: true },
         });
-      }
 
-      await prisma.session.delete({
-        where: { id: sessionId },
-      });
+        if (user?.contractor) {
+          try {
+            await ActivityLogger.log({
+              userId: user.id,
+              contractorId: user.contractor.id,
+              action: 'LOGOUT',
+              module: 'SETTINGS',
+              description: `${user.name} logged out`,
+            });
+          } catch (e) {
+            console.error('Activity log error:', e);
+          }
+        }
+
+        await revokeAllUserRefreshTokens(payload.userId);
+      }
     }
 
-    const response = NextResponse.json({
-      message: 'Logout successful',
+    if (refreshToken) {
+      try {
+        await revokeAllUserRefreshTokens(
+          (verifyAccessToken(refreshToken) || {} as any)?.userId || ''
+        );
+      } catch {}
+    }
+
+    const response = NextResponse.json({ message: 'Logout successful' });
+
+    response.cookies.set('accessToken', '', {
+      maxAge: 0,
+      path: '/',
     });
 
-    response.cookies.set('sessionId', '', {
+    response.cookies.set('refreshToken', '', {
       maxAge: 0,
       path: '/',
     });
@@ -49,16 +58,10 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Logout error:', error);
-    
-    const response = NextResponse.json({
-      message: 'Logout successful',
-    });
-    
-    response.cookies.set('sessionId', '', {
-      maxAge: 0,
-      path: '/',
-    });
-    
+
+    const response = NextResponse.json({ message: 'Logout successful' });
+    response.cookies.set('accessToken', '', { maxAge: 0, path: '/' });
+    response.cookies.set('refreshToken', '', { maxAge: 0, path: '/' });
     return response;
   }
 }
