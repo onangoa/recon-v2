@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission, getCurrentUser } from '@/lib/auth';
+import { hasPermission } from '@/lib/rbac';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
-    if (!await hasPermission('team:read')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'team:read')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     const { searchParams } = new URL(request.url);
@@ -62,11 +64,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!await hasPermission('team:create')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'team:create')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const user = await getCurrentUser();
     const body = await request.json();
     
     if (!body.name) {

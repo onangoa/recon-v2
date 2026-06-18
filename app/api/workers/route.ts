@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission, getCurrentUser } from '@/lib/auth';
+import { hasPermission } from '@/lib/rbac';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!await hasPermission('workers:read')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'workers:read')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     const { searchParams } = new URL(request.url);
@@ -55,11 +57,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!await hasPermission('workers:create')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'workers:create')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const user = await getCurrentUser();
     const body = await request.json();
 
     // Use user's contractorId if available, otherwise from body or fallback

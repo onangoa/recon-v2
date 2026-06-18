@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission, getCurrentUser } from '@/lib/auth';
+import { hasPermission } from '@/lib/rbac';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!await hasPermission('team:read')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'team:read')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     const { id } = await params;
@@ -32,11 +34,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!await hasPermission('team:update')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'team:update')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const user = await getCurrentUser();
     const { id } = await params;
     const body = await request.json();
 
@@ -87,11 +89,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!await hasPermission('team:delete')) {
+    const user = await getCurrentUser();
+    if (!await hasPermission(user?.id || '', 'team:delete')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const user = await getCurrentUser();
     const { id } = await params;
     const member = await prisma.teamMember.findUnique({
       where: { id }
