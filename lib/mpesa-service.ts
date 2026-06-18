@@ -1,5 +1,6 @@
 import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
+import { EmailService } from '@/lib/notification-service';
 
 // M-Pesa Configuration
 export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
@@ -469,9 +470,110 @@ const processRegistration = async (formData: any, transactionId: string) => {
 
     console.log('Automatic registration completed successfully:', { userId: result.user.id, contractorId: result.contractor.id });
 
-    // Send notification or email here if needed
+    // Send welcome email with credentials
+    await sendWelcomeEmail(result.user, password, result.contractor, formData.mpesaNumber);
+
   } catch (error) {
     console.error('Automatic registration error:', error);
+    // Don't throw error here to avoid breaking the callback
+  }
+};
+
+// Send welcome email to new user
+const sendWelcomeEmail = async (user: any, password: string, contractor: any, mpesaNumber: string) => {
+  try {
+    const loginUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3010'}/login`;
+
+    const emailResult = await EmailService.send({
+      to: user.email,
+      subject: 'Welcome to ReconSMI - Your Account is Ready!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #8B4513; margin: 0;">Welcome to ReconSMI!</h1>
+            <p style="color: #A0522D; margin: 8px 0 0 0;">Your Construction Management System</p>
+          </div>
+          
+          <p>Dear ${user.name},</p>
+          
+          <p>Congratulations! Your account has been successfully created and your subscription is now active. You can now start managing your construction projects efficiently.</p>
+          
+          <div style="background: #f5f5dc; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #8B4513/20;">
+            <h3 style="color: #8B4513; margin: 0 0 16px 0;">Your Account Details:</h3>
+            <div style="line-height: 1.8;">
+              <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
+              <p style="margin: 8px 0;"><strong>Password:</strong> ${password}</p>
+              <p style="margin: 8px 0;"><strong>Company:</strong> ${contractor.companyName}</p>
+              <p style="margin: 8px 0;"><strong>Phone:</strong> ${phoneNumber || 'Not provided'}</p>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(to right, #8B4513, #A0522D); color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Sign In to Your Account</a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #8B4513; font-size: 12px;">${loginUrl}</p>
+          
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #eee;">
+            <p style="margin: 8px 0; color: #666;"><strong>Getting Started:</strong></p>
+            <ul style="color: #666; margin: 8px 0 8px 32px; padding: 0;">
+              <li>Sign in to your dashboard</li>
+              <li>Add your team members</li>
+              <li>Create your first project</li>
+              <li>Set up sites and workers</li>
+              <li>Start tracking payroll and attendance</li>
+            </ul>
+          </div>
+          
+          <div style="background: #fff3cd; padding: 16px; border-radius: 6px; margin: 24px 0; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404; font-size: 14px;">
+              <strong>Security Note:</strong> For your security, we recommend changing your password after your first login.
+            </p>
+          </div>
+          
+          <p>If you have any questions or need assistance, please contact our support team.</p>
+          
+          <p style="margin-top: 32px; color: #666; font-size: 12px;">ReconSMI - Construction Management System<br>Building Excellence Together</p>
+        </div>
+      `,
+      text: `Welcome to ReconSMI!
+
+Dear ${user.name},
+
+Congratulations! Your account has been successfully created and your subscription is now active.
+
+Your Account Details:
+- Email: ${user.email}
+- Password: ${password}
+- Company: ${contractor.companyName}
+- Phone: ${phoneNumber || 'Not provided'}
+
+Sign in to your account: ${loginUrl}
+
+Getting Started:
+1. Sign in to your dashboard
+2. Add your team members
+3. Create your first project
+4. Set up sites and workers
+5. Start tracking payroll and attendance
+
+Security Note: For your security, we recommend changing your password after your first login.
+
+If you have any questions or need assistance, please contact our support team.
+
+ReconSMI - Construction Management System
+Building Excellence Together`,
+    });
+
+    console.log('Welcome email sent successfully to:', user.email);
+
+    if (!emailResult.success) {
+      console.error('Failed to send welcome email:', emailResult.error);
+    }
+
+  } catch (error) {
+    console.error('Welcome email sending error:', error);
     // Don't throw error here to avoid breaking the callback
   }
 };

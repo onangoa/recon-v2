@@ -732,11 +732,11 @@ model Wallet {
   balance      Float         @default(0)
   currency     String        @default("KES")
   status       String        @default("active")
-  contractorId String
+  contractorId String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
-  contractor   Contractor    @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  contractor   Contractor?   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
 }

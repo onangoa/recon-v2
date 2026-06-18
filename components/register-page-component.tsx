@@ -567,24 +567,17 @@ export function RegisterPageComponent() {
                           Check Payment Status
                         </>
                       )}
-                    </Button>
-                    <p className="text-[10px] text-[#5D4037] italic text-center">
-                      If you've completed the payment but haven't been redirected, click above to check your status.
-                    </p>
-                  </>
-                )}
-              </CardFooter>
-            </Card>
-          )}
-                </Button>
-                <Button variant="ghost" onClick={handleBack} disabled={isLoading} className="w-full text-[#8B4513] hover:bg-[#8B4513]/5">
-                  <ChevronLeft className="w-4 h-4 mr-2" /> Change Plan
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+                     </Button>
+                     <p className="text-[10px] text-[#5D4037] italic text-center">
+                       If you've completed the payment but haven't been redirected, click above to check your status.
+                     </p>
+                   </>
+                 )}
+               </CardFooter>
+             </Card>
+           )}
+         </div>
+       </div>
+     </div>
+   );
 }

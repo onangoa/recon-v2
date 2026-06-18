@@ -12,9 +12,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number, amount, and form data are required' }, { status: 400 });
     }
 
-    // 1. Get or create a System Wallet for registration fees
+    // 1. Get or create a System Wallet for registration fees (no contractor needed)
     let systemWallet = await prisma.wallet.findFirst({
-      where: { name: 'System Fees' }
+      where: { 
+        name: 'System Fees',
+        contractorId: null
+      }
     });
 
     if (!systemWallet) {
@@ -23,6 +26,7 @@ export async function POST(request: Request) {
           name: 'System Fees',
           description: 'Wallet for registration and subscription fees',
           balance: 0,
+          contractorId: null
         }
       });
     }
