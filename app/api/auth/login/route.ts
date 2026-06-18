@@ -7,7 +7,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password } = body;
 
-    // Find user with contractor relation
     const user = await prisma.user.findUnique({
       where: { email },
       include: { contractor: true }
@@ -20,15 +19,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create session
     const session = await prisma.session.create({
       data: {
         userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
-    // Log login activity if contractor exists
     if (user.contractor) {
       await ActivityLogger.log({
         userId: user.id,
@@ -38,38 +35,60 @@ export async function POST(request: Request) {
         description: `${user.name} logged in`,
       });
     }
-// Get permissions
-const { getPermissions } = await import('@/lib/rbac');
-const permissions = await getPermissions(user.id);
-const response = NextResponse.json(
-  {
-    message: 'Login successful',
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    name: user.name,
-    permissions,
-    contractor: user.contractor ? {
-      id: user.contractor.id,
-      companyName: user.contractor.companyName,
-      location: user.contractor.location,
-      phoneNumber: user.contractor.phoneNumber,
-      licenseNo: user.contractor.licenseNo,
-      userId: user.contractor.userId,
-    } : null,
-  },
-  { status: 200 }
-);
+
+    const { getPermissions } = await import('@/lib/rbac');
+    const permissions = await getPermissions(user.id);
+
+    let sites = [];
+    if (user.contractor) {
+      sites = await prisma.site.findMany({
+        where: { contractorId: user.contractor.id },
+        select: {
+          id: true,
+          name: true,
+          location: true,
+          status: true,
+          isPrimary: true,
+          projectId: true,
+        }
+      });
+    }
+
+    const response = NextResponse.json(
+      {
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+          avatar: user.avatar,
+          permissions,
+        },
+        contractor: user.contractor ? {
+          id: user.contractor.id,
+          companyName: user.contractor.companyName,
+          location: user.contractor.location,
+          phoneNumber: user.contractor.phoneNumber,
+          licenseNo: user.contractor.licenseNo,
+          userId: user.contractor.userId,
+        } : null,
+        sites,
+        selectedSiteId: sites.find(s => s.isPrimary)?.id || (sites.length > 0 ? sites[0].id : null),
+      },
+      { status: 200 }
+    );
 
     response.cookies.set('sessionId', session.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
     });
 
     return response;
   } catch (error) {
+    console.error('Login error:', error);
     return NextResponse.json({ error: 'Login failed' }, { status: 500 });
   }
 }

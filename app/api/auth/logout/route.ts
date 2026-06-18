@@ -7,20 +7,21 @@ export async function POST(request: NextRequest) {
     const sessionId = request.cookies.get('sessionId')?.value;
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: 'No session found' },
-        { status: 401 }
-      );
+      const response = NextResponse.json({
+        message: 'Logout successful',
+      });
+      
+      response.cookies.set('sessionId', '', { maxAge: 0 });
+      
+      return response;
     }
 
-    // Get session with user and contractor details before deleting
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
       include: { user: { include: { contractor: true } } }
     });
 
     if (session) {
-      // Log logout activity if contractor exists
       if (session.user.contractor) {
         await ActivityLogger.log({
           userId: session.user.id,
@@ -30,12 +31,11 @@ export async function POST(request: NextRequest) {
           description: `${session.user.name} logged out`,
         });
       }
-    }
 
-    // Delete session
-    await prisma.session.delete({
-      where: { id: sessionId },
-    });
+      await prisma.session.delete({
+        where: { id: sessionId },
+      });
+    }
 
     const response = NextResponse.json({
       message: 'Logout successful',
@@ -43,10 +43,22 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('sessionId', '', {
       maxAge: 0,
+      path: '/',
     });
 
     return response;
   } catch (error) {
-    return NextResponse.json({ error: 'Logout failed' }, { status: 500 });
+    console.error('Logout error:', error);
+    
+    const response = NextResponse.json({
+      message: 'Logout successful',
+    });
+    
+    response.cookies.set('sessionId', '', {
+      maxAge: 0,
+      path: '/',
+    });
+    
+    return response;
   }
 }

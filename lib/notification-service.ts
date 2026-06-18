@@ -1,7 +1,75 @@
 import { prisma } from './prisma';
+import nodemailer from 'nodemailer';
 
-// In a real app, use nodemailer or a service like SendGrid/Postmark
-// import nodemailer from 'nodemailer';
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+export class EmailService {
+  private static transporter: nodemailer.Transporter | null = null;
+
+  private static getTransporter() {
+    if (!this.transporter) {
+      const smtpHost = process.env.SMTP_HOST || 'smtp.purelymail.com';
+      const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPassword = process.env.SMTP_PASSWORD;
+      const smtpFrom = process.env.SMTP_FROM || 'notifications@reconsmi.com';
+
+      if (!smtpUser || !smtpPassword) {
+        throw new Error('SMTP_USER and SMTP_PASSWORD environment variables are required');
+      }
+
+      const secure = smtpPort === 465;
+
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: secure,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+
+      this.transporter.verify((error) => {
+        if (error) {
+          console.error('SMTP connection error:', error);
+        } else {
+          console.log('SMTP server is ready to send emails');
+        }
+      });
+    }
+
+    return this.transporter;
+  }
+
+  static async send(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
+    try {
+      const transporter = this.getTransporter();
+      const smtpFrom = process.env.SMTP_FROM || 'notifications@reconsmi.com';
+
+      await transporter.sendMail({
+        from: `"ReconSMI" <${smtpFrom}>`,
+        to: options.to,
+        subject: options.subject,
+        text: options.text || options.html.replace(/<[^>]*>/g, ''),
+        html: options.html,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Email sending error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to send email' };
+    }
+  }
+}
 
 export type NotificationType = 'payroll' | 'safety' | 'inventory' | 'team' | 'system';
 
@@ -54,7 +122,11 @@ export class NotificationService {
       if (emailEnabled) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (user?.email) {
-          await this.sendEmail(user.email, title, message);
+          await EmailService.send({
+            to: user.email,
+            subject: title,
+            html: `<p>${message}</p>`,
+          });
         }
       }
 
@@ -63,25 +135,5 @@ export class NotificationService {
       console.error('Notification Service Error:', error);
       return { success: false, error };
     }
-  }
-
-  /**
-   * Internal method to simulate/send email
-   */
-  private static async sendEmail(to: string, subject: string, body: string) {
-    console.log(`[EMAIL SENT] To: ${to} | Subject: ${subject}`);
-    // console.log(`Body: ${body}`);
-    
-    // Placeholder for actual SMTP logic:
-    /*
-    const transporter = nodemailer.createTransport({ ... });
-    await transporter.sendMail({
-      from: '"ReconSMI" <notifications@reconsmi.com>',
-      to,
-      subject,
-      text: body,
-      html: `<p>${body}</p>`,
-    });
-    */
   }
 }

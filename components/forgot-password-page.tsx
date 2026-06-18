@@ -19,21 +19,68 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export function ForgotPasswordPage() {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Reset link sent",
-      description: "If an account exists for this email, you will receive reset instructions.",
-    });
-    setIsSubmitted(true);
+    
+    console.log('Submitting forgot password request for email:', email);
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (response.ok) {
+        toast({
+          title: "Reset link sent",
+          description: data.message,
+        });
+        setIsSubmitted(true);
+        setResendTimer(30);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Something went wrong",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,9 +124,10 @@ export function ForgotPasswordPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all"
+                  className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all disabled:opacity-50"
+                  disabled={isLoading}
                 >
-                  Send Reset Link <Send className="w-4 h-4" />
+                  {isLoading ? 'Sending...' : 'Send Reset Link'} <Send className="w-4 h-4" />
                 </Button>
               </form>
             ) : (
@@ -89,9 +137,15 @@ export function ForgotPasswordPage() {
                 </div>
                 <h3 className="text-xl font-bold text-[#3E2723]">Check your email</h3>
                 <p className="text-sm text-[#5D4037]">We've sent a password reset link to <span className="font-bold text-[#8B4513]">{email}</span>.</p>
-                <Button variant="outline" className="mt-4 border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5" onClick={() => setIsSubmitted(false)}>
-                  Didn't receive it? Try again
-                </Button>
+                {resendTimer > 0 ? (
+                  <Button variant="outline" className="mt-4 border-[#8B4513]/20 text-[#8B4513]/50 hover:bg-[#8B4513]/5" disabled>
+                    Resend in {resendTimer}s
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="mt-4 border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5" onClick={() => setIsSubmitted(false)}>
+                    Didn't receive it? Try again
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

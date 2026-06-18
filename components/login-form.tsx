@@ -50,22 +50,22 @@ export function LoginForm() {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('user', JSON.stringify(data));
-
+        
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
         if (data.contractor) {
-          const contractor = data.contractor;
-          localStorage.setItem('contractor', JSON.stringify(contractor));
-
-          fetch(`/api/sites?contractorId=${contractor.id}`)
-            .then(res => res.json())
-            .then(sitesData => {
-              const sites = Array.isArray(sitesData.sites) ? sitesData.sites : sitesData;
-              localStorage.setItem('sites', JSON.stringify(sites));
-            })
-            .catch(err => console.error('Failed to fetch sites:', err));
+          localStorage.setItem('contractor', JSON.stringify(data.contractor));
         }
-
-        if (data.role === 'superadmin') {
+        
+        if (data.sites) {
+          localStorage.setItem('sites', JSON.stringify(data.sites));
+        }
+        
+        if (data.selectedSiteId) {
+          localStorage.setItem('selectedSiteId', data.selectedSiteId);
+        }
+        
+        if (data.user.role === 'superadmin') {
           router.push('/superadmin');
         } else {
           router.push('/contractor');

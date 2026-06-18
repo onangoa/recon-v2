@@ -9,21 +9,22 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  password      String
-  name          String
-  role          String         @default("user")
-  roleId        String?
-  roleRelation  Role?          @relation(fields: [roleId], references: [id])
-  avatar        String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  contractor    Contractor?
-  teamMember    TeamMember?
-  activityLogs  ActivityLog[]
-  notifications Notification[]
-  sessions      Session[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String
+  name                String
+  role                String               @default("user")
+  roleId              String?
+  avatar              String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  activityLogs        ActivityLog[]
+  contractor          Contractor?
+  notifications       Notification[]
+  passwordResetTokens PasswordResetToken[]
+  sessions            Session[]
+  teamMember          TeamMember?
+  roleRelation        Role?                @relation(fields: [roleId], references: [id])
 }
 
 model Role {
@@ -32,20 +33,20 @@ model Role {
   description  String?
   contractorId String?
   contractor   Contractor?  @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  permissions  Permission[] @relation("RolePermissions")
-  users        User[]
   teamMembers  TeamMember[]
+  users        User[]
+  permissions  Permission[] @relation("RolePermissions")
 
   @@index([contractorId])
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   module      String
   action      String
   description String?
-  roles       Role[]   @relation("RolePermissions")
+  roles       Role[]  @relation("RolePermissions")
 }
 
 model Session {
@@ -72,22 +73,22 @@ model Contractor {
   safetyScore             Float                    @default(0)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
-  subscriptionPlan        SubscriptionPlan         @relation(fields: [subscriptionPlanId], references: [id])
+  activityLogs            ActivityLog[]
+  attendances             Attendance[]
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionPlan        SubscriptionPlan         @relation(fields: [subscriptionPlanId], references: [id])
+  designations            Designation[]
   notificationPreferences NotificationPreference[]
   payrollPeriods          PayrollPeriod[]
+  projects                Project[]
+  roles                   Role[]
   salaryComponents        SalaryComponent[]
   salarySlips             SalarySlip[]
-  designations            Designation[]
-  sites                   Site[]
   shifts                  Shift[]
-  attendances             Attendance[]
+  sites                   Site[]
   team                    TeamMember[]
-  workers                 Worker[]
-  activityLogs            ActivityLog[]
-  projects                Project[]
   wallets                 Wallet[]
-  roles                   Role[]
+  workers                 Worker[]
 
   @@index([subscriptionPlanId])
 }
@@ -99,19 +100,19 @@ model Worker {
   email                 String?
   phone                 String?
   nationalId            String?         @unique
-  enrollId              String?         @unique
   designationId         String?
   shiftId               String?
   status                String          @default("Active")
   joinedAt              DateTime        @default(now())
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
+  enrollId              String?         @unique
+  attendances           Attendance[]
   payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")
   salarySlips           SalarySlip[]
-  designation           Designation?    @relation(fields: [designationId], references: [id])
-  shift                 Shift?          @relation(fields: [shiftId], references: [id])
-  attendances           Attendance[]
   contractor            Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  shift                 Shift?          @relation(fields: [shiftId], references: [id])
+  designation           Designation?    @relation(fields: [designationId], references: [id])
 
   @@index([contractorId])
   @@index([designationId])
@@ -122,16 +123,16 @@ model Shift {
   id            String       @id @default(cuid())
   contractorId  String
   name          String
-  startTime     String // e.g., "08:00"
-  endTime       String // e.g., "17:00"
-  breakDuration Float        @default(0) // in minutes
-  workingDays   String // comma separated: "Monday,Tuesday,Wednesday,Thursday,Friday"
+  startTime     String
+  endTime       String
+  breakDuration Float        @default(0)
+  workingDays   String
   allowOvertime Boolean      @default(true)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  attendances   Attendance[]
   contractor    Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   workers       Worker[]
-  attendances   Attendance[]
 
   @@index([contractorId])
 }
@@ -146,14 +147,14 @@ model Attendance {
   checkOut      DateTime?
   totalHours    Float           @default(0)
   overtimeHours Float           @default(0)
-  status        String          @default("Present") // Present, Absent, Late, Leave
+  status        String          @default("Present")
   notes         String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  logs          AttendanceLog[]
-  worker        Worker          @relation(fields: [workerId], references: [id], onDelete: Cascade)
-  shift         Shift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   contractor    Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  shift         Shift?          @relation(fields: [shiftId], references: [id])
+  worker        Worker          @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  logs          AttendanceLog[]
 
   @@unique([workerId, date])
   @@index([contractorId])
@@ -164,7 +165,7 @@ model Attendance {
 model AttendanceLog {
   id           String     @id @default(cuid())
   attendanceId String
-  type         String // IN, OUT
+  type         String
   timestamp    DateTime
   deviceName   String?
   attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
@@ -202,12 +203,12 @@ model PayrollPeriod {
   totalNetPay       Float        @default(0)
   totalDeductions   Float        @default(0)
   paymentStatus     String       @default("pending")
-  paymentFrequency  String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   createdByWorkerId String?
-  contractor        Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  paymentFrequency  String?
   createdBy         Worker?      @relation("CreatedBy", fields: [createdByWorkerId], references: [id])
+  contractor        Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   salarySlips       SalarySlip[]
 
   @@index([contractorId])
@@ -218,7 +219,7 @@ model SalaryComponent {
   id              String     @id @default(cuid())
   contractorId    String
   name            String
-  type            String // earning, deduction
+  type            String
   description     String?
   amount          Float?
   isPercentage    Boolean    @default(false)
@@ -238,7 +239,7 @@ model SalaryComponent {
 }
 
 model SalarySlip {
-  id               String              @id @default(cuid())
+  id               String             @id @default(cuid())
   contractorId     String
   workerId         String
   payrollPeriodId  String
@@ -247,32 +248,32 @@ model SalarySlip {
   grossPay         Float
   netPay           Float
   totalDeductions  Float
-  totalAllowance   Float               @default(0)
-  overtimeHours    Float               @default(0)
-  overtimePay      Float               @default(0)
-  daysWorked       Int                 @default(0)
-  workingDays      Int                 @default(0)
-  attainedDays     Int                 @default(0)
-  workingHours     Float               @default(0)
-  attainedHours    Float               @default(0)
-  lateDays         Int                 @default(0)
-  lateHours        Float               @default(0)
-  leaveDays        Int                 @default(0)
-  leaveHours       Float               @default(0)
-  payeTax          Float               @default(0)
-  personalRelief   Float               @default(0)
-  chargeableIncome Float               @default(0)
-  employerCosts    Float               @default(0)
-  paymentStatus    String              @default("pending") // pending, processing, paid, failed
+  totalAllowance   Float              @default(0)
+  overtimeHours    Float              @default(0)
+  overtimePay      Float              @default(0)
+  daysWorked       Int                @default(0)
+  workingDays      Int                @default(0)
+  attainedDays     Int                @default(0)
+  workingHours     Float              @default(0)
+  attainedHours    Float              @default(0)
+  lateDays         Int                @default(0)
+  lateHours        Float              @default(0)
+  leaveDays        Int                @default(0)
+  leaveHours       Float              @default(0)
+  payeTax          Float              @default(0)
+  personalRelief   Float              @default(0)
+  chargeableIncome Float              @default(0)
+  employerCosts    Float              @default(0)
+  paymentStatus    String             @default("pending")
   status           String?
   paymentDate      DateTime?
   mpesaReceipt     String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  contractor       Contractor          @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  payrollPeriod    PayrollPeriod       @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
-  worker           Worker              @relation(fields: [workerId], references: [id], onDelete: Cascade)
-  designation      Designation?        @relation(fields: [designationId], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  designation      Designation?       @relation(fields: [designationId], references: [id])
+  worker           Worker             @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  payrollPeriod    PayrollPeriod      @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  contractor       Contractor         @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   details          SalarySlipDetail[]
 
   @@index([contractorId])
@@ -285,7 +286,7 @@ model SalarySlipDetail {
   id           String     @id @default(cuid())
   salarySlipId String
   name         String
-  type         String // earning, deduction
+  type         String
   amount       Float
   isStatutory  Boolean    @default(false)
   salarySlip   SalarySlip @relation(fields: [salarySlipId], references: [id], onDelete: Cascade)
@@ -325,23 +326,23 @@ model Site {
   isPrimary       Boolean          @default(false)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  project         Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  contractor      Contractor       @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  tasks           Task[]
-  visitors        VisitorLog[]
-  safety          SafetyLog[]
+  documents       Document[]
   equipment       Equipment[]
-  team            TeamMember[]
   inventory       Inventory[]
   licenses        License[]
-  safetyIncidents SafetyIncident[]
-  documents       Document[]
   metrics         Metric[]
-  purchaseOrders  PurchaseOrder[]
-  visitorEntities Visitor[]
   photos          Photo[]
-  transfersFrom    StockTransfer[] @relation("TransferFrom")
-  transfersTo      StockTransfer[] @relation("TransferTo")
+  purchaseOrders  PurchaseOrder[]
+  safetyIncidents SafetyIncident[]
+  safety          SafetyLog[]
+  contractor      Contractor       @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  project         Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  transfersTo     StockTransfer[]  @relation("TransferTo")
+  transfersFrom   StockTransfer[]  @relation("TransferFrom")
+  tasks           Task[]
+  team            TeamMember[]
+  visitorEntities Visitor[]
+  visitors        VisitorLog[]
 
   @@index([projectId])
   @@index([contractorId])
@@ -351,20 +352,20 @@ model TeamMember {
   id           String     @id @default(cuid())
   contractorId String
   userId       String?    @unique
-  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   siteId       String?
   name         String
   email        String?
   phone        String?
   roleId       String?
-  roleRelation Role?      @relation(fields: [roleId], references: [id])
   role         String
   status       String     @default("Active")
   joinedAt     DateTime   @default(now())
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  site         Site?      @relation(fields: [siteId], references: [id])
   contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  site         Site?      @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  roleRelation Role?      @relation(fields: [roleId], references: [id])
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
   @@index([siteId])
@@ -374,14 +375,14 @@ model TeamMember {
 model Task {
   id          String    @id @default(cuid())
   siteId      String
-  projectId   String? // Keep for backward compatibility if needed, but primary link is site
   title       String
   description String?
-  status      String    @default("Pending") // Pending, In Progress, Completed
-  priority    String    @default("Medium") // Low, Medium, High
+  status      String    @default("Pending")
+  priority    String    @default("Medium")
   dueDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  projectId   String?
   site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId])
@@ -406,7 +407,7 @@ model VisitorLog {
 model Visitor {
   id           String    @id @default(cuid())
   siteId       String
-  projectId    String? // Keep for seed compatibility
+  projectId    String?
   name         String
   company      String?
   purpose      String
@@ -424,8 +425,8 @@ model SafetyLog {
   siteId      String
   title       String
   description String
-  severity    String // Low, Medium, High, Critical
-  status      String   @default("Open") // Open, Resolved
+  severity    String
+  status      String   @default("Open")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -454,14 +455,14 @@ model SafetyIncident {
 model Equipment {
   id           String    @id @default(cuid())
   siteId       String
-  projectId    String? // Keep for seed compatibility
+  projectId    String?
   name         String
   type         String
   serialNo     String?
-  serialNumber String? // Keep for backward compatibility
+  serialNumber String?
   rentalCost   Float?
   dailyRate    Float?
-  status       String    @default("Active") // Active, Maintenance, Repair, Out of Service
+  status       String    @default("Active")
   lastService  DateTime?
   nextService  DateTime?
   createdAt    DateTime  @default(now())
@@ -487,10 +488,10 @@ model Inventory {
   status       String             @default("in-stock")
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
-  site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   category     InventoryCategory? @relation(fields: [categoryId], references: [id])
-  transfers    StockTransfer[]
+  site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   movements    StockMovement[]
+  transfers    StockTransfer[]
 
   @@index([siteId])
   @@index([categoryId])
@@ -532,22 +533,22 @@ model License {
 }
 
 model StockTransfer {
-  id             String   @id @default(cuid())
-  inventoryId    String
-  fromSiteId     String
-  toSiteId       String
-  quantity       Float
-  status         String   @default("pending") // pending, approved, rejected, completed
-  requestedBy    String
-  approvedBy     String?
-  approvedAt     DateTime?
-  notes          String?
+  id              String    @id @default(cuid())
+  inventoryId     String
+  fromSiteId      String
+  toSiteId        String
+  quantity        Float
+  status          String    @default("pending")
+  requestedBy     String
+  approvedBy      String?
+  approvedAt      DateTime?
+  notes           String?
   rejectionReason String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  inventory      Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-  fromSite       Site      @relation("TransferFrom", fields: [fromSiteId], references: [id], onDelete: Cascade)
-  toSite         Site      @relation("TransferTo", fields: [toSiteId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  toSite          Site      @relation("TransferTo", fields: [toSiteId], references: [id], onDelete: Cascade)
+  fromSite        Site      @relation("TransferFrom", fields: [fromSiteId], references: [id], onDelete: Cascade)
+  inventory       Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   @@index([inventoryId])
   @@index([fromSiteId])
@@ -556,14 +557,14 @@ model StockTransfer {
 }
 
 model StockMovement {
-  id           String   @id @default(cuid())
-  inventoryId  String
-  quantity     Float
-  change       Float    // Positive for in, negative for out
-  type         String   // in, out, adjustment
-  notes        String?
-  createdAt    DateTime @default(now())
-  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  inventoryId String
+  quantity    Float
+  change      Float
+  type        String
+  notes       String?
+  createdAt   DateTime  @default(now())
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   @@index([inventoryId])
   @@index([createdAt])
@@ -573,7 +574,7 @@ model StockMovement {
 model Document {
   id         String   @id @default(cuid())
   siteId     String
-  projectId  String? // Keep for seed compatibility
+  projectId  String?
   name       String
   type       String
   fileUrl    String
@@ -588,7 +589,7 @@ model Document {
 model Photo {
   id        String   @id @default(cuid())
   siteId    String?
-  projectId String?  @unique // Keep for seed compatibility
+  projectId String?  @unique
   imageUrl  String
   caption   String?
   createdAt DateTime @default(now())
@@ -601,7 +602,7 @@ model Photo {
 model Metric {
   id         String   @id @default(cuid())
   siteId     String
-  projectId  String? // Keep for seed compatibility
+  projectId  String?
   type       String
   value      Float
   unit       String
@@ -627,22 +628,22 @@ model Supplier {
 }
 
 model PurchaseOrder {
-  id                    String              @id @default(cuid())
-  siteId                String
-  supplierId            String
-  orderNumber           String              @unique
-  status                String // pending, approved, completed, cancelled
-  subtotal              Float               @default(0)
-  tax                   Float               @default(0)
-  total                 Float               @default(0)
-  orderDate             DateTime            @default(now())
-  expectedDeliveryDate  DateTime?
-  notes                 String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  site                  Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  supplier              Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  items                 PurchaseOrderItem[]
+  id                   String              @id @default(cuid())
+  siteId               String
+  supplierId           String
+  orderNumber          String              @unique
+  status               String
+  subtotal             Float               @default(0)
+  tax                  Float               @default(0)
+  total                Float               @default(0)
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime?
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  supplier             Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  site                 Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  items                PurchaseOrderItem[]
 
   @@index([siteId])
   @@index([supplierId])
@@ -665,14 +666,14 @@ model ActivityLog {
   id           String     @id @default(cuid())
   userId       String
   contractorId String
-  action       String // CREATE, UPDATE, DELETE, etc.
-  module       String // WORKERS, PAYROLL, INVENTORY, etc.
+  action       String
+  module       String
   description  String
   targetId     String?
-  details      String? // JSON string
+  details      String?
   createdAt    DateTime   @default(now())
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
   @@index([userId])
@@ -684,10 +685,10 @@ model Notification {
   userId    String
   title     String
   message   String
-  type      String // info, warning, error, success
+  type      String
   isRead    Boolean  @default(false)
-  link      String?
   createdAt DateTime @default(now())
+  link      String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -696,16 +697,16 @@ model Notification {
 model NotificationPreference {
   id           String     @id @default(cuid())
   contractorId String
-  type         String // email, sms, push
-  enabled      Boolean    @default(true) // backward compatibility
+  type         String
+  enabled      Boolean    @default(true)
   emailEnabled Boolean    @default(true)
   pushEnabled  Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
-  @@index([contractorId])
   @@unique([contractorId, type])
+  @@index([contractorId])
 }
 
 model SubscriptionPlan {
@@ -713,11 +714,11 @@ model SubscriptionPlan {
   name           String       @unique
   description    String?
   price          Float
-  interval       String? // monthly, yearly
+  interval       String?
   maxProjects    Int?
-  maxSites       Int? // Add for compatibility
+  maxSites       Int?
   maxTeamMembers Int
-  features       String // JSON string
+  features       String
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -725,35 +726,47 @@ model SubscriptionPlan {
 }
 
 model Wallet {
-  id            String        @id @default(cuid())
-  name          String
-  description   String?
-  balance       Float         @default(0)
-  currency      String        @default("KES")
-  status        String        @default("active") // active, inactive, frozen
-  contractorId  String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  contractor    Contractor    @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  balance      Float         @default(0)
+  currency     String        @default("KES")
+  status       String        @default("active")
+  contractorId String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  contractor   Contractor    @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
 }
 
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
 model Transaction {
-  id           String   @id @default(cuid())
-  walletId     String
-  amount       Float
-  type         String // debit, credit
-  description  String?
-  status       String @default("completed") // pending, completed, failed
-  reference    String?
+  id            String   @id @default(cuid())
+  walletId      String
+  amount        Float
+  type          String
+  description   String?
+  status        String   @default("completed")
+  reference     String?
   receiptNumber String?
-  externalId   String?
-  metadata     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  wallet       Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  externalId    String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@index([walletId])
   @@index([createdAt])
