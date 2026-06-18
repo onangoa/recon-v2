@@ -1,0 +1,4 @@
+npm cache clean --force
+Remove-Item node_modules -Recurse -Force
+
+Get-Process | Where-Object {$_.ProcessName -like "*node*"} | Stop-Process -Force

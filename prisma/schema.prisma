@@ -754,21 +754,46 @@ model PasswordResetToken {
 }
 
 model Transaction {
-  id            String   @id @default(cuid())
-  walletId      String
-  amount        Float
-  type          String
-  description   String?
-  status        String   @default("completed")
-  reference     String?
-  receiptNumber String?
-  externalId    String?
-  metadata      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(cuid())
+  walletId                  String
+  amount                    Float
+  type                      String
+  description               String?
+  status                    String   @default("completed")
+  reference                 String?
+  receiptNumber             String?
+  externalId                String?
+  metadata                  String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  wallet                    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // M-Pesa specific fields
+  mpesaTransactionId        String?
+  merchantRequestId         String?
+  checkoutRequestId         String?
+  originatorConversationId  String?
+  conversationId            String?
+  transactionType           String?
+  resultCode                Int?
+  resultDesc                String?
+  mpesaReceiptNumber        String?
+  accountReference          String?
+  transactionDesc           String?
+  remarks                   String?
+  phoneNumber               String?
+  rawCallbackData           String?
+  rawApiResponse            String?
+  callbackReceivedAt        DateTime?
 
   @@index([walletId])
   @@index([createdAt])
   @@index([externalId])
+  @@index([mpesaTransactionId])
+  @@index([checkoutRequestId])
+  @@index([merchantRequestId])
+  @@index([conversationId])
+  @@index([originatorConversationId])
+  @@index([status])
+  @@index([transactionType])
 }

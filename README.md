@@ -1,250 +1,389 @@
-# Construction Hub - Professional Site Management System
+# M-Pesa Service API
 
-A comprehensive construction site management system for Kenya built with Next.js 16, Prisma, SQLite, and TypeScript. The system provides dual dashboards for superadmins and contractors with real-time project tracking, resource management, and analytics.
+A comprehensive M-Pesa payment service with API integration. This package provides service APIs and callbacks for consuming projects to implement their own database integration.
 
 ## Features
 
-### Superadmin Dashboard
-- Platform overview with key metrics (contractors, projects, revenue)
-- Contractor management with safety score tracking
-- Subscription plan management (Basic, Professional, Enterprise)
-- Revenue and performance analytics with Recharts visualizations
-- Reports generation
-- Platform settings and configuration
+- **STK Push** - Customer-initiated payments via mobile prompts
+- **B2C** - Business to Customer payments
+- **B2B** - Business to Business transfers
+- **C2B** - Customer to Business payments
+- **B2Pochi** - Payments to Pochi La Biashara wallets
+- **Account Balance** - Query M-Pesa account balance
+- **Transaction Status** - Check transaction status
+- **Reversal** - Reverse completed transactions
+- **Certificate-based Security** - Enhanced encryption and validation
+- **Comprehensive Callback Handling** - All M-Pesa callbacks supported
 
-### Contractor Portal
-- Project management with budget tracking
-- Task management with priority levels and status tracking
-- Materials and equipment inventory management
-- Team member management
-- Safety metrics and compliance tracking
-- Real-time project health indicators
-
-### Core Features
-- Role-based authentication (Superadmin, Contractor)
-- SQLite database with Prisma ORM
-- Comprehensive REST API for all entities
-- Kenyan-specific seed data (3 contractors, 3 projects, materials, equipment, documents, visitors)
-- Professional brown/grey/white color scheme
-- Fully responsive design
-- Recharts integration for analytics
-
-## Tech Stack
-
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4
-- **Backend**: Next.js API Routes, Node.js
-- **Database**: SQLite with Prisma 5.22
-- **Charts**: Recharts 2.15
-- **Styling**: Tailwind CSS v4 with custom design tokens
-
-## Getting Started
-
-### Installation
+## Installation
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Generate Prisma client
-pnpm exec prisma generate
-
-# Run migrations
-DATABASE_URL="file:./prisma/dev.db" pnpm exec prisma migrate deploy
-
-# Seed database with Kenyan data
-DATABASE_URL="file:./prisma/dev.db" pnpm prisma:seed
+npm install mpesa-servc
 ```
 
-### Running the Application
+## Configuration
+
+Set up your environment variables:
 
 ```bash
-# Start development server
-pnpm dev
+# M-Pesa Configuration
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_PASSKEY=your_passkey
+MPESA_SHORTCODE=your_shortcode
+MPESA_HEAD_OFFICE=your_head_office
+MPESA_INITIATOR_NAME=your_initiator_name
+MPESA_INITIATOR_PASSWORD=your_initiator_password
+MPESA_SECURITY_CREDENTIAL=your_security_credential
+MPESA_CALLBACK_URL=https://yourdomain.com/api/mpesa/callback
+MPESA_TIMEOUT_URL=https://yourdomain.com/api/mpesa/timeout
+MPESA_RESULT_URL=https://yourdomain.com/api/mpesa/result
+MPESA_B2B_RESULT_URL=https://yourdomain.com/api/mpesa/b2b/result
+MPESA_B2POCHI_RESULT_URL=https://yourdomain.com/api/mpesa/b2pochi/result
+MPESA_ACCOUNT_BALANCE_RESULT_URL=https://yourdomain.com/api/mpesa/account-balance/result
+MPESA_TRANSACTION_STATUS_RESULT_URL=https://yourdomain.com/api/mpesa/transaction-status/result
+MPESA_REVERSAL_RESULT_URL=https://yourdomain.com/api/mpesa/reversal/result
+MPESA_QUEUE_TIMEOUT_URL=https://yourdomain.com/api/mpesa/queue-timeout
+MPESA_ENVIRONMENT=sandbox # or production
 
-# Open http://localhost:3000
+# Server Configuration
+PORT=3000
+MPESA_JWT_SECRET=your_jwt_secret
+API_KEY=your_api_key
 ```
 
-## Demo Credentials
+## Quick Start
 
-### Superadmin
-- Email: `admin@constructionhub.ke`
-- Password: `hashed_admin_password`
+```javascript
+const mpesa = require('mpesa-servc');
 
-### Contractors
-1. **Nairobi Builders Ltd**
-   - Email: `info@nairobibuilders.ke`
-   - Password: `hashed_contractor_password`
+// Start the service
+mpesa.start();
 
-2. **Kisumu Construction Co**
-   - Email: `hello@kisumucon.ke`
-   - Password: `hashed_contractor_password`
-
-3. **Mombasa Developers**
-   - Email: `contact@mombasadev.ke`
-   - Password: `hashed_contractor_password`
-
-## Project Structure
-
+// The server will be available at http://localhost:3000
 ```
-/app
-  /api                    # API Routes
-    /auth                # Authentication endpoints
-    /contractors         # Contractor CRUD
-    /projects           # Project CRUD
-    /tasks              # Task CRUD
-    /materials          # Material CRUD
-    /visitors           # Visitor CRUD
-    /subscription-plans # Plan CRUD
-  /superadmin           # Superadmin dashboard routes
-    /contractors
-    /plans
-    /reports
-    /settings
-  /contractor           # Contractor portal routes
-    /projects
-    /tasks
-    /materials
-    /equipment
-    /team
-    /safety
-    /settings
-  layout.tsx            # Root layout with theme
-  page.tsx              # Login page
-  globals.css           # Global styles & design tokens
-
-/components
-  login-form.tsx        # Login component
-  analytics-charts.tsx  # Recharts visualizations
-
-/lib
-  prisma.ts            # Prisma client utility
-
-/prisma
-  schema.prisma        # Database schema
-  seed.ts              # Seed script with Kenyan data
-```
-
-## Database Schema
-
-### Core Models
-- **User**: Authentication (Superadmin/Contractor)
-- **Session**: Session management
-- **Contractor**: Company information, subscription, safety score
-- **SubscriptionPlan**: Pricing tiers and features
-- **Project**: Construction projects with budget tracking
-- **Site**: Project sites with coordinates
-- **Task**: Project tasks with priority and status
-- **Material**: Material inventory tracking
-- **Equipment**: Equipment and machinery management
-- **Document**: Project documents and uploads
-- **Photo**: Project photos and gallery
-- **Visitor**: Site visitor tracking and checkpoints
-- **Metric**: Project metrics (safety, progress, cost, quality)
-
-## Key Features Implemented
-
-### Authentication
-- Login/Logout with session-based auth
-- Role-based routing (Superadmin vs Contractor)
-- Session cookies with 7-day expiration
-
-### Dashboard Analytics
-- Real-time metrics and KPIs
-- Recharts line charts for revenue trends
-- Pie charts for project distribution
-- Bar charts for contractor performance
-- Progress indicators and health metrics
-
-### API Integration
-- RESTful endpoints for all entities
-- CRUD operations with relationship support
-- Error handling and validation
-
-### Design System
-- Brown (#8B4513) primary color
-- Grey and white neutrals
-- Professional UI with Tailwind CSS v4
-- Responsive grid layouts
-- Semantic HTML with ARIA labels
-
-## Seeded Data
-
-The database includes Kenyan-specific data:
-- **3 Contractors**: Based in Nairobi, Kisumu, and Mombasa
-- **3 Projects**: Galaxy Mall, Westlands Complex, Lakeside Residential
-- **6 Sites**: Multiple sites per project
-- **15 Tasks**: Various construction phases
-- **12 Materials**: Common construction materials
-- **8 Equipment**: Machinery and tools
-- **4 Documents**: Contracts and reports
-- **9 Visitors**: Site access logs
-- **12 Metrics**: Performance measurements
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/logout` - User logout
+### STK Push
+```bash
+POST /api/mpesa/stkpush/initiate
+Content-Type: application/json
 
-### Contractors
-- `GET /api/contractors` - List all contractors
-- `POST /api/contractors` - Create contractor
-- `GET /api/contractors/[id]` - Get contractor details
-- `PUT /api/contractors/[id]` - Update contractor
-- `DELETE /api/contractors/[id]` - Delete contractor
-
-### Projects
-- `GET /api/projects` - List all projects
-- `POST /api/projects` - Create project
-- `GET /api/projects/[id]` - Get project details with all relationships
-- `PUT /api/projects/[id]` - Update project
-- `DELETE /api/projects/[id]` - Delete project
-
-### Other Resources
-Similar CRUD endpoints available for:
-- Tasks (`/api/tasks`)
-- Materials (`/api/materials`)
-- Visitors (`/api/visitors`)
-- Subscription Plans (`/api/subscription-plans`)
-
-## Environment Variables
-
-```env
-DATABASE_URL="file:./prisma/dev.db"
+{
+  "phoneNumber": "254700000000",
+  "amount": "100",
+  "accountReference": "Payment",
+  "transactionDesc": "Payment for services"
+}
 ```
 
-## Development
+### B2C Payment
+```bash
+POST /api/mpesa/b2c/payment
+Content-Type: application/json
 
-### Database Commands
+{
+  "initiatorName": "testapi",
+  "securityCredential": "encrypted_credential",
+  "commandID": "BusinessPayment",
+  "amount": "1000",
+  "partyA": "174379",
+  "partyB": "254700000000",
+  "remarks": "Payment to customer",
+  "occasion": "Salary"
+}
+```
+
+### B2B Transfer
+```bash
+POST /api/mpesa/b2b/transfer
+Content-Type: application/json
+
+{
+  "initiatorName": "testapi",
+  "securityCredential": "encrypted_credential",
+  "commandID": "BusinessPayBill",
+  "senderIdentifierType": "4",
+  "receiverIdentifierType": "4",
+  "amount": "5000",
+  "partyA": "174379",
+  "partyB": "174379",
+  "accountReference": "Business Transfer",
+  "remarks": "Payment to supplier"
+}
+```
+
+### C2B Registration
+```bash
+POST /api/mpesa/c2b/register
+Content-Type: application/json
+
+{
+  "shortCode": "174379",
+  "responseType": "Completed",
+  "confirmationURL": "https://yourdomain.com/api/mpesa/c2b/confirmation",
+  "validationURL": "https://yourdomain.com/api/mpesa/c2b/validation"
+}
+```
+
+### B2Pochi Payment
+```bash
+POST /api/mpesa/b2pochi/payment
+Content-Type: application/json
+
+{
+  "initiatorName": "testapi",
+  "securityCredential": "encrypted_credential",
+  "amount": "500",
+  "partyA": "174379",
+  "partyB": "254700000000",
+  "remarks": "Payment to Pochi wallet",
+  "occasion": "Wallet top-up"
+}
+```
+
+### Account Balance
+```bash
+POST /api/mpesa/account/balance
+Content-Type: application/json
+
+{
+  "partyA": "174379",
+  "identifierType": "4",
+  "remarks": "Balance query"
+}
+```
+
+### Transaction Status
+```bash
+POST /api/mpesa/transaction/status
+Content-Type: application/json
+
+{
+  "initiatorName": "testapi",
+  "securityCredential": "encrypted_credential",
+  "transactionID": "ABC123XYZ",
+  "partyA": "174379",
+  "identifierType": "4",
+  "remarks": "Status query"
+}
+```
+
+### Reversal
+```bash
+POST /api/mpesa/reversal
+Content-Type: application/json
+
+{
+  "initiatorName": "testapi",
+  "securityCredential": "encrypted_credential",
+  "transactionID": "ABC123XYZ",
+  "amount": "100",
+  "receiverParty": "174379",
+  "receiverIdentifierType": "4",
+  "remarks": "Transaction reversal"
+}
+```
+
+## Callback Endpoints
+
+The service provides the following callback endpoints that should be configured in your M-Pesa dashboard:
+
+```
+POST /api/mpesa/callback/stkpush
+POST /api/mpesa/callback/c2b/confirmation
+POST /api/mpesa/callback/c2b/validation
+POST /api/mpesa/callback/b2c
+POST /api/mpesa/callback/b2b
+POST /api/mpesa/callback/b2pochi
+POST /api/mpesa/callback/account-balance
+POST /api/mpesa/callback/transaction-status
+POST /api/mpesa/callback/reversal
+POST /api/mpesa/callback/timeout
+```
+
+## Database Integration
+
+**Important**: This package no longer includes built-in database functionality. The consuming project must implement database operations for both service API requests and callback handling.
+
+### Database Integration Guide
+
+See [DATABASE_INTEGRATION_GUIDE.md](./DATABASE_INTEGRATION_GUIDE.md) for comprehensive documentation on:
+- Recommended database schema
+- Service API transaction storage patterns
+- Callback handling implementation
+- Error handling strategies
+- Monitoring and maintenance queries
+- Best practices and testing examples
+
+## Certificate Management
+
+The package supports certificate-based security for enhanced encryption:
 
 ```bash
-# Create/update database schema
-DATABASE_URL="file:./prisma/dev.db" pnpm exec prisma migrate dev --name <migration-name>
+# Validate certificates
+npm run cert:validate
 
-# Seed database
-DATABASE_URL="file:./prisma/dev.db" pnpm prisma:seed
+# Test encryption
+npm run cert:test
 
-# Open Prisma Studio
-DATABASE_URL="file:./prisma/dev.db" pnpm exec prisma studio
+# Encrypt password for credentials
+npm run encrypt:password
 ```
 
-### Building for Production
+### Certificate Files
+- `cert/production.cer` - Production environment certificate
+- `cert/sandbox.cer` - Sandbox environment certificate
+
+## Security Features
+
+- **Certificate-based encryption** for sensitive operations
+- **Helmet.js** for HTTP header security
+- **CORS** configuration
+- **Rate limiting** to prevent abuse
+- **Request validation** and error handling
+
+## Error Handling
+
+The service provides comprehensive error handling:
+
+```javascript
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error message"
+}
+```
+
+## Testing
 
 ```bash
-pnpm build
-pnpm start
+# Run tests
+npm test
+
+# Run linter
+npm run lint
+
+# Development mode
+npm run dev
 ```
 
-## Notes
+## Monitoring
 
-- Password hashing is not implemented in the demo (use bcrypt in production)
-- Session management uses simple cookies (consider more robust solutions for production)
-- API validation should be enhanced before production deployment
-- Implement proper error logging and monitoring
-- Add comprehensive test coverage
-- Consider adding WebSocket support for real-time updates
+### Health Check
+```bash
+GET /health
+```
+
+### Certificate Info
+```bash
+GET /api/certificate/info
+```
+
+### Certificate Validation
+```bash
+GET /api/certificate/validate
+```
+
+## Environment Variables Reference
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `MPESA_CONSUMER_KEY` | M-Pesa API consumer key | `your_key_here` |
+| `MPESA_CONSUMER_SECRET` | M-Pesa API consumer secret | `your_secret_here` |
+| `MPESA_PASSKEY` | STK Push passkey | `bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919` |
+| `MPESA_SHORTCODE` | Business short code | `174379` |
+| `MPESA_ENVIRONMENT` | Environment | `sandbox` or `production` |
+| `MPESA_CALLBACK_URL` | Base callback URL | `https://yourdomain.com/api/mpesa/callback` |
+| `PORT` | Server port | `3000` |
+
+## Transaction Types
+
+| Type | Description |
+|------|-------------|
+| STK_PUSH | Customer initiated payments via STK Push |
+| B2C | Business to Customer payments |
+| B2B | Business to Business transfers |
+| C2B | Customer to Business payments |
+| B2POCHI | Business to Pochi wallet payments |
+| REVERSAL | Transaction reversals |
+| ACCOUNT_BALANCE | Balance queries |
+| TRANSACTION_STATUS | Transaction status queries |
+
+## Response Codes
+
+| Code | Description |
+|------|-------------|
+| 0 | Success |
+| 1 | Internal server error |
+| 1032 | Request cancelled by user (STK Push) |
+| 1037 | Timeout |
+| 2001 | Duplicate request |
+| 2002 | Insufficient balance |
+
+## Best Practices
+
+1. **Database Integration**: Implement proper transaction storage as per the integration guide
+2. **Error Handling**: Always handle errors gracefully and provide meaningful feedback
+3. **Security**: Use certificate-based encryption for production environments
+4. **Testing**: Test thoroughly in sandbox before moving to production
+5. **Monitoring**: Set up proper monitoring for failed transactions
+6. **Rate Limiting**: Respect M-Pesa API rate limits
+7. **Idempotency**: Handle duplicate requests and callbacks appropriately
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Certificate Validation Failed**
+   - Ensure certificate files are in the `cert/` directory
+   - Run `npm run cert:validate` to diagnose issues
+
+2. **Invalid Credentials**
+   - Verify consumer key and secret are correct
+   - Check environment is set correctly (sandbox/production)
+
+3. **Timeout Errors**
+   - Increase timeout values in your M-Pesa dashboard
+   - Check network connectivity
+
+4. **Callback Not Received**
+   - Verify callback URLs are publicly accessible
+   - Check firewall settings
+   - Ensure URLs are correctly configured in M-Pesa dashboard
+
+## Support
+
+For issues and questions:
+- Check the [Database Integration Guide](./DATABASE_INTEGRATION_GUIDE.md)
+- Review M-Pesa API documentation
+- Check package repository issues
 
 ## License
 
-This project is part of the Construction Hub platform demonstration.
+ISC
+
+## Changelog
+
+### Version 2.0.0
+- Removed built-in database functionality
+- Added comprehensive database integration guide
+- Simplified package dependencies
+- Enhanced callback handling
+- Improved error handling and logging
+
+### Version 1.1.0
+- Added B2Pochi support
+- Enhanced certificate validation
+- Improved error handling
+- Added comprehensive logging
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- Code follows existing patterns
+- Proper error handling is implemented
+- Database operations follow the integration guide
+- Tests are included where applicable
+- Documentation is updated
