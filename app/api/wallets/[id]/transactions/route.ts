@@ -11,17 +11,29 @@ export async function GET(
     const resolvedParams = await params;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
+
+    const whereCondition: any = { walletId: resolvedParams.id };
+
+    if (search) {
+      whereCondition.OR = [
+        { reference: { contains: search } },
+        { receiptNumber: { contains: search } },
+        { description: { contains: search } },
+        { transactionType: { contains: search } }
+      ];
+    }
 
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
-        where: { walletId: resolvedParams.id },
+        where: whereCondition,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.transaction.count({ where: { walletId: resolvedParams.id } }),
+      prisma.transaction.count({ where: whereCondition }),
     ]);
 
     return NextResponse.json({
@@ -46,7 +58,7 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const body = await request.json();
-    const { type, amount, description, referenceNumber, method, payoutType } = body;
+    const { type, amount, description, referenceNumber, method, payoutType, accountNumber, requiresApproval } = body;
 
     if (!type || !amount) {
       return NextResponse.json(
@@ -102,39 +114,35 @@ export async function POST(
 
       return NextResponse.json({ mpesaResponse: stkResponse });
     } else {
-      // Payout
+      // Payout - create pending approval transaction
       if (wallet.balance < amount) {
         return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
       }
 
-      let payoutResponse;
-      if (payoutType === 'phone') {
-        payoutResponse = await initiateB2C(
-          referenceNumber, // phone number
-          amount,
-          'BusinessPayment',
-          description || `Payment to ${referenceNumber}`,
-          ''
-        );
-      } else if (payoutType === 'pochi') {
-        payoutResponse = await initiateB2Pochi(
-          referenceNumber, // phone number
-          amount,
-          description || `Pochi Payment to ${referenceNumber}`
-        );
-      } else if (payoutType === 'paybill' || payoutType === 'buygoods') {
-        payoutResponse = await initiateB2B(
-          referenceNumber, // shortcode
-          amount,
-          payoutType === 'paybill' ? 'BusinessPayBill' : 'BusinessBuyGoods',
-          wallet.name,
-          description || `Payment to ${referenceNumber}`
-        );
-      } else {
-        return NextResponse.json({ error: 'Invalid payout type' }, { status: 400 });
-      }
+      let transactionType = 'B2C';
+      if (payoutType === 'pochi') transactionType = 'B2POCHI';
+      else if (payoutType === 'paybill' || payoutType === 'till') transactionType = 'B2B';
 
-      return NextResponse.json({ mpesaResponse: payoutResponse });
+      const transaction = await prisma.transaction.create({
+        data: {
+          walletId: resolvedParams.id,
+          type: 'debit',
+          amount,
+          description,
+          reference: referenceNumber,
+          status: 'pending_approval',
+          transactionType,
+          accountReference: accountNumber || referenceNumber,
+          transactionDesc: description || `${transactionType} Payment to ${referenceNumber}`,
+          remarks: payoutType,
+          phoneNumber: payoutType === 'phone' || payoutType === 'pochi' ? referenceNumber : undefined,
+        },
+      });
+
+      return NextResponse.json({ 
+        transaction,
+        message: 'Transaction created and pending approval'
+      });
     }
   } catch (error: any) {
     console.error('Wallet Transaction Error:', error);

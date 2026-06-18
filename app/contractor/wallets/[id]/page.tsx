@@ -27,7 +27,8 @@ import {
   AlertCircle,
   QrCode,
   User,
-  ShoppingBag
+  ShoppingBag,
+  ChevronLeft
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -119,14 +120,36 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentRecipient, setPaymentRecipient] = useState('');
+  const [paymentAccountNumber, setPaymentAccountNumber] = useState('');
   const [paymentMemo, setPaymentMemo] = useState('');
   const [payoutType, setPayoutType] = useState('phone');
   const [isMakingPayment, setIsMakingPayment] = useState(false);
+
+  // Transaction pagination states
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
+  const [transactionsTotalCount, setTransactionsTotalCount] = useState(0);
+  const [transactionsSearch, setTransactionsSearch] = useState('');
+  const [transactionsLimit] = useState(10);
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(true);
 
   useEffect(() => {
     fetchWalletData();
     fetchTransactions();
   }, [walletId]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (transactionsPage !== 1) setTransactionsPage(1);
+      else fetchTransactions();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [transactionsSearch]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [transactionsPage]);
 
   const fetchWalletData = async () => {
     try {
@@ -142,13 +165,21 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const fetchTransactions = async () => {
+    setIsTransactionsLoading(true);
     try {
-      const response = await fetch(`/api/wallets/${walletId}/transactions`);
+      let url = `/api/wallets/${walletId}/transactions?page=${transactionsPage}&limit=${transactionsLimit}`;
+      if (transactionsSearch) url += `&search=${transactionsSearch}`;
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch transactions');
       const data = await response.json();
       setTransactions(data.transactions || []);
+      setTransactionsTotalPages(data.pagination.pages);
+      setTransactionsTotalCount(data.pagination.total);
     } catch (err: any) {
       console.error(err.message);
+    } finally {
+      setIsTransactionsLoading(false);
     }
   };
 
@@ -190,6 +221,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setDepositMemo('');
       setShowAddFunds(false);
       fetchTransactions(); // Show the pending transaction
+      fetchWalletData(); // Update wallet balance
     } catch (err: any) {
       toast({
         title: "Error",
@@ -232,6 +264,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           amount: parseFloat(paymentAmount),
           description: paymentMemo || `Payment to ${paymentRecipient}`,
           referenceNumber: paymentRecipient,
+          accountNumber: payoutType === 'paybill' && paymentAccountNumber ? paymentAccountNumber : undefined,
         }),
       });
 
@@ -246,9 +279,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
       setPaymentAmount('');
       setPaymentRecipient('');
+      setPaymentAccountNumber('');
       setPaymentMemo('');
       setShowMakePayment(false);
       fetchTransactions(); // Show pending transaction
+      fetchWalletData(); // Update wallet balance
     } catch (err: any) {
       toast({
         title: "Error",
@@ -260,8 +295,15 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const totalCredits = transactions.filter(t => t.type === 'credit' && t.status === 'completed').reduce((sum, t) => sum + t.amount, 0);
-  const totalDebits = transactions.filter(t => t.type === 'debit' && t.status === 'completed').reduce((sum, t) => sum + t.amount, 0);
+  const totalCredits = transactions.filter(t => 
+    (t.type === 'credit' || t.type === 'STK_PUSH') && 
+    (t.status === 'completed' || t.status === 'SUCCESS')
+  ).reduce((sum, t) => sum + t.amount, 0);
+  
+  const totalDebits = transactions.filter(t => 
+    (t.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(t.type)) && 
+    (t.status === 'completed' || t.status === 'SUCCESS')
+  ).reduce((sum, t) => sum + t.amount, 0);
 
   if (isLoading) {
     return (
@@ -359,28 +401,60 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/20 border-b">
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <History className="w-5 h-5 text-primary" />
                   Transaction History
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { fetchTransactions(); fetchWalletData(); }}>
-                    <RotateCcw className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-3">
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search transactions..."
+                      value={transactionsSearch}
+                      onChange={(e) => setTransactionsSearch(e.target.value)}
+                      className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
+                    />
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 hover:bg-background hover:text-primary transition-colors"
+                    onClick={fetchTransactions}
+                    disabled={isTransactionsLoading}
+                  >
+                    <RotateCcw className={`w-4 h-4 text-muted-foreground ${isTransactionsLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                  <Button asChild variant="outline" className="h-10 text-xs border-primary/20 hover:bg-primary/5 text-primary">
+                    <Link href={`/contractor/wallets/approvals?walletId=${walletId}`}>
+                      <ShieldCheck className="w-4 h-4 mr-1" /> Approvals
+                    </Link>
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
+              {isTransactionsLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground italic">Loading transactions...</p>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                  <History className="h-6 w-6 opacity-20" />
+                  <p className="text-xs italic">No recent financial activity recorded.</p>
+                </div>
+              ) : (
+                <>
+                  <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="font-bold text-[10px] uppercase">Ref / Receipt</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase">Amount</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase text-center">Type</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase">Description</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase text-center">Status</TableHead>
+                    <TableHead className="font-bold text-xs uppercase">Ref / Receipt</TableHead>
+                    <TableHead className="font-bold text-xs uppercase">Amount</TableHead>
+                    <TableHead className="font-bold text-xs uppercase text-center">Type</TableHead>
+                    <TableHead className="font-bold text-xs uppercase">Description</TableHead>
+                    <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -390,41 +464,105 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-muted-foreground text-sm italic">No recent financial activity recorded.</p>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    transactions.map((tx) => (
-                      <TableRow key={tx.id} className="hover:bg-muted/20">
-                        <TableCell className="font-mono text-[10px]">
-                          <div className="flex flex-col">
-                            <span className="opacity-50">{tx.reference || tx.id.slice(0, 8)}</span>
-                            <span className="font-bold text-primary">{tx.receiptNumber || '-'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={`font-bold font-mono ${tx.type === 'credit' ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}{wallet.currency} {tx.amount.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={tx.type === 'credit' ? 'default' : 'secondary'} className="text-[8px] py-0">
-                            {tx.type.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">{tx.description || '-'}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[8px] py-0 border-none ${
-                              tx.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 
-                              tx.status === 'pending' ? 'bg-amber-500/10 text-amber-600' : 
-                              'bg-red-500/10 text-red-600'
-                            }`}
-                          >
-                            {tx.status.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                   ) : (
+                     transactions.map((tx) => (
+                       <TableRow key={tx.id} className="hover:bg-muted/20 transition-colors">
+                         <TableCell className="font-mono text-xs">
+                           <div className="flex flex-col gap-1">
+                             <span className="opacity-50 text-[10px]">{tx.reference || tx.id.slice(0, 8)}</span>
+                             <span className="font-bold text-primary text-xs">{tx.receiptNumber || '-'}</span>
+                           </div>
+                         </TableCell>
+                         <TableCell className={`font-bold font-mono text-xs ${
+                           tx.type === 'credit' || tx.type === 'STK_PUSH' || tx.type === 'C2B' ? 'text-emerald-600' : 
+                           tx.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(tx.type) ? 'text-red-600' : 'text-gray-600'
+                         }`}>
+                           {tx.type === 'credit' || tx.type === 'STK_PUSH' || tx.type === 'C2B' ? '+' : 
+                            tx.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(tx.type) ? '-' : ''}{wallet.currency} {tx.amount.toFixed(2)}
+                         </TableCell>
+                         <TableCell className="text-center">
+                           <Badge variant={tx.type === 'credit' || tx.type === 'STK_PUSH' || tx.type === 'C2B' ? 'default' : 
+                                         tx.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(tx.type) ? 'destructive' : 'secondary'} 
+                                   className="text-[10px] py-0">
+                             {tx.type.replace('_', ' ')}
+                           </Badge>
+                         </TableCell>
+                         <TableCell className="text-xs">{tx.description || '-'}</TableCell>
+                         <TableCell className="text-center">
+                           <Badge 
+                             variant="outline" 
+                             className={`text-[10px] py-0 border-none ${
+                               tx.status === 'completed' || tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-600' : 
+                               tx.status === 'pending' || tx.status === 'PENDING' ? 'bg-amber-500/10 text-amber-600' : 
+                               'bg-red-500/10 text-red-600'
+                             }`}
+                           >
+                             {(tx.status || 'UNKNOWN').replace('_', ' ')}
+                           </Badge>
+                         </TableCell>
+                       </TableRow>
+                     ))
+                   )}
                 </TableBody>
               </Table>
+
+              {transactionsTotalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-muted/5">
+                  <p className="text-sm text-muted-foreground italic">
+                    Showing <span className="font-bold">{(transactionsPage - 1) * transactionsLimit + 1}</span> to <span className="font-bold">{Math.min(transactionsPage * transactionsLimit, transactionsTotalCount)}</span> of <span className="font-bold">{transactionsTotalCount}</span> transactions
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTransactionsPage(prev => Math.max(1, prev - 1))}
+                      disabled={transactionsPage === 1 || isTransactionsLoading}
+                      className="gap-1 h-8 px-3 text-xs"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, transactionsTotalPages) }, (_, i) => {
+                        let page;
+                        if (transactionsTotalPages <= 5) {
+                          page = i + 1;
+                        } else if (transactionsPage <= 3) {
+                          page = i + 1;
+                        } else if (transactionsPage >= transactionsTotalPages - 2) {
+                          page = transactionsTotalPages - 4 + i;
+                        } else {
+                          page = transactionsPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={page}
+                            variant={transactionsPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setTransactionsPage(page)}
+                            disabled={isTransactionsLoading}
+                            className={`h-8 w-8 p-0 text-xs ${transactionsPage === page ? 'bg-primary text-white' : ''}`}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTransactionsPage(prev => Math.min(transactionsTotalPages, prev + 1))}
+                      disabled={transactionsPage === transactionsTotalPages || isTransactionsLoading}
+                      className="gap-1 h-8 px-3 text-xs"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -525,7 +663,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                               <User className="w-4 h-4" /> Pochi la Biashara
                             </div>
                           </SelectItem>
-                          <SelectItem value="buygoods">
+                          <SelectItem value="till">
                             <div className="flex items-center gap-2">
                               <ShoppingBag className="w-4 h-4" /> Buy Goods (Till)
                             </div>
@@ -551,16 +689,29 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="space-y-2">
                       <Label>
-                        {payoutType === 'phone' || payoutType === 'pochi' ? 'Recipient Mobile No.' : 'Shortcode / Till Number'} *
+                        {payoutType === 'phone' || payoutType === 'pochi' ? 'Recipient Mobile No.' : payoutType === 'paybill' ? 'Business Short Code' : 'Till Number'} *
                       </Label>
                       <Input 
                         type="text" 
-                        placeholder={payoutType === 'phone' || payoutType === 'pochi' ? '2547XXXXXXXX' : 'Shortcode'} 
+                        placeholder={payoutType === 'phone' || payoutType === 'pochi' ? '2547XXXXXXXX' : payoutType === 'paybill' ? 'Enter business short code' : 'Enter till number'} 
                         value={paymentRecipient}
                         onChange={(e) => setPaymentRecipient(e.target.value)}
                         className="bg-muted/30 border-none h-11" 
                       />
                     </div>
+                    {payoutType === 'paybill' && (
+                      <div className="space-y-2">
+                        <Label>Account Number *</Label>
+                        <Input 
+                          type="text" 
+                          placeholder="Enter account number (optional)" 
+                          value={paymentAccountNumber}
+                          onChange={(e) => setPaymentAccountNumber(e.target.value)}
+                          className="bg-muted/30 border-none h-11" 
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Leave blank if the paybill doesn't require an account number</p>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Description / Remarks</Label>
                       <Textarea 
@@ -594,7 +745,9 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
           <Card className="border-none shadow-md overflow-hidden">
             <CardHeader className="bg-muted/20 border-b">
-              <CardTitle className="text-sm font-bold">Account Meta</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold">Account Meta</CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
               <div className="flex justify-between items-center">

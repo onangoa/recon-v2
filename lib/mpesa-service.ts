@@ -2,12 +2,12 @@ import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
 
 // M-Pesa Configuration
-const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
-const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || '';
-const MPESA_SHORTCODE = process.env.MPESA_SHORTCODE || '';
-const MPESA_PASSKEY = process.env.MPESA_PASSKEY || '';
-const MPESA_CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'http://localhost:3010/api/callbacks/mpesa';
-const MPESA_ENVIRONMENT = (process.env.MPESA_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
+export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
+export const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || '';
+export const MPESA_SHORTCODE = process.env.MPESA_SHORTCODE || '';
+export const MPESA_PASSKEY = process.env.MPESA_PASSKEY || '';
+export const MPESA_CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'http://localhost:3010/api/callbacks/mpesa';
+export const MPESA_ENVIRONMENT = (process.env.MPESA_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
 
 // Transaction Status Enum
 export enum TransactionStatus {
@@ -15,7 +15,8 @@ export enum TransactionStatus {
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
   CANCELLED = 'CANCELLED',
-  TIMEOUT = 'TIMEOUT'
+  TIMEOUT = 'TIMEOUT',
+  PENDING_APPROVAL = 'PENDING_APPROVAL'
 }
 
 // Transaction Type Enum
@@ -78,19 +79,47 @@ const createTransaction = async (data: {
   remarks?: string;
   metadata?: string;
 }) => {
-  return await prisma.transaction.create({
-    data: {
-      walletId: data.walletId,
-      amount: data.amount,
-      type: data.type,
-      status: TransactionStatus.PENDING,
-      phoneNumber: data.phoneNumber,
-      accountReference: data.accountReference,
-      transactionDesc: data.transactionDesc || `${data.type} transaction`,
-      remarks: data.remarks,
-      metadata: data.metadata
+  try {
+    console.log('Creating transaction for wallet:', data.walletId);
+    
+    // Validate wallet exists
+    const wallet = await prisma.wallet.findUnique({
+      where: { id: data.walletId }
+    });
+
+    if (!wallet) {
+      throw new Error(`Wallet with ID ${data.walletId} not found`);
     }
-  });
+
+    console.log('Wallet found, creating transaction:', {
+      walletId: wallet.id,
+      walletName: wallet.name,
+      currentBalance: wallet.balance
+    });
+
+    return await prisma.transaction.create({
+      data: {
+        walletId: data.walletId,
+        amount: data.amount,
+        type: data.type,
+        status: TransactionStatus.PENDING,
+        phoneNumber: data.phoneNumber,
+        accountReference: data.accountReference,
+        transactionDesc: data.transactionDesc || `${data.type} transaction`,
+        remarks: data.remarks,
+        metadata: data.metadata,
+        transactionType: data.type
+      }
+    });
+  } catch (error: any) {
+    console.error('Error creating transaction:', {
+      walletId: data.walletId,
+      error: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+    throw error;
+  }
 };
 
 // Helper function to update transaction
@@ -152,8 +181,11 @@ const findTransaction = async (identifier: string, type: TransactionType) => {
 
 // Helper function to extract parameter value from callback
 const extractParameterValue = (parameters: any[], key: string) => {
-  const parameter = parameters.find((p: any) => p.Key === key);
-  return parameter ? parameter.Value : null;
+  console.log(`Extracting parameter ${key} from ${parameters.length} items`);
+  const parameter = parameters.find((p: any) => p.Key === key || p.Name === key);
+  const value = parameter ? parameter.Value : null;
+  console.log(`Parameter ${key}:`, JSON.stringify(parameter), `Value: ${value}`);
+  return value;
 };
 
 // ============ STK PUSH OPERATIONS ============
@@ -168,10 +200,11 @@ export const initiateSTKPush = async (
   await ensureInitialized();
   
   const formattedPhone = formatPhoneNumber(phoneNumber);
+  let transaction: any = null;
 
   try {
-    // Create initial transaction record
-    const transaction = await createTransaction({
+    // Create initial transaction record as CREDIT type
+    transaction = await createTransaction({
       walletId,
       amount,
       type: TransactionType.STK_PUSH,
@@ -224,14 +257,39 @@ export const initiateSTKPush = async (
     }
   } catch (error: any) {
     console.error('STK Push Error:', error);
+    
+    // Update transaction status to FAILED if transaction exists
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate STK Push',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            response: error.response?.data
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+    
     throw new Error(error.message || 'Failed to initiate STK Push');
   }
 };
 
 export const handleSTKPushCallback = async (callbackData: any) => {
   try {
-    const { Body } = callbackData;
-    const { stkCallback } = Body;
+    let stkCallback: any;
+    
+    if (callbackData.Body?.stkCallback) {
+      stkCallback = callbackData.Body.stkCallback;
+    } else {
+      stkCallback = callbackData;
+    }
+    
     const {
       MerchantRequestID,
       CheckoutRequestID,
@@ -239,15 +297,25 @@ export const handleSTKPushCallback = async (callbackData: any) => {
       ResultDesc
     } = stkCallback;
 
-    console.log('STK Push callback received:', { CheckoutRequestID, ResultCode, ResultDesc });
+    console.log('STK Push callback received:', { CheckoutRequestID, ResultCode, ResultDesc, fullData: JSON.stringify(callbackData) });
 
-    // Find transaction
+    if (!CheckoutRequestID) {
+      console.error('Missing CheckoutRequestID in callback', JSON.stringify(callbackData));
+      return { success: false, error: 'Missing CheckoutRequestID' };
+    }
+
     const transaction = await findTransaction(CheckoutRequestID, TransactionType.STK_PUSH);
 
     if (!transaction) {
       console.warn(`Transaction not found for CheckoutRequestID: ${CheckoutRequestID}`);
       return { success: false, error: 'Transaction not found' };
     }
+
+    console.log(`Processing STK Push callback for transaction ${transaction.id}`, {
+      currentStatus: transaction.status,
+      resultCode: ResultCode,
+      resultDesc: ResultDesc
+    });
 
     // Prepare update data
     let updateData: any = {
@@ -262,6 +330,8 @@ export const handleSTKPushCallback = async (callbackData: any) => {
       // Success case
       const metadata = stkCallback.CallbackMetadata?.Item || [];
       
+      console.log('STK Push metadata:', JSON.stringify(metadata));
+      
       updateData.status = TransactionStatus.SUCCESS;
       updateData.mpesaReceiptNumber = extractParameterValue(metadata, 'MpesaReceiptNumber');
       
@@ -269,22 +339,34 @@ export const handleSTKPushCallback = async (callbackData: any) => {
       const phoneNumber = extractParameterValue(metadata, 'PhoneNumber');
       const transactionDate = extractParameterValue(metadata, 'TransactionDate');
 
-      console.log('STK Push successful:', {
+      console.log('STK Push extracted values:', {
         transactionId: transaction.id,
-        mpesaReceiptNumber: updateData.mpessaReceiptNumber,
+        mpesaReceiptNumber: updateData.mpesaReceiptNumber,
         amount,
-        phoneNumber
+        phoneNumber,
+        transactionDate
       });
 
-      // Update wallet balance
-      await prisma.wallet.update({
-        where: { id: transaction.walletId },
-        data: {
-          balance: {
-            increment: amount
+      // Update wallet balance only if amount is valid (INCREASE for deposits)
+      if (amount && !isNaN(amount)) {
+        const numericAmount = parseFloat(amount);
+        console.log(`Updating wallet balance for transaction ${transaction.id} by INCREMENTING ${numericAmount}`);
+        const wallet = await prisma.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              increment: numericAmount
+            }
           }
-        }
-      });
+        });
+        console.log(`Successfully updated wallet ${transaction.walletId} balance to ${wallet.balance}`);
+      } else {
+        console.warn('Could not update wallet balance: invalid or missing amount', {
+          transactionId: transaction.id,
+          amount,
+          phoneNumber
+        });
+      }
 
     } else if (ResultCode === 1032) {
       // User cancelled
@@ -294,7 +376,7 @@ export const handleSTKPushCallback = async (callbackData: any) => {
     } else if (ResultCode === 1037) {
       // Timeout
       updateData.status = TransactionStatus.TIMEOUT;
-      console.log('STK Push timed out:', { transactionId: transaction.id });
+      console.log('STK Push timed out:', { transactionId: transaction.id, CheckoutRequestID });
       
     } else {
       // Failed case
@@ -302,7 +384,8 @@ export const handleSTKPushCallback = async (callbackData: any) => {
       console.error('STK Push failed:', {
         transactionId: transaction.id,
         ResultCode,
-        ResultDesc
+        ResultDesc,
+        CheckoutRequestID
       });
     }
 
@@ -329,22 +412,35 @@ export const initiateB2C = async (
   walletId: string,
   commandID: string = 'BusinessPayment',
   remarks?: string,
-  occasion?: string
+  occasion?: string,
+  existingTransactionId?: string
 ) => {
   await ensureInitialized();
+  let transaction: any = null;
 
   try {
     const formattedPhone = formatPhoneNumber(phoneNumber);
 
-    // Create transaction record
-    const transaction = await createTransaction({
-      walletId,
-      amount,
-      type: TransactionType.B2C,
-      phoneNumber: formattedPhone,
-      transactionDesc: remarks || 'B2C Payment',
-      remarks: occasion
-    });
+    // Use existing transaction or create new one
+    if (existingTransactionId) {
+      transaction = await prisma.transaction.findUnique({
+        where: { id: existingTransactionId }
+      });
+      
+      if (!transaction) {
+        throw new Error(`Transaction with ID ${existingTransactionId} not found`);
+      }
+    } else {
+      // Create transaction record as DEBIT type
+      transaction = await createTransaction({
+        walletId,
+        amount,
+        type: TransactionType.B2C,
+        phoneNumber: formattedPhone,
+        transactionDesc: remarks || 'B2C Payment',
+        remarks: occasion
+      });
+    }
 
     // Generate originator conversation ID
     const originatorConversationID = `B2C_${Date.now()}_${transaction.id}`;
@@ -363,6 +459,7 @@ export const initiateB2C = async (
       await updateTransaction(transaction.id, {
         conversationId: result.ConversationID,
         originatorConversationId: result.OriginatorConversationID,
+        status: TransactionStatus.PENDING,
         rawApiResponse: JSON.stringify(result)
       });
 
@@ -391,6 +488,29 @@ export const initiateB2C = async (
     }
   } catch (error: any) {
     console.error('B2C Error:', error);
+    
+    // Update transaction status to FAILED if transaction exists
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate B2C payment',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            code: error.code,
+            meta: error.meta
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+    
+    // Provide more detailed error information
+    if (error.code === 'P2003') {
+      throw new Error(`Foreign key constraint violated. The wallet ID may not exist: ${error.meta?.field_name || 'walletId'}`);
+    }
+    
     throw new Error(error.message || 'Failed to initiate B2C payment');
   }
 };
@@ -414,7 +534,9 @@ export const handleB2CCallback = async (callbackData: any) => {
     console.log('B2C callback received:', {
       OriginatorConversationID,
       ConversationID,
-      ResultCode
+      ResultCode,
+      ResultDesc,
+      fullResult: JSON.stringify(Result)
     });
 
     // Find transaction
@@ -439,6 +561,9 @@ export const handleB2CCallback = async (callbackData: any) => {
     if (ResultCode === 0) {
       // Success - extract result parameters
       const parameters = Result.ResultParameters?.ResultParameter || [];
+      
+      console.log('B2C callback parameters:', JSON.stringify(parameters));
+      
       const receiptNo = extractParameterValue(parameters, 'TransactionReceipt');
       const amount = extractParameterValue(parameters, 'TransactionAmount');
       const transactionCompletedDateTime = extractParameterValue(parameters, 'TransactionCompletedDateTime');
@@ -453,15 +578,25 @@ export const handleB2CCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
-      // Update wallet balance (deduct)
-      await prisma.wallet.update({
-        where: { id: transaction.walletId },
-        data: {
-          balance: {
-            decrement: amount
+      // Update wallet balance (DECREASE for payouts) only if amount is valid
+      if (amount && !isNaN(amount)) {
+        const numericAmount = parseFloat(amount);
+        console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
+        await prisma.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              decrement: numericAmount
+            }
           }
-        }
-      });
+        });
+        console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
+      } else {
+        console.warn('Could not update wallet balance: invalid or missing amount', {
+          transactionId: transaction.id,
+          amount
+        });
+      }
 
     } else {
       // Failed
@@ -496,20 +631,41 @@ export const initiateB2B = async (
   walletId: string,
   accountReference: string,
   commandID: string = 'BusinessPayBill',
-  remarks?: string
+  remarks?: string,
+  existingTransactionId?: string
 ) => {
   await ensureInitialized();
+  let transaction: any = null;
 
   try {
-    // Create transaction record
-    const transaction = await createTransaction({
-      walletId,
-      amount,
-      type: TransactionType.B2B,
-      accountReference,
-      transactionDesc: remarks || 'B2B Payment',
-      remarks: remarks
-    });
+    // Use existing transaction or create new one
+    if (existingTransactionId) {
+      transaction = await prisma.transaction.findUnique({
+        where: { id: existingTransactionId }
+      });
+      
+      if (!transaction) {
+        throw new Error(`Transaction with ID ${existingTransactionId} not found`);
+      }
+    } else {
+      // Create transaction record
+      transaction = await createTransaction({
+        walletId,
+        amount,
+        type: TransactionType.B2B,
+        accountReference,
+        transactionDesc: remarks || 'B2B Payment',
+        remarks: remarks
+      });
+    }
+
+    // Set identifier types based on command ID
+    let senderIdentifierType = '4';
+    let receiverIdentifierType = '4';
+    
+    if (commandID === 'BusinessBuyGoods') {
+      receiverIdentifierType = '2'; // Till number
+    }
 
     // Initiate B2B
     const result = await mpesa.b2b({
@@ -518,7 +674,9 @@ export const initiateB2B = async (
       partyB: receiverShortCode,
       accountReference,
       remarks: remarks || 'B2B Payment',
-      commandID: commandID
+      commandID: commandID,
+      senderIdentifierType: senderIdentifierType,
+      receiverIdentifierType: receiverIdentifierType
     });
     
     // Update transaction with API response
@@ -526,6 +684,7 @@ export const initiateB2B = async (
       await updateTransaction(transaction.id, {
         conversationId: result.ConversationID,
         originatorConversationId: result.OriginatorConversationID,
+        status: TransactionStatus.PENDING,
         rawApiResponse: JSON.stringify(result)
       });
 
@@ -554,6 +713,25 @@ export const initiateB2B = async (
     }
   } catch (error: any) {
     console.error('B2B Error:', error);
+    
+    // Update transaction status to FAILED if transaction exists
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate B2B transfer',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            response: error.response?.data
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+    
     throw new Error(error.message || 'Failed to initiate B2B transfer');
   }
 };
@@ -577,7 +755,9 @@ export const handleB2BCallback = async (callbackData: any) => {
     console.log('B2B callback received:', {
       OriginatorConversationID,
       ConversationID,
-      ResultCode
+      ResultCode,
+      ResultDesc,
+      fullResult: JSON.stringify(Result)
     });
 
     // Find transaction
@@ -602,6 +782,9 @@ export const handleB2BCallback = async (callbackData: any) => {
     if (ResultCode === 0) {
       // Success - extract result parameters
       const parameters = Result.ResultParameters?.ResultParameter || [];
+      
+      console.log('B2B callback parameters:', JSON.stringify(parameters));
+      
       const receiptNo = extractParameterValue(parameters, 'TransactionReceipt');
       const amount = extractParameterValue(parameters, 'TransactionAmount');
       const transactionCompletedDateTime = extractParameterValue(parameters, 'TransactionCompletedDateTime');
@@ -616,15 +799,25 @@ export const handleB2BCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
-      // Update wallet balance (deduct)
-      await prisma.wallet.update({
-        where: { id: transaction.walletId },
-        data: {
-          balance: {
-            decrement: amount
+      // Update wallet balance (DECREASE for payouts) only if amount is valid
+      if (amount && !isNaN(amount)) {
+        const numericAmount = parseFloat(amount);
+        console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
+        await prisma.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              decrement: numericAmount
+            }
           }
-        }
-      });
+        });
+        console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
+      } else {
+        console.warn('Could not update wallet balance: invalid or missing amount', {
+          transactionId: transaction.id,
+          amount
+        });
+      }
 
     } else {
       // Failed
@@ -657,22 +850,35 @@ export const initiateB2Pochi = async (
   phoneNumber: string,
   amount: number,
   walletId: string,
-  remarks?: string
+  remarks?: string,
+  existingTransactionId?: string
 ) => {
   await ensureInitialized();
+  let transaction: any = null;
 
   try {
     const formattedPhone = formatPhoneNumber(phoneNumber);
 
-    // Create transaction record
-    const transaction = await createTransaction({
-      walletId,
-      amount,
-      type: TransactionType.B2POCHI,
-      phoneNumber: formattedPhone,
-      transactionDesc: remarks || 'Pochi Payment',
-      remarks: remarks
-    });
+    // Use existing transaction or create new one
+    if (existingTransactionId) {
+      transaction = await prisma.transaction.findUnique({
+        where: { id: existingTransactionId }
+      });
+      
+      if (!transaction) {
+        throw new Error(`Transaction with ID ${existingTransactionId} not found`);
+      }
+    } else {
+      // Create transaction record
+      transaction = await createTransaction({
+        walletId,
+        amount,
+        type: TransactionType.B2POCHI,
+        phoneNumber: formattedPhone,
+        transactionDesc: remarks || 'Pochi Payment',
+        remarks: remarks
+      });
+    }
 
     // Initiate B2Pochi
     const result = await mpesa.b2pochi({
@@ -686,6 +892,7 @@ export const initiateB2Pochi = async (
       await updateTransaction(transaction.id, {
         conversationId: result.ConversationID,
         originatorConversationId: result.OriginatorConversationID,
+        status: TransactionStatus.PENDING,
         rawApiResponse: JSON.stringify(result)
       });
 
@@ -714,6 +921,25 @@ export const initiateB2Pochi = async (
     }
   } catch (error: any) {
     console.error('B2Pochi Error:', error);
+    
+    // Update transaction status to FAILED if transaction exists
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate Pochi payment',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            response: error.response?.data
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+    
     throw new Error(error.message || 'Failed to initiate Pochi payment');
   }
 };
@@ -737,7 +963,9 @@ export const handleB2PochiCallback = async (callbackData: any) => {
     console.log('B2Pochi callback received:', {
       OriginatorConversationID,
       ConversationID,
-      ResultCode
+      ResultCode,
+      ResultDesc,
+      fullResult: JSON.stringify(Result)
     });
 
     // Find transaction
@@ -762,6 +990,9 @@ export const handleB2PochiCallback = async (callbackData: any) => {
     if (ResultCode === 0) {
       // Success - extract result parameters
       const parameters = Result.ResultParameters?.ResultParameter || [];
+      
+      console.log('B2Pochi callback parameters:', JSON.stringify(parameters));
+      
       const receiptNo = extractParameterValue(parameters, 'TransactionReceipt');
       const amount = extractParameterValue(parameters, 'TransactionAmount');
       const transactionCompletedDateTime = extractParameterValue(parameters, 'TransactionCompletedDateTime');
@@ -776,15 +1007,25 @@ export const handleB2PochiCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
-      // Update wallet balance (deduct)
-      await prisma.wallet.update({
-        where: { id: transaction.walletId },
-        data: {
-          balance: {
-            decrement: amount
+      // Update wallet balance (DECREASE for payouts) only if amount is valid
+      if (amount && !isNaN(amount)) {
+        const numericAmount = parseFloat(amount);
+        console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
+        await prisma.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              decrement: numericAmount
+            }
           }
-        }
-      });
+        });
+        console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
+      } else {
+        console.warn('Could not update wallet balance: invalid or missing amount', {
+          transactionId: transaction.id,
+          amount
+        });
+      }
 
     } else {
       // Failed
@@ -879,7 +1120,7 @@ export const handleC2BConfirmation = async (callbackData: any) => {
       amount: TransAmount
     });
 
-    // Update wallet balance
+    // Update wallet balance (INCREASE for customer deposits)
     await prisma.wallet.update({
       where: { id: wallet.id },
       data: {
@@ -888,6 +1129,8 @@ export const handleC2BConfirmation = async (callbackData: any) => {
         }
       }
     });
+
+    console.log(`Successfully INCREMENTED wallet ${wallet.id} balance by ${TransAmount} for C2B payment`);
 
     return {
       success: true,
@@ -1214,10 +1457,11 @@ export const initiateReversal = async (
   remarks: string = 'Reversal Request'
 ) => {
   await ensureInitialized();
+  let transaction: any = null;
 
   try {
     // Create transaction record
-    const transaction = await createTransaction({
+    transaction = await createTransaction({
       walletId,
       amount,
       type: TransactionType.REVERSAL,
@@ -1267,6 +1511,25 @@ export const initiateReversal = async (
     }
   } catch (error: any) {
     console.error('Reversal Error:', error);
+    
+    // Update transaction status to FAILED if transaction exists
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate reversal',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            response: error.response?.data
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+    
     throw new Error(error.message || 'Failed to initiate reversal');
   }
 };
@@ -1328,15 +1591,25 @@ export const handleReversalCallback = async (callbackData: any) => {
         reversalReceipt
       });
 
-      // Update wallet balance (add back the reversed amount)
-      await prisma.wallet.update({
-        where: { id: transaction.walletId },
-        data: {
-          balance: {
-            increment: reversalAmount
+      // Update wallet balance (INCREASE for reversals - adding back the reversed amount) only if amount is valid
+      if (reversalAmount && !isNaN(reversalAmount)) {
+        const numericAmount = parseFloat(reversalAmount);
+        console.log(`Updating wallet balance for transaction ${transaction.id} by INCREMENTING ${numericAmount}`);
+        await prisma.wallet.update({
+          where: { id: transaction.walletId },
+          data: {
+            balance: {
+              increment: numericAmount
+            }
           }
-        }
-      });
+        });
+        console.log(`Successfully incremented wallet ${transaction.walletId} balance`);
+      } else {
+        console.warn('Could not update wallet balance: invalid or missing reversal amount', {
+          transactionId: transaction.id,
+          reversalAmount
+        });
+      }
 
     } else {
       // Failed
@@ -1431,12 +1704,12 @@ export const getTransactionsByType = async (
 ) => {
   const [transactions, total] = await Promise.all([
     prisma.transaction.findMany({
-      where: { transactionType: type },
+      where: { type },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset
     }),
-    prisma.transaction.count({ where: { transactionType: type } })
+    prisma.transaction.count({ where: { type } })
   ]);
 
   return {
