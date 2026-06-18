@@ -6,10 +6,10 @@ import { WalletService } from '@/lib/wallet-service';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { phoneNumber, amount, email } = body;
+    const { phoneNumber, amount, email, formData } = body;
 
-    if (!phoneNumber || !amount) {
-      return NextResponse.json({ error: 'Phone number and amount are required' }, { status: 400 });
+    if (!phoneNumber || !amount || !formData) {
+      return NextResponse.json({ error: 'Phone number, amount, and form data are required' }, { status: 400 });
     }
 
     // 1. Get or create a System Wallet for registration fees
@@ -35,9 +35,23 @@ export async function POST(request: Request) {
       `Subscription for ${email}`
     );
 
+    // 3. Store registration data with the transaction for later use
+    if (stkResponse.transactionId) {
+      await prisma.transaction.update({
+        where: { id: stkResponse.transactionId },
+        data: {
+          metadata: JSON.stringify({
+            isRegistration: true,
+            formData: formData
+          })
+        }
+      });
+    }
+
     return NextResponse.json({
       message: 'STK Push initiated',
       checkoutRequestId: stkResponse.CheckoutRequestID,
+      transactionId: stkResponse.transactionId,
     });
   } catch (error: any) {
     console.error('Registration Payment Error:', error.message);

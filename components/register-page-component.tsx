@@ -15,7 +15,8 @@ import {
   Lock,
   MapPin,
   FileText,
-  Smartphone
+  Smartphone,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,11 @@ export function RegisterPageComponent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -125,11 +131,15 @@ export function RegisterPageComponent() {
           phoneNumber: formData.mpesaNumber,
           amount: selectedPlan?.price,
           email: formData.email,
+          formData: formData,
         }),
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to initiate payment');
+
+      setCheckoutRequestId(data.checkoutRequestId);
+      setTransactionId(data.transactionId);
 
       toast({ title: "Payment Initiated", description: "Please check your phone for the M-Pesa prompt." });
       
@@ -147,10 +157,22 @@ export function RegisterPageComponent() {
         const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
         const data = await response.json();
 
-        if (data.status === 'completed') {
+        setPaymentStatus(data.status);
+
+        if (data.status === 'completed' || data.status === 'SUCCESS') {
           clearInterval(interval);
-          finalizeRegistration(checkoutRequestId);
-        } else if (data.status === 'failed') {
+          setIsLoading(false);
+          setRegistrationComplete(true);
+          toast({ 
+            title: "Payment Successful!", 
+            description: "Your registration is being processed. You will receive a confirmation email shortly.", 
+            variant: "success" 
+          });
+          setTimeout(() => {
+            localStorage.removeItem('registration_draft');
+            router.push('/login');
+          }, 3000);
+        } else if (data.status === 'failed' || data.status === 'FAILED' || data.status === 'CANCELLED') {
           clearInterval(interval);
           toast({ title: "Payment Failed", description: "Your payment was not successful. Please try again.", variant: "destructive" });
           setIsLoading(false);
@@ -163,30 +185,46 @@ export function RegisterPageComponent() {
     // Stop polling after 2 minutes
     setTimeout(() => {
       clearInterval(interval);
-      if (isLoading) {
+      if (isLoading && !registrationComplete) {
         setIsLoading(false);
-        toast({ title: "Timeout", description: "Payment confirmation timed out. Please try again if you paid.", variant: "destructive" });
+        toast({ title: "Timeout", description: "Payment confirmation timed out. Please check your status manually if you paid.", variant: "destructive" });
       }
     }, 120000);
   };
 
-  const finalizeRegistration = async (checkoutRequestId: string) => {
+  const handleCheckStatus = async () => {
+    if (!checkoutRequestId) {
+      toast({ title: "Error", description: "No pending payment found", variant: "destructive" });
+      return;
+    }
+
+    setIsCheckingStatus(true);
     try {
-      const response = await fetch('/api/auth/register-contractor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, checkoutRequestId }),
-      });
-
+      const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Registration failed');
+      
+      setPaymentStatus(data.status);
 
-      toast({ title: "Success!", description: "Account created successfully. Welcome aboard!", variant: "success" });
-      localStorage.removeItem('registration_draft');
-      router.push('/login');
+      if (data.status === 'completed' || data.status === 'SUCCESS') {
+        toast({ 
+          title: "Payment Successful!", 
+          description: "Your registration is being processed. You will receive a confirmation email shortly.", 
+          variant: "success" 
+        });
+        setRegistrationComplete(true);
+        setTimeout(() => {
+          localStorage.removeItem('registration_draft');
+          router.push('/login');
+        }, 3000);
+      } else if (data.status === 'failed' || data.status === 'FAILED' || data.status === 'CANCELLED') {
+        toast({ title: "Payment Failed", description: "Your payment was not successful. Please try again.", variant: "destructive" });
+      } else {
+        toast({ title: "Payment Pending", description: "Your payment is still being processed. Please check again in a few moments.", variant: "default" });
+      }
     } catch (error: any) {
-      toast({ title: "Registration Error", description: error.message, variant: "destructive" });
-      setIsLoading(false);
+      toast({ title: "Error", description: error.message || "Failed to check payment status", variant: "destructive" });
+    } finally {
+      setIsCheckingStatus(false);
     }
   };
 
@@ -442,40 +480,102 @@ export function RegisterPageComponent() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label htmlFor="mpesaNumber" className="text-sm font-bold uppercase tracking-wider text-[#5D4037]">M-Pesa Phone Number</Label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
-                    <Input 
-                      id="mpesaNumber" 
-                      placeholder="e.g. 254712345678" 
-                      className="pl-10 h-12 text-lg font-bold tracking-widest border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
-                      value={formData.mpesaNumber}
-                      onChange={(e) => setFormData({ ...formData, mpesaNumber: e.target.value })}
-                    />
+                {checkoutRequestId && !registrationComplete && (
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      <span className="text-sm font-medium text-blue-800">Payment Status: <span className="font-bold capitalize">{paymentStatus || 'Pending'}</span></span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      {isLoading ? 'Waiting for payment confirmation...' : 'Please check your phone and complete the payment.'}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-[#5D4037] italic flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    You will receive an STK Push prompt on this number.
-                  </p>
-                </div>
+                )}
+
+                {registrationComplete && (
+                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="text-sm font-medium text-emerald-800">Payment Successful!</span>
+                    </div>
+                    <p className="text-xs text-emerald-700">
+                      Your account is being created. Redirecting to login...
+                    </p>
+                  </div>
+                )}
+
+                {!checkoutRequestId && (
+                  <>
+                    <div className="space-y-3">
+                      <Label htmlFor="mpesaNumber" className="text-sm font-bold uppercase tracking-wider text-[#5D4037]">M-Pesa Phone Number</Label>
+                      <div className="relative">
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                        <Input 
+                          id="mpesaNumber" 
+                          placeholder="e.g. 254712345678" 
+                          className="pl-10 h-12 text-lg font-bold tracking-widest border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                          value={formData.mpesaNumber}
+                          onChange={(e) => setFormData({ ...formData, mpesaNumber: e.target.value })}
+                        />
+                      </div>
+                      <p className="text-[10px] text-[#5D4037] italic flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                        You will receive an STK Push prompt on this number.
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
               <CardFooter className="bg-[#FFF8DC]/50 p-8 flex flex-col gap-4 border-t border-[#8B4513]/10">
-                <Button 
-                  onClick={handleInitiatePayment} 
-                  className="w-full h-14 text-lg font-black bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all duration-300"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                      Processing Payment...
-                    </>
-                  ) : (
-                    <>
-                      Pay KES {plans.find(p => p.id === formData.planId)?.price.toLocaleString()} Now
-                    </>
-                  )}
+                {!checkoutRequestId ? (
+                  <>
+                    <Button 
+                      onClick={handleInitiatePayment} 
+                      className="w-full h-14 text-lg font-black bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all duration-300"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          Processing Payment...
+                        </>
+                      ) : (
+                        <>
+                          Pay KES {plans.find(p => p.id === formData.planId)?.price.toLocaleString()} Now
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="ghost" onClick={handleBack} disabled={isLoading} className="w-full text-[#8B4513] hover:bg-[#8B4513]/5">
+                      <ChevronLeft className="w-4 h-4 mr-2" /> Change Plan
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={handleCheckStatus}
+                      disabled={isCheckingStatus || registrationComplete}
+                      className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white gap-2 transition-all duration-300"
+                    >
+                      {isCheckingStatus ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Checking Status...
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="w-4 h-4" />
+                          Check Payment Status
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-[#5D4037] italic text-center">
+                      If you've completed the payment but haven't been redirected, click above to check your status.
+                    </p>
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          )}
                 </Button>
                 <Button variant="ghost" onClick={handleBack} disabled={isLoading} className="w-full text-[#8B4513] hover:bg-[#8B4513]/5">
                   <ChevronLeft className="w-4 h-4 mr-2" /> Change Plan

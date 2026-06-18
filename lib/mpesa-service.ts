@@ -360,6 +360,19 @@ export const handleSTKPushCallback = async (callbackData: any) => {
           }
         });
         console.log(`Successfully updated wallet ${transaction.walletId} balance to ${wallet.balance}`);
+
+        // Process registration if this is a registration payment
+        if (transaction.metadata) {
+          try {
+            const metadata = JSON.parse(transaction.metadata);
+            if (metadata.isRegistration && metadata.formData) {
+              console.log('Processing automatic registration after payment success');
+              await processRegistration(metadata.formData, transaction.id);
+            }
+          } catch (error) {
+            console.error('Failed to parse transaction metadata for registration:', error);
+          }
+        }
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
           transactionId: transaction.id,
@@ -401,6 +414,65 @@ export const handleSTKPushCallback = async (callbackData: any) => {
   } catch (error: any) {
     console.error('STK Push callback processing error:', error);
     throw new Error(error.message || 'Failed to process STK Push callback');
+  }
+};
+
+// Process registration after successful payment
+const processRegistration = async (formData: any, transactionId: string) => {
+  try {
+    const { email, password, name, companyName, phoneNumber, licenseNo, location, planId } = formData;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      console.log(`User with email ${email} already exists, skipping registration`);
+      return;
+    }
+
+    // Create User and Contractor in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          password, // In production, use bcrypt
+          name,
+          role: 'contractor',
+        },
+      });
+
+      const contractor = await tx.contractor.create({
+        data: {
+          userId: user.id,
+          companyName,
+          location,
+          phoneNumber,
+          licenseNo,
+          subscriptionPlanId: planId,
+        },
+      });
+
+      // Create a default wallet for the contractor
+      await tx.wallet.create({
+        data: {
+          name: `${companyName} Wallet`,
+          description: 'Default wallet for business operations',
+          currency: 'KES',
+          contractorId: contractor.id,
+        }
+      });
+
+      return { user, contractor };
+    });
+
+    console.log('Automatic registration completed successfully:', { userId: result.user.id, contractorId: result.contractor.id });
+
+    // Send notification or email here if needed
+  } catch (error) {
+    console.error('Automatic registration error:', error);
+    // Don't throw error here to avoid breaking the callback
   }
 };
 
