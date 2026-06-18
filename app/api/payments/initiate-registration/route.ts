@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { initiateSTKPush } from '@/lib/mpesa';
-import { WalletService } from '@/lib/wallet-service';
+import { initiateSTKPush } from '@/lib/mpesa-service';
 
 export async function POST(request: Request) {
   try {
@@ -39,6 +38,12 @@ export async function POST(request: Request) {
       `Subscription for ${email}`
     );
 
+    if (!stkResponse.success) {
+      return NextResponse.json({ 
+        error: stkResponse.error || 'Failed to initiate STK Push' 
+      }, { status: 500 });
+    }
+
     // 3. Store registration data with the transaction for later use
     if (stkResponse.transactionId) {
       await prisma.transaction.update({
@@ -54,7 +59,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: 'STK Push initiated',
-      checkoutRequestId: stkResponse.CheckoutRequestID,
+      checkoutRequestId: stkResponse.checkoutRequestId,
       transactionId: stkResponse.transactionId,
     });
   } catch (error: any) {

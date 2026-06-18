@@ -423,6 +423,8 @@ const processRegistration = async (formData: any, transactionId: string) => {
   try {
     const { email, password, name, companyName, phoneNumber, licenseNo, location, planId } = formData;
 
+    console.log('Starting registration process for:', email);
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -430,6 +432,16 @@ const processRegistration = async (formData: any, transactionId: string) => {
 
     if (existingUser) {
       console.log(`User with email ${email} already exists, skipping registration`);
+      
+      // Update transaction to show registration was skipped
+      await updateTransaction(transactionId, {
+        metadata: JSON.stringify({
+          isRegistration: true,
+          registrationStatus: 'user_exists',
+          formData: formData
+        })
+      });
+      
       return;
     }
 
@@ -470,11 +482,48 @@ const processRegistration = async (formData: any, transactionId: string) => {
 
     console.log('Automatic registration completed successfully:', { userId: result.user.id, contractorId: result.contractor.id });
 
+    // Get existing transaction metadata
+    const currentTransaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+    const existingMetadata = currentTransaction?.metadata ? JSON.parse(currentTransaction.metadata) : {};
+
+    // Update transaction metadata to show registration is complete
+    await updateTransaction(transactionId, {
+      metadata: JSON.stringify({
+        ...existingMetadata,
+        isRegistration: true,
+        registrationStatus: 'completed',
+        userId: result.user.id,
+        contractorId: result.contractor.id,
+        formData: formData
+      })
+    });
+
     // Send welcome email with credentials
     await sendWelcomeEmail(result.user, password, result.contractor, formData.mpesaNumber);
 
+    console.log('Registration process fully completed for:', email);
+
   } catch (error) {
     console.error('Automatic registration error:', error);
+    
+    // Update transaction metadata to show registration failed
+    try {
+      const currentTransaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+      const existingMetadata = currentTransaction?.metadata ? JSON.parse(currentTransaction.metadata) : {};
+      
+      await updateTransaction(transactionId, {
+        metadata: JSON.stringify({
+          ...existingMetadata,
+          isRegistration: true,
+          registrationStatus: 'failed',
+          registrationError: error.message,
+          formData: formData
+        })
+      });
+    } catch (metadataError) {
+      console.error('Failed to update transaction metadata:', metadataError);
+    }
+    
     // Don't throw error here to avoid breaking the callback
   }
 };
@@ -504,7 +553,7 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
               <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
               <p style="margin: 8px 0;"><strong>Password:</strong> ${password}</p>
               <p style="margin: 8px 0;"><strong>Company:</strong> ${contractor.companyName}</p>
-              <p style="margin: 8px 0;"><strong>Phone:</strong> ${phoneNumber || 'Not provided'}</p>
+              <p style="margin: 8px 0;"><strong>Phone:</strong> ${mpesaNumber || 'Not provided'}</p>
             </div>
           </div>
           
@@ -547,7 +596,7 @@ Your Account Details:
 - Email: ${user.email}
 - Password: ${password}
 - Company: ${contractor.companyName}
-- Phone: ${phoneNumber || 'Not provided'}
+- Phone: ${mpesaNumber || 'Not provided'}
 
 Sign in to your account: ${loginUrl}
 

@@ -16,7 +16,9 @@ import {
   MapPin,
   FileText,
   Smartphone,
-  RotateCcw
+  RotateCcw,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,6 +140,12 @@ export function RegisterPageComponent() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to initiate payment');
 
+      console.log('Payment initiation response:', data);
+
+      if (!data.checkoutRequestId) {
+        throw new Error('Checkout request ID not received from M-Pesa');
+      }
+
       setCheckoutRequestId(data.checkoutRequestId);
       setTransactionId(data.transactionId);
 
@@ -146,6 +154,7 @@ export function RegisterPageComponent() {
       // Start polling for payment status
       pollPaymentStatus(data.checkoutRequestId);
     } catch (error: any) {
+      console.error('Payment initiation error:', error);
       toast({ title: "Payment Error", description: error.message, variant: "destructive" });
       setIsLoading(false);
     }
@@ -154,18 +163,30 @@ export function RegisterPageComponent() {
   const pollPaymentStatus = async (checkoutRequestId: string) => {
     const interval = setInterval(async () => {
       try {
+        console.log('Polling payment status for:', checkoutRequestId);
         const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
         const data = await response.json();
+        
+        console.log('Payment status response:', data);
 
         setPaymentStatus(data.status);
 
-        if (data.status === 'completed' || data.status === 'SUCCESS') {
+        // Wait for payment success AND registration completion
+        const isPaymentSuccess = data.status === 'completed' || data.status === 'SUCCESS' || data.status === 'PENDING';
+        const isRegistrationComplete = data.registrationStatus === 'completed';
+        const isRegistrationFailed = data.registrationStatus === 'failed';
+        const isUserExists = data.registrationStatus === 'user_exists';
+
+        // Registration is complete (either created or user already exists)
+        if (isPaymentSuccess && (isRegistrationComplete || isUserExists)) {
           clearInterval(interval);
           setIsLoading(false);
           setRegistrationComplete(true);
           toast({ 
-            title: "Payment Successful!", 
-            description: "Your registration is being processed. You will receive a confirmation email shortly.", 
+            title: "Registration Complete!", 
+            description: isUserExists ? 
+              "Your account is already set up. Please proceed to login." :
+              "Your account has been created successfully. You will receive a welcome email shortly.", 
             variant: "success" 
           });
           setTimeout(() => {
@@ -174,22 +195,53 @@ export function RegisterPageComponent() {
           }, 3000);
         } else if (data.status === 'failed' || data.status === 'FAILED' || data.status === 'CANCELLED') {
           clearInterval(interval);
-          toast({ title: "Payment Failed", description: "Your payment was not successful. Please try again.", variant: "destructive" });
           setIsLoading(false);
+          setPaymentStatus(data.status);
+        } else if (isPaymentSuccess && isRegistrationFailed) {
+          clearInterval(interval);
+          setIsLoading(false);
+          setPaymentStatus('registration_failed');
+          toast({ 
+            title: "Registration Failed", 
+            description: "Payment was successful but account creation failed. Please contact support.", 
+            variant: "destructive" 
+          });
         }
       } catch (error) {
         console.error('Polling error', error);
       }
     }, 3000);
 
-    // Stop polling after 2 minutes
+    // Stop polling after 3 minutes (extended to allow registration time)
     setTimeout(() => {
       clearInterval(interval);
       if (isLoading && !registrationComplete) {
         setIsLoading(false);
-        toast({ title: "Timeout", description: "Payment confirmation timed out. Please check your status manually if you paid.", variant: "destructive" });
+        toast({ 
+          title: "Timeout", 
+          description: "Registration is taking longer than expected. Please check your email for login credentials or try logging in.", 
+          variant: "destructive" 
+        });
       }
-    }, 120000);
+    }, 180000); // 3 minutes
+  };
+
+  const handleRetryPayment = () => {
+    // Reset payment state
+    setCheckoutRequestId(null);
+    setTransactionId(null);
+    setPaymentStatus(null);
+    setIsLoading(false);
+    setRegistrationComplete(false);
+  };
+
+  const handleChangePlan = () => {
+    setCheckoutRequestId(null);
+    setTransactionId(null);
+    setPaymentStatus(null);
+    setIsLoading(false);
+    setRegistrationComplete(false);
+    setCurrentStep(2);
   };
 
   const handleCheckStatus = async () => {
@@ -203,12 +255,22 @@ export function RegisterPageComponent() {
       const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
       const data = await response.json();
       
+      console.log('Manual status check:', data);
+
       setPaymentStatus(data.status);
 
-      if (data.status === 'completed' || data.status === 'SUCCESS') {
+      const isPaymentSuccess = data.status === 'completed' || data.status === 'SUCCESS' || data.status === 'PENDING';
+      const isRegistrationComplete = data.registrationStatus === 'completed';
+      const isRegistrationFailed = data.registrationStatus === 'failed';
+      const isUserExists = data.registrationStatus === 'user_exists';
+
+      // Registration is complete (either created or user already exists)
+      if (isPaymentSuccess && (isRegistrationComplete || isUserExists)) {
         toast({ 
-          title: "Payment Successful!", 
-          description: "Your registration is being processed. You will receive a confirmation email shortly.", 
+          title: "Registration Complete!", 
+          description: isUserExists ? 
+            "Your account is already set up. Please proceed to login." :
+            "Your account has been created successfully. You will receive a welcome email shortly.", 
           variant: "success" 
         });
         setRegistrationComplete(true);
@@ -218,6 +280,18 @@ export function RegisterPageComponent() {
         }, 3000);
       } else if (data.status === 'failed' || data.status === 'FAILED' || data.status === 'CANCELLED') {
         toast({ title: "Payment Failed", description: "Your payment was not successful. Please try again.", variant: "destructive" });
+      } else if (isPaymentSuccess && isRegistrationFailed) {
+        toast({ 
+          title: "Registration Failed", 
+          description: "Payment was successful but account creation failed. Please contact support.", 
+          variant: "destructive" 
+        });
+      } else if (isPaymentSuccess && !isRegistrationComplete) {
+        toast({ 
+          title: "Registration in Progress", 
+          description: "Your payment is still being processed. Please check again in a few moments.", 
+          variant: "default" 
+        });
       } else {
         toast({ title: "Payment Pending", description: "Your payment is still being processed. Please check again in a few moments.", variant: "default" });
       }
@@ -481,14 +555,88 @@ export function RegisterPageComponent() {
                 </div>
 
                 {checkoutRequestId && !registrationComplete && (
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-3">
+                  <div className={`p-4 rounded-xl space-y-3 border ${
+                    (paymentStatus === 'completed' || paymentStatus === 'SUCCESS' || paymentStatus === 'PENDING')
+                      ? 'bg-blue-50 border-blue-200' 
+                      : paymentStatus === 'failed' || paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED' || paymentStatus === 'registration_failed'
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-amber-50 border-amber-200'
+                  }`}>
                     <div className="flex items-center gap-2">
-                      <Loader2 className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                      <span className="text-sm font-medium text-blue-800">Payment Status: <span className="font-bold capitalize">{paymentStatus || 'Pending'}</span></span>
+                      {paymentStatus === 'failed' || paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED' ? (
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      ) : paymentStatus === 'registration_failed' ? (
+                        <AlertCircle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <Loader2 className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                      )}
+                      <span className="text-sm font-medium">
+                        {paymentStatus === 'failed' || paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED' ? (
+                          <span className="text-red-800">Payment Failed</span>
+                        ) : paymentStatus === 'registration_failed' ? (
+                          <span className="text-red-800">Account Creation Failed</span>
+                        ) : paymentStatus === 'completed' || paymentStatus === 'SUCCESS' || paymentStatus === 'PENDING' ? (
+                          <span className="text-blue-800">Payment Status: <span className="font-bold capitalize">{paymentStatus || 'Pending'}</span></span>
+                        ) : (
+                          <span className="text-blue-800">Payment Status: <span className="font-bold capitalize">{paymentStatus || 'Pending'}</span></span>
+                        )}
+                      </span>
                     </div>
-                    <p className="text-xs text-blue-700">
-                      {isLoading ? 'Waiting for payment confirmation...' : 'Please check your phone and complete the payment.'}
-                    </p>
+                    
+                    {paymentStatus === 'failed' || paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED' ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-red-700">
+                          Your payment was not successful. You can try again or select a different plan.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleRetryPayment}
+                            className="flex-1 h-8 text-xs font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] text-white gap-1"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Try Again
+                          </Button>
+                          <Button 
+                            onClick={handleChangePlan}
+                            variant="outline"
+                            className="flex-1 h-8 text-xs font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 gap-1"
+                          >
+                            <ChevronLeft className="w-3 h-3" /> Change Plan
+                          </Button>
+                        </div>
+                      </div>
+                    ) : paymentStatus === 'registration_failed' ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-red-700">
+                          Payment was successful but there was an issue creating your account. Please contact support.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => router.push('/login')}
+                            className="flex-1 h-8 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white gap-1"
+                          >
+                            Go to Login
+                          </Button>
+                          <Button 
+                            onClick={() => window.open('mailto:support@reconsmi.com?subject=Registration Issue', '_blank')}
+                            variant="outline"
+                            className="flex-1 h-8 text-xs font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 gap-1"
+                          >
+                            Contact Support
+                          </Button>
+                        </div>
+                      </div>
+                    ) : paymentStatus === 'completed' || paymentStatus === 'SUCCESS' || paymentStatus === 'PENDING' ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm font-medium text-blue-800">
+                          Creating your account... <span className="text-xs text-blue-600">(this may take a moment)</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-blue-700">
+                        {isLoading ? 'Waiting for payment confirmation...' : 'Please check your phone and complete the payment.'}
+                      </p>
+                    )}
                   </div>
                 )}
 
