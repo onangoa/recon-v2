@@ -23,6 +23,11 @@ const AUTH_API_PATHS = [
   '/web/api/mpesa',
   '/web/api/callbacks',
   '/web/api/attendance/biometric',
+  '/api/config',
+  '/api/users/authenticate',
+  '/api/users/register',
+  '/api/users/forgot-password',
+  '/api/subscriptions/plans',
 ];
 
 async function verifyTokenEdge(token: string) {
@@ -126,6 +131,25 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/web/api/')) {
     if (!isAuthenticated && !isAuthApiPath(pathname)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
+  // Mobile API routes use Bearer token auth – check Authorization header
+  if (pathname.startsWith('/api/')) {
+    if (!isAuthApiPath(pathname)) {
+      const bearerToken = request.headers.get('authorization')?.replace('Bearer ', '');
+      if (!bearerToken && !accessToken) {
+        return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+      }
+      if (bearerToken) {
+        const payload = await verifyTokenEdge(bearerToken);
+        if (!payload) {
+          return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+        }
+      } else if (!isAuthenticated) {
+        return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+      }
     }
     return NextResponse.next();
   }
