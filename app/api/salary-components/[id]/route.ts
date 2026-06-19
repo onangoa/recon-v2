@@ -27,20 +27,43 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    
+    const data: any = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.type !== undefined) data.type = body.type;
+    if (body.deductionType !== undefined) data.deductionType = body.deductionType;
+    if (body.calculationType !== undefined) data.calculationType = body.calculationType;
+    if (body.amount !== undefined) data.amount = body.amount ? parseFloat(body.amount) : null;
+    if (body.percentage !== undefined) data.percentage = body.percentage ? parseFloat(body.percentage) : null;
+    if (body.isPercentage !== undefined) data.isPercentage = body.isPercentage;
+    if (body.isTaxable !== undefined) data.isTaxable = body.isTaxable;
+    if (body.isStatutory !== undefined) data.isStatutory = body.isStatutory;
+    if (body.isActive !== undefined) data.isActive = body.isActive;
+    if (body.isRecurring !== undefined) data.isRecurring = body.isRecurring;
+    if (body.description !== undefined) data.description = body.description;
+    if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
+    
     const component = await prisma.salaryComponent.update({
       where: { id },
-      data: body,
+      data,
     });
 
-    await ActivityLogger.log({
-      userId: 'system',
-      contractorId: component.contractorId,
-      action: 'UPDATE',
-      module: 'PAYROLL',
-      description: `Updated salary component: ${component.name}`,
-      targetId: component.id,
-      details: { name: component.name, type: component.type }
-    });
+    try {
+      const contractor = await prisma.contractor.findFirst();
+      if (contractor) {
+        await ActivityLogger.log({
+          userId: contractor.userId || 'system',
+          contractorId: component.contractorId,
+          action: 'UPDATE',
+          module: 'PAYROLL',
+          description: `Updated salary component: ${component.name}`,
+          targetId: component.id,
+          details: { name: component.name, type: component.type }
+        });
+      }
+    } catch (logError) {
+      console.error('Failed to record activity log:', logError);
+    }
 
     return NextResponse.json(component);
   } catch (error) {
@@ -59,15 +82,22 @@ export async function DELETE(
     });
 
     if (component) {
-      await ActivityLogger.log({
-        userId: 'system',
-        contractorId: component.contractorId,
-        action: 'DELETE',
-        module: 'PAYROLL',
-        description: `Deleted salary component: ${component.name}`,
-        targetId: component.id,
-        details: { name: component.name, type: component.type }
-      });
+      try {
+        const contractor = await prisma.contractor.findFirst();
+        if (contractor) {
+          await ActivityLogger.log({
+            userId: contractor.userId || 'system',
+            contractorId: component.contractorId,
+            action: 'DELETE',
+            module: 'PAYROLL',
+            description: `Deleted salary component: ${component.name}`,
+            targetId: component.id,
+            details: { name: component.name, type: component.type }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to record activity log:', logError);
+      }
     }
 
     await prisma.salaryComponent.delete({

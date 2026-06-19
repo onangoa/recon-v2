@@ -82,9 +82,7 @@ export async function POST(request: Request) {
         purpose: body.purpose,
         checkInTime: new Date(body.checkInTime || new Date()),
         checkOutTime: body.checkOutTime ? new Date(body.checkOutTime) : null,
-        notes: body.notes || null,
-        attachmentName: body.attachmentName || null,
-        attachmentUrl: body.attachmentUrl || null,
+        projectId: body.projectId || null,
       },
     });
 

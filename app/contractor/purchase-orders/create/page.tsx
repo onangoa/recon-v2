@@ -32,6 +32,7 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   materialId?: string;
+  manualPrice: boolean;
 }
 
 interface Supplier {
@@ -60,7 +61,7 @@ export default function CreatePurchaseOrder() {
     notes: '',
   });
   const [items, setItems] = useState<OrderItem[]>([
-    { id: '1', description: '', quantity: 1, unitPrice: 0, materialId: '' }
+    { id: '1', description: '', quantity: 1, unitPrice: 0, materialId: '', manualPrice: false }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -97,7 +98,8 @@ export default function CreatePurchaseOrder() {
       description: '',
       quantity: 1,
       unitPrice: 0,
-      materialId: ''
+      materialId: '',
+      manualPrice: false
     }]);
   };
 
@@ -114,11 +116,31 @@ export default function CreatePurchaseOrder() {
             ...item, 
             materialId: value, 
             description: selectedItem.name,
-            unitPrice: selectedItem.unitCost
+            unitPrice: selectedItem.unitCost || 0,
+            manualPrice: false
           } : item
         ));
-        return;
+      } else {
+        setItems(items.map(item =>
+          item.id === id ? { 
+            ...item, 
+            materialId: '', 
+            manualPrice: true
+          } : item
+        ));
       }
+      return;
+    }
+
+    if (field === 'manualPrice') {
+      setItems(items.map(item =>
+        item.id === id ? { ...item, manualPrice: value } : item
+      ));
+      return;
+    }
+
+    if (field === 'unitPrice' && !items.find(i => i.id === id)?.manualPrice) {
+      return;
     }
     
     setItems(items.map(item =>
@@ -346,16 +368,47 @@ export default function CreatePurchaseOrder() {
                           className="w-full rounded border-gray-300 text-xs text-center focus:ring-primary focus:border-primary"
                         />
                       </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
-                          disabled={isSubmitting}
-                          className="w-full rounded border-gray-300 text-xs text-right focus:ring-primary focus:border-primary"
-                        />
+                       <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={item.unitPrice}
+                            onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            step="0.01"
+                            disabled={isSubmitting || !item.manualPrice}
+                            className="w-24 rounded border-gray-300 text-xs text-right focus:ring-primary focus:border-primary disabled:opacity-50 disabled:bg-gray-50"
+                            placeholder={item.manualPrice ? "Enter price" : "Auto"}
+                          />
+                          {!item.manualPrice && item.materialId && (
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, 'manualPrice', true)}
+                              className="text-xs text-primary hover:underline disabled:opacity-50"
+                              disabled={isSubmitting}
+                              title="Click to manually edit price"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {item.manualPrice && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const selectedItem = inventoryItems.find(i => i.id === item.materialId);
+                                if (selectedItem) {
+                                  updateItem(item.id, 'unitPrice', selectedItem.unitCost || 0);
+                                  updateItem(item.id, 'manualPrice', false);
+                                }
+                              }}
+                              className="text-xs text-primary hover:underline disabled:opacity-50"
+                              disabled={isSubmitting}
+                              title="Click to reset to inventory price"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-2 text-right font-medium">
                         KES {(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}

@@ -347,9 +347,11 @@ export default function PurchaseOrderView() {
                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Status</label>
                 <Badge variant="secondary" className={`
                   text-[10px] font-black uppercase px-2 py-0 border-none
-                  ${order.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-600' : 
-                    order.status === 'pending' ? 'bg-amber-500/10 text-amber-600' : 
-                    'bg-red-500/10 text-red-600'}
+                  ${order.status === 'delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 
+                    order.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' : 
+                    order.status === 'processing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' :
+                    order.status === 'cancelled' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}
                 `}>
                   {order.status}
                 </Badge>

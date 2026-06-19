@@ -23,13 +23,10 @@ import {
   Bell,
   MessageSquare,
   LogOut,
-  ChevronRight,
-  HardHat,
   ChevronsUpDown,
   Building2,
   Plus,
   CheckCircle2,
-  ExternalLink,
   MapPin,
   Briefcase,
   ShieldAlert,
@@ -112,17 +109,14 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex items-center gap-3 px-2 py-4 group-data-[collapsible=icon]:justify-center">
-                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                  <HardHat className="size-6" />
-                </div>
-                <div className="flex flex-col gap-0 group-data-[collapsible=icon]:hidden">
-                  <span className="font-black text-xl tracking-tighter text-foreground leading-none">RECON<span className="text-primary">HUB</span></span>
-                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-0.5">Site Management</span>
-                </div>
+                <Link href="/contractor" className="flex items-center gap-3">
+                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
+                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden group-data-[collapsible=icon]:block" />
+                </Link>
               </div>
             </SidebarMenuItem>
             
-            <SidebarMenuItem className="px-2">
+            <SidebarMenuItem className="px-2 mt-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton

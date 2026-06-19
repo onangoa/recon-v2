@@ -36,12 +36,10 @@ export async function PUT(
       where: { id },
       data: {
         name: body.name,
-        company: body.company,
+        company: body.company || null,
         purpose: body.purpose,
         checkOutTime: body.checkOutTime ? new Date(body.checkOutTime) : null,
-        notes: body.notes,
-        attachmentName: body.attachmentName,
-        attachmentUrl: body.attachmentUrl,
+        projectId: body.projectId || null,
       },
       include: { site: true }
     });
