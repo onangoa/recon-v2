@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const auth = await verifyAuth(request);
-
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!auth.contractorId) {
+    if (!permCheck.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const wallets = await prisma.wallet.findMany({
-      where: { contractorId: auth.contractorId },
+      where: { contractorId: permCheck.contractorId },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -66,14 +62,10 @@ function getTimeAgo(date: Date): string {
 }
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'wallets:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const auth = await verifyAuth(request);
-
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!auth.contractorId) {
+    if (!permCheck.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
@@ -87,7 +79,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         description: body.description || null,
-        contractorId: auth.contractorId,
+        contractorId: permCheck.contractorId,
       },
     });
 

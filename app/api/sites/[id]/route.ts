@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'sites:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const site = await prisma.site.findUnique({
@@ -24,9 +27,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'sites:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const { id } = await params;
@@ -81,9 +86,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'sites:delete');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     // Check for related records

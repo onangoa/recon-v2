@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated || !auth.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'reports:read');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = auth.contractorId;
+    const contractorId = permCheck.contractorId;
     if (!contractorId) {
       return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'equipment:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const equipment = await prisma.equipment.findUnique({
@@ -28,6 +31,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'equipment:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -70,6 +75,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'equipment:delete');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const equipment = await prisma.equipment.findUnique({

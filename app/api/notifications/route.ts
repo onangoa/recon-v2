@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'settings:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     // In a real app, get userId from session
     const user = await prisma.user.findFirst();
@@ -20,6 +23,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'settings:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id, isRead } = await request.json();
     

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'visitors:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const visitor = await prisma.visitor.findUnique({
@@ -28,6 +31,8 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'visitors:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -65,6 +70,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'visitors:delete');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const visitor = await prisma.visitor.findUnique({

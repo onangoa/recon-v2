@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'inventory:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     
@@ -42,6 +45,8 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'inventory:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();

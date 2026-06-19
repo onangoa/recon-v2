@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSuperadmin } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const adminCheck = await requireSuperadmin(request);
+  if (!adminCheck.authorized) return adminCheck.error;
   try {
     const { id } = await params;
 
@@ -45,6 +48,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const adminCheck = await requireSuperadmin(request);
+  if (!adminCheck.authorized) return adminCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -78,6 +83,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const adminCheck = await requireSuperadmin(request);
+  if (!adminCheck.authorized) return adminCheck.error;
   try {
     const { id } = await params;
     const contractor = await prisma.contractor.findUnique({

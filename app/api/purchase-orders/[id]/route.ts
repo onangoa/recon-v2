@@ -1,22 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { getCurrentContractor } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 import { verifyContractorAccess } from '@/lib/contractor-isolation';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractor = await getCurrentContractor();
-    if (!contractor) {
+    const permCheck = await requirePermission(request, 'purchase_orders:read');
+    if (!permCheck.authorized) return permCheck.error;
+
+    const contractorId = permCheck.contractorId;
+    if (!contractorId) {
       return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }
 
     const { id } = await params;
 
-    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    const hasAccess = await verifyContractorAccess(contractorId, 'purchase-order', id);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
@@ -42,12 +45,15 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractor = await getCurrentContractor();
-    if (!contractor) {
+    const permCheck = await requirePermission(request, 'purchase_orders:update');
+    if (!permCheck.authorized) return permCheck.error;
+
+    const contractorId = permCheck.contractorId;
+    if (!contractorId) {
       return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }
 
@@ -55,7 +61,7 @@ export async function PATCH(
     const body = await request.json();
     const { items, ...poData } = body;
 
-    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    const hasAccess = await verifyContractorAccess(contractorId, 'purchase-order', id);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
@@ -73,19 +79,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Cannot edit a delivered purchase order' }, { status: 400 });
     }
 
-    // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      // 0. Get the current status to check for transitions
       const currentPO = await tx.purchaseOrder.findUnique({
         where: { id },
         select: { status: true, site: { select: { contractorId: true } } }
       });
 
-      if (!currentPO || currentPO.site.contractorId !== contractor.id) {
+      if (!currentPO || currentPO.site.contractorId !== contractorId) {
         throw new Error('Purchase order not found');
       }
 
-      // 1. Update the Purchase Order
       const updatedPO = await tx.purchaseOrder.update({
         where: { id },
         data: {
@@ -110,7 +113,6 @@ export async function PATCH(
         }
       });
 
-      // 2. If status just transitioned to "completed", update the associated materials
       if (currentPO.status !== 'delivered' && updatedPO.status === 'delivered') {
         for (const item of updatedPO.items) {
           if (item.materialId) {
@@ -121,7 +123,6 @@ export async function PATCH(
             if (material) {
               const newQuantity = material.quantity + item.quantity;
               
-              // Update material stock
               await tx.inventory.update({
                 where: { id: item.materialId },
                 data: {
@@ -132,7 +133,6 @@ export async function PATCH(
                 }
               });
 
-              // Record stock movement
               await tx.stockMovement.create({
                 data: {
                   inventoryId: item.materialId,
@@ -152,8 +152,8 @@ export async function PATCH(
 
     if (result.site) {
       await ActivityLogger.log({
-        userId: 'system',
-        contractorId: contractor.id,
+        userId: permCheck.userId!,
+        contractorId: contractorId,
         action: 'UPDATE',
         module: 'PURCHASE_ORDERS',
         description: `Updated purchase order: ${result.orderNumber}`,
@@ -170,18 +170,21 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractor = await getCurrentContractor();
-    if (!contractor) {
+    const permCheck = await requirePermission(request, 'purchase_orders:delete');
+    if (!permCheck.authorized) return permCheck.error;
+
+    const contractorId = permCheck.contractorId;
+    if (!contractorId) {
       return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }
 
     const { id } = await params;
 
-    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    const hasAccess = await verifyContractorAccess(contractorId, 'purchase-order', id);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
@@ -201,8 +204,8 @@ export async function DELETE(
 
     if (purchaseOrder.site) {
       await ActivityLogger.log({
-        userId: 'system',
-        contractorId: contractor.id,
+        userId: permCheck.userId!,
+        contractorId: contractorId,
         action: 'DELETE',
         module: 'PURCHASE_ORDERS',
         description: `Deleted purchase order: ${purchaseOrder.orderNumber}`,

@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { startOfDay, endOfDay, differenceInMinutes, format } from 'date-fns';
-import { hasPermission } from '@/lib/rbac';
-import { getCurrentUser } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'attendance:read')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'attendance:read');
+    if (!permCheck.authorized) return permCheck.error;
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
     const workerId = searchParams.get('workerId');
@@ -60,10 +57,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'attendance:create')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'attendance:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const { workerId, contractorId, type, notes } = body; // type: 'CLOCK_IN' or 'CLOCK_OUT'
 
@@ -165,7 +160,7 @@ export async function POST(request: NextRequest) {
     }
 
     await ActivityLogger.log({
-      userId: user?.id || 'system',
+      userId: permCheck.userId || 'system',
       contractorId,
       action: type,
       module: 'ATTENDANCE',

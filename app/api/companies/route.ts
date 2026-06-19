@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
+    const permCheck = await requirePermission(request, 'settings:read');
 
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!permCheck.authorized) return permCheck.error;
 
-    if (!auth.contractorId) {
+    if (!permCheck.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const contractor = await prisma.contractor.findUnique({
-      where: { id: auth.contractorId },
+      where: { id: permCheck.contractorId },
       include: {
         user: {
           select: {
@@ -48,13 +46,11 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
+    const permCheck = await requirePermission(request, 'settings:update');
 
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!permCheck.authorized) return permCheck.error;
 
-    if (!auth.contractorId) {
+    if (!permCheck.contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
@@ -65,7 +61,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const contractor = await prisma.contractor.update({
-      where: { id: auth.contractorId },
+      where: { id: permCheck.contractorId },
       data: {
         companyName: body.name,
         phoneNumber: body.phone,

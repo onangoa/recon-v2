@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NotificationService } from '@/lib/notification-service';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'safety:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
@@ -34,6 +37,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'safety:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const incident = await prisma.safetyIncident.create({

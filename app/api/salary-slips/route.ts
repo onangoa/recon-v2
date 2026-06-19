@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'salary_slips:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
     const payrollPeriodId = searchParams.get('payrollPeriodId');
@@ -26,6 +29,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'salary_slips:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const { 

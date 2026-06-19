@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'dashboard:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');

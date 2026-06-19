@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSuperadmin } from '@/lib/require-permission';
 
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const adminCheck = await requireSuperadmin(request);
+  if (!adminCheck.authorized) return adminCheck.error;
   try {
     const body = await request.json();
     const { name, email, password } = body;
@@ -27,6 +30,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const adminCheck = await requireSuperadmin(request);
+  if (!adminCheck.authorized) return adminCheck.error;
   try {
     // Prevent self-deletion if possible (logic would need current user ID)
     await prisma.user.delete({

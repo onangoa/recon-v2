@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'payroll:manage');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated || !auth.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { id } = await params;
     const body = await request.json();

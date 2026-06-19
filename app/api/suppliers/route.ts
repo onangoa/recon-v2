@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: Request) {
+  const permCheck = await requirePermission(request, 'suppliers:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -45,6 +48,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const permCheck = await requirePermission(request, 'suppliers:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     

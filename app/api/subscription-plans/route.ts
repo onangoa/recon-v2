@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'settings:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const plans = await prisma.subscriptionPlan.findMany({
       include: {
@@ -15,6 +18,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'settings:manage');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const plan = await prisma.subscriptionPlan.create({

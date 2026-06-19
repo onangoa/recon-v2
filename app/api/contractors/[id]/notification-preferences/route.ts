@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'settings:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const preferences = await prisma.notificationPreference.findMany({
@@ -28,6 +31,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'settings:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const { preferences } = await request.json();

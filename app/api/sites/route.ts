@@ -1,16 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { getCurrentContractor } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 import { withContractorFilter } from '@/lib/contractor-isolation';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'sites:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const contractor = await getCurrentContractor();
-    if (!contractor) {
-      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -27,7 +24,7 @@ export async function GET(request: Request) {
         }
       : {};
 
-    const where = withContractorFilter({ where: baseWhere }, contractor.id).where;
+    const where = withContractorFilter({ where: baseWhere }, permCheck.contractorId!).where;
 
     const [sites, totalCount] = await Promise.all([
       prisma.site.findMany({
@@ -55,15 +52,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'sites:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const contractor = await getCurrentContractor();
-    if (!contractor) {
-      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
-    }
-
     const body = await request.json();
-    const contractorId = contractor.id;
+    const contractorId = permCheck.contractorId!;
     
     const site = await prisma.$transaction(async (tx) => {
       // If this site is being set as primary, unset any other primary sites for this contractor

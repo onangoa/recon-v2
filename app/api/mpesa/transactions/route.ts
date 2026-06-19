@@ -8,8 +8,11 @@ import {
   TransactionType 
 } from '@/lib/mpesa-service';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(req: NextRequest) {
+  const permCheck = await requirePermission(req, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(req.url);
     const transactionId = searchParams.get('transactionId');

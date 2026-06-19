@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'inventory:read');
+    if (!permCheck.authorized) return permCheck.error;
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -17,8 +15,8 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
 
-    const contractorFilter = auth.contractorId
-      ? { OR: [{ contractorId: auth.contractorId }, { contractorId: null }] }
+    const contractorFilter = permCheck.contractorId
+      ? { OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] }
       : {};
 
     const searchFilter = search
@@ -66,10 +64,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'inventory:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const body = await request.json();
     
@@ -82,7 +78,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         description: body.description,
         parentId: body.parentId || null,
-        contractorId: auth.contractorId || null,
+        contractorId: permCheck.contractorId || null,
       },
       include: {
         parent: true

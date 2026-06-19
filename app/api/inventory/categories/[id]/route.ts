@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'inventory:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const category = await prisma.inventoryCategory.findUnique({
@@ -33,6 +36,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'inventory:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -68,6 +73,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'inventory:delete');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     // Check if category has materials

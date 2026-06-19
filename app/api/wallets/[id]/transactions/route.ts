@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { initiateSTKPush, initiateB2C, initiateB2B, initiateB2Pochi } from '@/lib/mpesa';
 import { WalletService } from '@/lib/wallet-service';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const resolvedParams = await params;
     const { searchParams } = new URL(request.url);
@@ -52,9 +55,11 @@ export async function GET(
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'wallets:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const resolvedParams = await params;
     const body = await request.json();

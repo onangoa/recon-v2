@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 import { startOfDay, differenceInMinutes, parse } from 'date-fns';
 
 /**
@@ -17,6 +18,8 @@ import { startOfDay, differenceInMinutes, parse } from 'date-fns';
  */
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'attendance:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const logs = Array.isArray(body) ? body : [body];

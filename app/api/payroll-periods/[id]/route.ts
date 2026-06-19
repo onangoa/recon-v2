@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'payroll:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const period = await prisma.payrollPeriod.findUnique({
@@ -55,6 +58,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'payroll:update');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -212,6 +217,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const permCheck = await requirePermission(request, 'payroll:delete');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
     // Check if it has salary slips

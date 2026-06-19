@@ -35,8 +35,10 @@ async function main() {
 
     // Create permissions
     const modules = [
-      'WORKERS', 'ATTENDANCE', 'PAYROLL', 'PROJECTS', 'SITES', 'TASKS', 
-      'INVENTORY', 'EQUIPMENT', 'SAFETY', 'TEAM', 'WALLETS', 'REPORTS', 'SETTINGS'
+      'WORKERS', 'ATTENDANCE', 'PAYROLL', 'PROJECTS', 'SITES', 'TASKS',
+      'INVENTORY', 'EQUIPMENT', 'SAFETY', 'TEAM', 'WALLETS', 'REPORTS', 'SETTINGS',
+      'PURCHASE_ORDERS', 'SUPPLIERS', 'MATERIALS', 'VISITORS', 'DESIGNATIONS',
+      'SHIFTS', 'SALARY_COMPONENTS', 'SALARY_SLIPS', 'DOCUMENTS', 'LICENSES', 'DASHBOARD'
     ];
     const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
     

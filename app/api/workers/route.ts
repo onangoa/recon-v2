@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission } from '@/lib/rbac';
-import { getCurrentUser, getCurrentContractor } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
+import { getCurrentContractor } from '@/lib/auth';
 import { withContractorFilter } from '@/lib/contractor-isolation';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'workers:read')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'workers:read');
+    if (!permCheck.authorized) return permCheck.error;
 
     const contractor = await getCurrentContractor();
     if (!contractor) {
@@ -62,10 +60,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'workers:create')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'workers:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const contractor = await getCurrentContractor();
     if (!contractor) {
@@ -105,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Record activity log
     await ActivityLogger.log({
-      userId: user?.id || 'system',
+      userId: permCheck.userId || 'system',
       contractorId: contractorId,
       action: 'CREATE',
       module: 'WORKERS',

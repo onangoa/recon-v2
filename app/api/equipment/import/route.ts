@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'equipment:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const body = await request.json();
     const { equipment: items, siteId } = body;
-
-    if (!auth.userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 401 });
-    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Equipment array is required' }, { status: 400 });
@@ -63,7 +57,7 @@ export async function POST(request: NextRequest) {
         if (site) {
           await prisma.activityLog.create({
             data: {
-              userId: auth.userId,
+              userId: permCheck.userId,
               contractorId: site.contractorId!,
               action: 'CREATE',
               module: 'EQUIPMENT',

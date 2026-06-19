@@ -1,17 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission } from '@/lib/rbac';
-import { getCurrentUser } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 import { hashPassword } from '@/lib/jwt';
 import { EmailService } from '@/lib/notification-service';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'team:read')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'team:read');
+    if (!permCheck.authorized) return permCheck.error;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -64,12 +61,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'team:create')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'team:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const body = await request.json();
     
@@ -77,7 +72,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const contractorId = user?.contractor?.id || user?.teamMember?.contractorId;
+    const contractorId = permCheck.contractorId;
     if (!contractorId) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
@@ -146,7 +141,7 @@ export async function POST(request: Request) {
     });
 
     await ActivityLogger.log({
-      userId: user?.id || 'system',
+      userId: permCheck.userId || 'system',
       contractorId: contractorId,
       action: 'CREATE',
       module: 'TEAM',

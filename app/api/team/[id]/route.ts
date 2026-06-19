@@ -1,18 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { hasPermission } from '@/lib/rbac';
-import { getCurrentUser } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'team:read')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'team:read');
+    if (!permCheck.authorized) return permCheck.error;
     const { id } = await params;
     const member = await prisma.teamMember.findUnique({
       where: { id },
@@ -30,14 +27,12 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'team:update')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'team:update');
+    if (!permCheck.authorized) return permCheck.error;
 
     const { id } = await params;
     const body = await request.json();
@@ -68,7 +63,7 @@ export async function PATCH(
     }
 
     await ActivityLogger.log({
-      userId: user?.id || 'system',
+      userId: permCheck.userId || 'system',
       contractorId: member.contractorId,
       action: 'UPDATE',
       module: 'TEAM',
@@ -85,14 +80,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!await hasPermission(user?.id || '', 'team:delete')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    const permCheck = await requirePermission(request, 'team:delete');
+    if (!permCheck.authorized) return permCheck.error;
 
     const { id } = await params;
     const member = await prisma.teamMember.findUnique({
@@ -104,7 +97,7 @@ export async function DELETE(
     }
 
     await ActivityLogger.log({
-      userId: user?.id || 'system',
+      userId: permCheck.userId || 'system',
       contractorId: member.contractorId,
       action: 'DELETE',
       module: 'TEAM',

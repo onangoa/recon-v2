@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkTransactionStatus, TransactionType } from '@/lib/mpesa-service';
 import { getTransaction } from '@/lib/mpesa-service';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(req: NextRequest) {
+  const permCheck = await requirePermission(req, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await req.json();
     const {
@@ -57,6 +60,8 @@ export async function POST(req: NextRequest) {
 
 // GET endpoint to check local transaction status
 export async function GET(req: NextRequest) {
+  const permCheck = await requirePermission(req, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(req.url);
     const transactionId = searchParams.get('transactionId');

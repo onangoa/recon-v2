@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'inventory:create');
+    if (!permCheck.authorized) return permCheck.error;
 
     const body = await request.json();
     const { categories } = body;
@@ -31,7 +29,7 @@ export async function POST(request: NextRequest) {
             name: cat.name,
             description: cat.description || null,
             parentId: cat.parentId || null,
-            contractorId: auth.contractorId || null,
+            contractorId: permCheck.contractorId || null,
           },
         });
         results.created++;

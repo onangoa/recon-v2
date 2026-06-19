@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { requirePermission } from '@/lib/require-permission';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'tasks:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
     const siteId = searchParams.get('siteId');
@@ -28,6 +31,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'tasks:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const task = await prisma.task.create({

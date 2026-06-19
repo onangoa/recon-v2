@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth-middleware';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
@@ -8,11 +8,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const auth = await verifyAuth(request);
+    const permCheck = await requirePermission(request, 'settings:read');
 
-    if (!auth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!permCheck.authorized) return permCheck.error;
 
     const contractor = await prisma.contractor.findUnique({
       where: { id },
@@ -30,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
-    if (contractor.userId !== auth.userId) {
+    if (contractor.userId !== permCheck.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

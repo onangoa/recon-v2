@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAccountBalance, TransactionType } from '@/lib/mpesa-service';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(req: NextRequest) {
+  const permCheck = await requirePermission(req, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await req.json();
     const {

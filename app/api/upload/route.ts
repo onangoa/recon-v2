@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { requirePermission } from '@/lib/require-permission';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const permCheck = await requirePermission(request, 'documents:create');
+  if (!permCheck.authorized) return permCheck.error;
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
