@@ -11,7 +11,7 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Loader2 } from 'lucide-react';
-import RoleForm from '../../components/role-form';
+import RoleForm from '../../../components/role-form';
 import { useToast } from '@/hooks/use-toast';
 
 export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {

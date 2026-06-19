@@ -61,6 +61,7 @@ async function main() {
       data: {
         name: 'Superadmin',
         description: 'Global system administrator',
+        scope: 'platform',
       },
     });
 
@@ -137,14 +138,15 @@ async function main() {
     ];
 
     for (const data of contractorData) {
-      const adminRole = await prisma.role.create({
+const adminRole = await prisma.role.create({
         data: {
           name: 'Contractor Admin',
           description: 'Full access to contractor dashboard',
+          scope: 'contractor',
           permissions: {
             connect: permissions.map(p => ({ id: p.id }))
           }
-        }
+        },
       });
 
       const user = await prisma.user.create({

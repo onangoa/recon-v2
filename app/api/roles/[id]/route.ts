@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,8 +36,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -45,7 +45,6 @@ export async function PATCH(
     const body = await request.json();
     const { name, description, permissionIds } = body;
 
-    // Ensure user only edits their own roles (or has permission)
     const existingRole = await prisma.role.findUnique({
       where: { id }
     });
@@ -54,7 +53,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    if (existingRole.contractorId === null && user.role !== 'superadmin') {
+    if (existingRole.scope === 'platform' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Cannot edit system roles' }, { status: 403 });
     }
 
@@ -84,8 +83,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -98,7 +97,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    if (existingRole.contractorId === null && user.role !== 'superadmin') {
+    if (existingRole.scope === 'platform' && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Cannot delete system roles' }, { status: 403 });
     }
 

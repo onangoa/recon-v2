@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
 
     const { currentPassword, newPassword } = await request.json();
 
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json({ error: 'Current password and new password are required' }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
     });
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const isMatch = await comparePassword(currentPassword, user.password);
     if (!isMatch) {
-      return NextResponse.json({ error: 'Invalid current password' }, { status: 400 });
+      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
     }
 
     if (newPassword.length < 8) {

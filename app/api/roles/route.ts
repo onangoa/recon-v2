@@ -1,23 +1,32 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const contractorId = user.contractor?.id || user.teamMember?.contractorId;
-    
+    const contractorId = session.contractor?.id;
+
+    const where: any = {};
+    if (session.user.role === 'superadmin') {
+      // Superadmin sees all roles
+    } else if (contractorId) {
+      where.OR = [
+        { contractorId: contractorId },
+        { contractorId: null, scope: 'contractor' }
+      ];
+    } else {
+      where.OR = [
+        { contractorId: null, scope: 'contractor' }
+      ];
+    }
+
     const roles = await prisma.role.findMany({
-      where: {
-        OR: [
-          { contractorId: contractorId },
-          { contractorId: null } // System roles
-        ]
-      },
+      where,
       include: {
         permissions: true
       }
@@ -32,14 +41,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const contractorId = user.contractor?.id || user.teamMember?.contractorId;
+    const contractorId = session.contractor?.id;
     if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -53,6 +62,7 @@ export async function POST(request: Request) {
       data: {
         name,
         description,
+        scope: 'contractor',
         contractorId,
         permissions: {
           connect: permissionIds?.map((id: string) => ({ id })) || []

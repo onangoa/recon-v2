@@ -52,8 +52,8 @@ export default function SecurityTab() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update password');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to update password');
       }
 
       toast({ title: "Success", description: "Password updated successfully" });
