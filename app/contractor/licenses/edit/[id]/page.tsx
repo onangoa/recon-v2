@@ -73,7 +73,7 @@ export default function EditLicensePage() {
 
   const fetchLicense = async () => {
     try {
-      const response = await fetch(`/api/licenses/${id}`);
+      const response = await fetch(`/web/api/licenses/${id}`);
       if (!response.ok) throw new Error('Failed to fetch license');
       const license: License = await response.json();
       
@@ -124,7 +124,7 @@ export default function EditLicensePage() {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
@@ -157,7 +157,7 @@ export default function EditLicensePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/licenses/${id}`, {
+      const response = await fetch(`/web/api/licenses/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

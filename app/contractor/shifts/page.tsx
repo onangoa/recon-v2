@@ -96,7 +96,7 @@ export default function ShiftsPage() {
   const fetchShifts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/shifts?contractorId=${activeSite?.contractorId}`);
+      const res = await fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId}`);
       if (!res.ok) throw new Error('Failed to fetch shifts');
       const data = await res.json();
       setShifts(data);
@@ -145,7 +145,7 @@ export default function ShiftsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const url = editingShift ? `/api/shifts/${editingShift.id}` : '/api/shifts';
+      const url = editingShift ? `/web/api/shifts/${editingShift.id}` : '/web/api/shifts';
       const method = editingShift ? 'PUT' : 'POST';
       
       const res = await fetch(url, {
@@ -186,7 +186,7 @@ export default function ShiftsPage() {
     if (!shiftToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/shifts/${shiftToDelete.id}`, { method: 'DELETE' });
+      const res = await fetch(`/web/api/shifts/${shiftToDelete.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete shift');
       toast({
         title: 'Success',

@@ -102,7 +102,7 @@ export default function TeamPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/team?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/web/api/team?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
       if (!response.ok) throw new Error('Failed to fetch team members');
       const data = await response.json();
       setMembers(data.members);
@@ -133,7 +133,7 @@ export default function TeamPage() {
     
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/team/${memberToDelete.id}`, {
+      const response = await fetch(`/web/api/team/${memberToDelete.id}`, {
         method: 'DELETE',
       });
 

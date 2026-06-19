@@ -29,7 +29,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
     if (!id) return;
     const fetchRole = async () => {
       try {
-        const response = await fetch(`/api/roles/${id}`);
+        const response = await fetch(`/web/api/roles/${id}`);
         if (!response.ok) throw new Error('Failed to fetch role');
         const data = await response.json();
         setRoleData({

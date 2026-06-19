@@ -108,7 +108,7 @@ export default function SuppliersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/suppliers?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/web/api/suppliers?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
       if (!response.ok) throw new Error('Failed to fetch suppliers');
       const data = await response.json();
       setSuppliers(data.suppliers);
@@ -139,7 +139,7 @@ export default function SuppliersPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/suppliers/${supplierToDelete.id}`, {
+      const response = await fetch(`/web/api/suppliers/${supplierToDelete.id}`, {
         method: 'DELETE',
       });
 

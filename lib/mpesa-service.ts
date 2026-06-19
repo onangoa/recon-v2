@@ -7,7 +7,7 @@ export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
 export const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || '';
 export const MPESA_SHORTCODE = process.env.MPESA_SHORTCODE || '';
 export const MPESA_PASSKEY = process.env.MPESA_PASSKEY || '';
-export const MPESA_CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'http://localhost:3010/api/callbacks/mpesa';
+export const MPESA_CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'http://localhost:3010/web/api/callbacks/mpesa';
 export const MPESA_ENVIRONMENT = (process.env.MPESA_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
 
 // Transaction Status Enum

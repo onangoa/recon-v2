@@ -73,9 +73,9 @@ export default function EditPurchaseOrder() {
     const fetchData = async () => {
       try {
         const [suppliersRes, inventoryRes, poRes] = await Promise.all([
-          fetch('/api/suppliers?limit=100'),
-          fetch(`/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`),
-          fetch(`/api/purchase-orders/${id}`)
+          fetch('/web/api/suppliers?limit=100'),
+          fetch(`/web/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`),
+          fetch(`/web/api/purchase-orders/${id}`)
         ]);
         
         const suppliersData = await suppliersRes.json();
@@ -194,7 +194,7 @@ export default function EditPurchaseOrder() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/purchase-orders/${id}`, {
+      const response = await fetch(`/web/api/purchase-orders/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

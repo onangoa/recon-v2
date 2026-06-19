@@ -43,7 +43,7 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const response = await fetch('/api/roles');
+        const response = await fetch('/web/api/roles');
         if (response.ok) {
           const data = await response.json();
           setRoles(data);
@@ -66,7 +66,7 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
 
     const fetchMember = async () => {
       try {
-        const response = await fetch(`/api/team/${id}`);
+        const response = await fetch(`/web/api/team/${id}`);
         if (!response.ok) throw new Error('Failed to fetch team member');
         const data = await response.json();
         setFormData({
@@ -115,7 +115,7 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/team/${id}`, {
+      const response = await fetch(`/web/api/team/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -57,7 +57,7 @@ export default function CreateSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/suppliers', {
+      const response = await fetch('/web/api/suppliers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

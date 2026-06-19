@@ -50,7 +50,7 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const fetchVisitor = async () => {
       try {
-        const response = await fetch(`/api/visitors/${id}`);
+        const response = await fetch(`/web/api/visitors/${id}`);
         if (!response.ok) throw new Error('Failed to fetch visitor data');
         const data = await response.json();
         setFormData({
@@ -87,7 +87,7 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
     uploadData.append('file', file);
 
     try {
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: uploadData,
       });
@@ -142,7 +142,7 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/visitors/${id}`, {
+      const response = await fetch(`/web/api/visitors/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

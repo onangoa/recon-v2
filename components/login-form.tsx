@@ -42,7 +42,7 @@ export function LoginForm() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/web/api/auth/login', {
         method: 'POST',
         credentials: 'include',
         headers: {

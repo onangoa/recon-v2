@@ -10,7 +10,7 @@ export function LandingPage() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await fetch('/api/subscription-plans');
+        const response = await fetch('/web/api/subscription-plans');
         const data = await response.json();
         setPlans(data);
       } catch (error) {

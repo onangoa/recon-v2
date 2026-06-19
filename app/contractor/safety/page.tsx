@@ -112,7 +112,7 @@ export default function SafetyIncidentsPage() {
   const fetchIncidents = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/safety-incidents');
+      const response = await fetch('/web/api/safety-incidents');
       if (!response.ok) throw new Error('Failed to fetch incidents');
       const data = await response.json();
       setIncidents(data);
@@ -125,7 +125,7 @@ export default function SafetyIncidentsPage() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('/api/sites?limit=100');
+      const response = await fetch('/web/api/sites?limit=100');
       if (!response.ok) throw new Error('Failed to fetch sites');
       const data = await response.json();
       setSites(data.sites || []);
@@ -143,7 +143,7 @@ export default function SafetyIncidentsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const url = editingIncident ? `/api/safety-incidents/${editingIncident.id}` : '/api/safety-incidents';
+      const url = editingIncident ? `/web/api/safety-incidents/${editingIncident.id}` : '/web/api/safety-incidents';
       const method = editingIncident ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -186,7 +186,7 @@ export default function SafetyIncidentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this incident report?')) return;
     try {
-      const response = await fetch(`/api/safety-incidents/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/web/api/safety-incidents/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete incident');
       toast({ title: "Deleted", description: "Incident report removed" });
       fetchIncidents();

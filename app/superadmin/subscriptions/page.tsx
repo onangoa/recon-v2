@@ -85,8 +85,8 @@ export default function SubscriptionsPage() {
     setLoading(true);
     try {
       const [subsRes, plansRes] = await Promise.all([
-        fetch('/api/superadmin/subscriptions'),
-        fetch('/api/superadmin/plans'),
+        fetch('/web/api/superadmin/subscriptions'),
+        fetch('/web/api/superadmin/plans'),
       ]);
       const subsData = await subsRes.json();
       const plansData = await plansRes.json();
@@ -106,7 +106,7 @@ export default function SubscriptionsPage() {
   const handleUpdatePlan = async () => {
     if (!selectedSub || !newPlanId) return;
     try {
-      const res = await fetch('/api/superadmin/subscriptions', {
+      const res = await fetch('/web/api/superadmin/subscriptions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

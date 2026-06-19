@@ -76,7 +76,7 @@ export default function WalletsPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/wallets');
+      const response = await fetch('/web/api/wallets');
       if (!response.ok) throw new Error('Failed to fetch wallets');
       const data = await response.json();
       setWallets(data);
@@ -96,7 +96,7 @@ export default function WalletsPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/wallets/${walletToDelete.id}`, {
+      const response = await fetch(`/web/api/wallets/${walletToDelete.id}`, {
         method: 'DELETE',
       });
 

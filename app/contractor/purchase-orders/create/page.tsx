@@ -71,8 +71,8 @@ export default function CreatePurchaseOrder() {
     const fetchData = async () => {
       try {
         const [suppliersRes, inventoryRes] = await Promise.all([
-          fetch('/api/suppliers?limit=100'),
-          fetch(`/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`)
+          fetch('/web/api/suppliers?limit=100'),
+          fetch(`/web/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`)
         ]);
         
         const suppliersData = await suppliersRes.json();
@@ -183,7 +183,7 @@ export default function CreatePurchaseOrder() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/purchase-orders', {
+      const response = await fetch('/web/api/purchase-orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

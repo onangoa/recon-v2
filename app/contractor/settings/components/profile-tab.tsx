@@ -33,7 +33,7 @@ export default function ProfileTab() {
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/contractors?limit=1');
+      const response = await fetch('/web/api/contractors?limit=1');
       const data = await response.json();
       const profile = data.contractors[0];
       
@@ -76,7 +76,7 @@ export default function ProfileTab() {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
@@ -100,7 +100,7 @@ export default function ProfileTab() {
     
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/contractors/${contractor.id}`, {
+      const response = await fetch(`/web/api/contractors/${contractor.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

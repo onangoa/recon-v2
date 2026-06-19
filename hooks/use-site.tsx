@@ -32,7 +32,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchSites = async () => {
       try {
-        const response = await fetch('/api/sites');
+        const response = await fetch('/web/api/sites');
         const data = await response.json();
         
         // Handle both array and object responses (pagination)

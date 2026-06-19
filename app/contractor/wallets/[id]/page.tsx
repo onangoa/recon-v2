@@ -153,7 +153,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
   const fetchWalletData = async () => {
     try {
-      const response = await fetch(`/api/wallets/${walletId}`);
+      const response = await fetch(`/web/api/wallets/${walletId}`);
       if (!response.ok) throw new Error('Failed to fetch wallet');
       const data = await response.json();
       setWallet(data);
@@ -167,7 +167,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const fetchTransactions = async () => {
     setIsTransactionsLoading(true);
     try {
-      let url = `/api/wallets/${walletId}/transactions?page=${transactionsPage}&limit=${transactionsLimit}`;
+      let url = `/web/api/wallets/${walletId}/transactions?page=${transactionsPage}&limit=${transactionsLimit}`;
       if (transactionsSearch) url += `&search=${transactionsSearch}`;
       
       const response = await fetch(url);
@@ -195,7 +195,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
     setIsDepositing(true);
     try {
-      const response = await fetch(`/api/wallets/${walletId}/transactions`, {
+      const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
     setIsMakingPayment(true);
     try {
-      const response = await fetch(`/api/wallets/${walletId}/transactions`, {
+      const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

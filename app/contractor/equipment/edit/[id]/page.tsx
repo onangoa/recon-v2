@@ -54,7 +54,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
 
     const fetchEquipment = async () => {
       try {
-        const response = await fetch(`/api/equipment/${id}`);
+        const response = await fetch(`/web/api/equipment/${id}`);
         if (!response.ok) throw new Error('Failed to fetch equipment');
         const data = await response.json();
         setFormData({
@@ -109,7 +109,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/equipment/${id}`, {
+      const response = await fetch(`/web/api/equipment/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -45,7 +45,7 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
   useEffect(() => {
     const fetchPermissions = async () => {
       try {
-        const response = await fetch('/api/permissions');
+        const response = await fetch('/web/api/permissions');
         if (!response.ok) throw new Error('Failed to fetch permissions');
         const data = await response.json();
         setPermissions(data);
@@ -71,7 +71,7 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
 
     setIsSubmitting(true);
     try {
-      const url = isEditing ? `/api/roles/${initialData?.id}` : '/api/roles';
+      const url = isEditing ? `/web/api/roles/${initialData?.id}` : '/web/api/roles';
       const method = isEditing ? 'PATCH' : 'POST';
       
       const response = await fetch(url, {

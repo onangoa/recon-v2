@@ -136,7 +136,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const fetchPeriod = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/payroll-periods/${id}`);
+      const response = await fetch(`/web/api/payroll-periods/${id}`);
       if (!response.ok) throw new Error('Failed to fetch payroll period');
       const data = await response.json();
       setPeriod(data);
@@ -154,7 +154,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const handleProcessPayroll = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch(`/api/payroll-periods/${id}`, {
+      const response = await fetch(`/web/api/payroll-periods/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'processing' }),
@@ -173,7 +173,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
 
   const handleOpenDisburse = async () => {
     try {
-      const res = await fetch('/api/wallets');
+      const res = await fetch('/web/api/wallets');
       if (!res.ok) throw new Error('Failed to fetch wallets');
       const data = await res.json();
       setWallets(data.wallets || data);
@@ -191,7 +191,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
     }
     setIsDisbursing(true);
     try {
-      const res = await fetch(`/api/payroll-periods/${id}/disburse`, {
+      const res = await fetch(`/web/api/payroll-periods/${id}/disburse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ walletId: selectedWalletId }),

@@ -58,7 +58,7 @@ export default function SuperadminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/superadmin/dashboard');
+        const res = await fetch('/web/api/superadmin/dashboard');
         if (!res.ok) throw new Error('Failed to fetch dashboard data');
         const data: DashboardResponse = await res.json();
         setStats(data.stats);

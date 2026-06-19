@@ -131,7 +131,7 @@ export default function SalaryComponentsPage() {
   const fetchComponents = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/salary-components?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite?.contractorId ? `&contractorId=${activeSite.contractorId}` : ''}`);
+      const response = await fetch(`/web/api/salary-components?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite?.contractorId ? `&contractorId=${activeSite.contractorId}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch components');
       const data = await response.json();
       setComponents(data.components);
@@ -161,7 +161,7 @@ export default function SalaryComponentsPage() {
     setIsSaving(true);
     try {
       const method = editingComponent ? 'PUT' : 'POST';
-      const url = editingComponent ? `/api/salary-components/${editingComponent.id}` : '/api/salary-components';
+      const url = editingComponent ? `/web/api/salary-components/${editingComponent.id}` : '/web/api/salary-components';
       
       const response = await fetch(url, {
         method,
@@ -228,7 +228,7 @@ export default function SalaryComponentsPage() {
     if (!componentToDelete) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/salary-components/${componentToDelete.id}`, {
+      const response = await fetch(`/web/api/salary-components/${componentToDelete.id}`, {
         method: 'DELETE',
       });
 

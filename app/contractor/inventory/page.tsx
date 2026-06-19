@@ -130,7 +130,7 @@ export default function InventoryPage() {
     setIsLoading(true);
     setError(null);
     try {
-      let url = `/api/inventory?page=${currentPage}&limit=${limit}`;
+      let url = `/web/api/inventory?page=${currentPage}&limit=${limit}`;
       if (searchQuery) url += `&search=${searchQuery}`;
       if (activeSite) url += `&siteId=${activeSite.id}`;
       
@@ -171,7 +171,7 @@ export default function InventoryPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${itemForUsage.id}/usage`, {
+      const response = await fetch(`/web/api/inventory/${itemForUsage.id}/usage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,7 +223,7 @@ export default function InventoryPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${itemToDelete.id}`, {
+      const response = await fetch(`/web/api/inventory/${itemToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -639,7 +639,7 @@ export default function InventoryPage() {
           { name: 'Cement Bags', quantity: '500', unit: 'bags', minStock: '100', sku: 'CMT-001', description: 'Portland cement', status: 'In Stock', categoryId: '' },
           { name: 'Steel Rods', quantity: '200', unit: 'pieces', minStock: '50', sku: 'STL-002', description: 'Reinforcement steel', status: 'In Stock', categoryId: '' },
         ]}
-        endpoint="/api/inventory/import"
+        endpoint="/web/api/inventory/import"
         requestBodyKey="items"
         extraBody={activeSite ? { siteId: activeSite.id } : undefined}
         onSuccess={() => { fetchInventory(); toast({ title: "Import Complete", description: "Inventory items imported successfully", variant: "success" }); }}

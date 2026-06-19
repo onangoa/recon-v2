@@ -42,7 +42,7 @@ export default function CreateInventoryCategoryPage() {
   useEffect(() => {
     const fetchParentCategories = async () => {
       try {
-        const response = await fetch('/api/inventory/categories?limit=100');
+        const response = await fetch('/web/api/inventory/categories?limit=100');
         const data = await response.json();
         if (data.categories && Array.isArray(data.categories)) {
           // Only show top-level categories as potential parents
@@ -75,7 +75,7 @@ export default function CreateInventoryCategoryPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/inventory/categories', {
+      const response = await fetch('/web/api/inventory/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

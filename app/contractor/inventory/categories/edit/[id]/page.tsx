@@ -56,7 +56,7 @@ export default function EditInventoryCategoryPage() {
   useEffect(() => {
     const fetchCategory = async () => {
       try {
-        const response = await fetch(`/api/inventory/categories/${categoryId}`);
+        const response = await fetch(`/web/api/inventory/categories/${categoryId}`);
         if (!response.ok) throw new Error('Failed to fetch category');
         
         const category: Category = await response.json();
@@ -76,7 +76,7 @@ export default function EditInventoryCategoryPage() {
 
     const fetchParentCategories = async () => {
       try {
-        const response = await fetch('/api/inventory/categories?limit=100');
+        const response = await fetch('/web/api/inventory/categories?limit=100');
         const data = await response.json();
         if (data.categories && Array.isArray(data.categories)) {
           // Only show top-level categories as potential parents, excluding current category and its children
@@ -119,7 +119,7 @@ export default function EditInventoryCategoryPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/inventory/categories/${categoryId}`, {
+      const response = await fetch(`/web/api/inventory/categories/${categoryId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

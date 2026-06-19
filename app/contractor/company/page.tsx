@@ -49,7 +49,7 @@ export default function CompaniesPage() {
   const fetchCompany = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/companies');
+      const response = await fetch('/web/api/companies');
       if (response.ok) {
         const data = await response.json();
         setCompany(data);

@@ -85,7 +85,7 @@ export default function PlansPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/plans');
+      const res = await fetch('/web/api/superadmin/plans');
       const data = await res.json();
       setPlans(data);
     } catch (error) {
@@ -106,7 +106,7 @@ export default function PlansPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/superadmin/plans', {
+      const res = await fetch('/web/api/superadmin/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +144,7 @@ export default function PlansPage() {
     e.preventDefault();
     if (!selectedPlan) return;
     try {
-      const res = await fetch(`/api/superadmin/plans/${selectedPlan.id}`, {
+      const res = await fetch(`/web/api/superadmin/plans/${selectedPlan.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +181,7 @@ export default function PlansPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this plan?')) return;
     try {
-      const res = await fetch(`/api/superadmin/plans/${id}`, {
+      const res = await fetch(`/web/api/superadmin/plans/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -213,7 +213,7 @@ export default function PlansPage() {
     if (!confirm(`Are you sure you want to ${action} this plan? ${plan.isActive ? 'Contractors will not be able to select this plan for new subscriptions.' : 'This plan will be available for contractors to select.'}`)) return;
 
     try {
-      const res = await fetch(`/api/superadmin/plans/${plan.id}`, {
+      const res = await fetch(`/web/api/superadmin/plans/${plan.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !plan.isActive }),

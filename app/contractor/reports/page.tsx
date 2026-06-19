@@ -105,7 +105,7 @@ export default function ReportsPage() {
     try {
       const params = new URLSearchParams();
       if (activeSite) params.set('siteId', activeSite.id);
-      const res = await fetch(`/api/reports?${params.toString()}`);
+      const res = await fetch(`/web/api/reports?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load report data');
       const json = await res.json();
       setData(json);

@@ -48,7 +48,7 @@ export default function EditCompanyPage() {
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const response = await fetch(`/api/companies/${companyId}`);
+        const response = await fetch(`/web/api/companies/${companyId}`);
         if (response.ok) {
           const company: Company = await response.json();
           setFormData({
@@ -98,7 +98,7 @@ export default function EditCompanyPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/companies', {
+      const response = await fetch('/web/api/companies', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

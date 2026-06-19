@@ -80,7 +80,7 @@ export default function MaterialsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/purchase-orders?status=delivered&page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/purchase-orders?status=delivered&page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch deliveries');
       const data = await response.json();
       setDeliveries(data.purchaseOrders);

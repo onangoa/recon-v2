@@ -67,7 +67,7 @@ export default function ContractorDetailPage() {
   const fetchContractor = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/superadmin/contractors/${id}`);
+      const res = await fetch(`/web/api/superadmin/contractors/${id}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to fetch contractor');
@@ -90,7 +90,7 @@ export default function ContractorDetailPage() {
     if (!confirm('Are you sure you want to delete this contractor? This will also delete their user account and all associated data.')) return;
 
     try {
-      const res = await fetch(`/api/superadmin/contractors/${id}`, {
+      const res = await fetch(`/web/api/superadmin/contractors/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

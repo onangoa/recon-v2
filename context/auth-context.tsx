@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isRefreshingRef.current = true;
 
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/web/api/auth/me');
 
       if (response.ok) {
         const data = await response.json();
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('selectedSiteId', data.selectedSiteId);
         }
       } else {
-        const refreshResponse = await fetch('/api/auth/refresh', { method: 'POST' });
+        const refreshResponse = await fetch('/web/api/auth/refresh', { method: 'POST' });
 
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json();
@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    if (!user && !PUBLIC_PATHS.includes(pathname) && !pathname.startsWith('/api/')) {
+    if (!user && !PUBLIC_PATHS.includes(pathname) && !pathname.startsWith('/web/api/')) {
       if (!pathname.includes('/auth/')) {
         const callbackUrl = encodeURIComponent(pathname);
         router.push(`/login?callbackUrl=${callbackUrl}`);
@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/web/api/auth/logout', { method: 'POST' });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selectedSiteId', siteId);
 
     try {
-      await fetch('/api/auth/select-site', {
+      await fetch('/web/api/auth/select-site', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId }),

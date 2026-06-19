@@ -93,8 +93,8 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const [txRes, walletsRes] = await Promise.all([
-        fetch('/api/superadmin/transactions'),
-        fetch('/api/wallets'), // Assuming this exists or I'll need to create it
+        fetch('/web/api/superadmin/transactions'),
+        fetch('/web/api/wallets'), // Assuming this exists or I'll need to create it
       ]);
       const txData = await txRes.json();
       const walletsData = await walletsRes.json();
@@ -114,7 +114,7 @@ export default function TransactionsPage() {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/superadmin/transactions', {
+      const res = await fetch('/web/api/superadmin/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

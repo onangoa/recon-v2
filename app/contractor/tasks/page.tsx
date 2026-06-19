@@ -24,7 +24,7 @@ export default function TasksPage() {
     const fetchTasks = async () => {
       setLoading(true);
       try {
-        const url = `/api/tasks${activeSite ? `?siteId=${activeSite.id}` : ''}`;
+        const url = `/web/api/tasks${activeSite ? `?siteId=${activeSite.id}` : ''}`;
         const res = await fetch(url);
         const data = await res.json();
         setTasks(data);

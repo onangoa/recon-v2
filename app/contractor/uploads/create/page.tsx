@@ -71,7 +71,7 @@ export default function CreateDocumentPage() {
       const formDataUpload = new FormData();
       formDataUpload.append('file', entry.file);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
@@ -138,7 +138,7 @@ export default function CreateDocumentPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/documents', {
+      const response = await fetch('/web/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

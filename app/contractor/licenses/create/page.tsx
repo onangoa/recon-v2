@@ -69,7 +69,7 @@ export default function CreateLicensePage() {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
@@ -130,7 +130,7 @@ export default function CreateLicensePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/licenses', {
+      const response = await fetch('/web/api/licenses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

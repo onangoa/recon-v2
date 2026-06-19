@@ -75,7 +75,7 @@ export default function CreateMachinePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/equipment', {
+      const response = await fetch('/web/api/equipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

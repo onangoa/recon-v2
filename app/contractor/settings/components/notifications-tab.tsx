@@ -26,13 +26,13 @@ export default function NotificationsTab() {
   const fetchPreferences = async () => {
     setIsLoading(true);
     try {
-      const resp = await fetch('/api/contractors?limit=1');
+      const resp = await fetch('/web/api/contractors?limit=1');
       const data = await resp.json();
       const contractor = data.contractors[0];
       
       if (contractor) {
         setContractorId(contractor.id);
-        const prefResp = await fetch(`/api/contractors/${contractor.id}/notification-preferences`);
+        const prefResp = await fetch(`/web/api/contractors/${contractor.id}/notification-preferences`);
         const prefData = await prefResp.json();
         setPreferences(prefData);
       }
@@ -57,7 +57,7 @@ export default function NotificationsTab() {
     if (!contractorId) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/contractors/${contractorId}/notification-preferences`, {
+      const response = await fetch(`/web/api/contractors/${contractorId}/notification-preferences`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferences }),

@@ -41,7 +41,7 @@ export default function CreateTeamMemberPage() {
   useState(() => {
     const fetchRoles = async () => {
       try {
-        const response = await fetch('/api/roles');
+        const response = await fetch('/web/api/roles');
         if (response.ok) {
           const data = await response.json();
           setRoles(data);
@@ -77,7 +77,7 @@ export default function CreateTeamMemberPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/team', {
+      const response = await fetch('/web/api/team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -105,7 +105,7 @@ export default function SitesManagementPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/sites?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/web/api/sites?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
       if (!response.ok) throw new Error('Failed to fetch sites');
       const data = await response.json();
       setSites(data.sites);
@@ -136,7 +136,7 @@ export default function SitesManagementPage() {
     
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/sites/${siteToDelete.id}`, {
+      const response = await fetch(`/web/api/sites/${siteToDelete.id}`, {
         method: 'DELETE',
       });
 

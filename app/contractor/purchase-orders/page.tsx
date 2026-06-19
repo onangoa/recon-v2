@@ -110,7 +110,7 @@ export default function PurchaseOrdersList() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/purchase-orders?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/purchase-orders?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch purchase orders');
       const data = await response.json();
       setOrders(data.purchaseOrders);
@@ -141,7 +141,7 @@ export default function PurchaseOrdersList() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/purchase-orders/${orderToDelete.id}`, {
+      const response = await fetch(`/web/api/purchase-orders/${orderToDelete.id}`, {
         method: 'DELETE',
       });
 

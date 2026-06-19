@@ -141,8 +141,8 @@ export default function ContractorsPage() {
     setLoading(true);
     try {
       const [contractorsRes, plansRes] = await Promise.all([
-        fetch(`/api/superadmin/contractors?page=${currentPage}&limit=${limit}`),
-        fetch('/api/subscription-plans'),
+        fetch(`/web/api/superadmin/contractors?page=${currentPage}&limit=${limit}`),
+        fetch('/web/api/subscription-plans'),
       ]);
       const contractorsData = await contractorsRes.json();
       const plansData = await plansRes.json();
@@ -179,7 +179,7 @@ export default function ContractorsPage() {
 
     setIsCreating(true);
     try {
-      const res = await fetch('/api/superadmin/contractors', {
+      const res = await fetch('/web/api/superadmin/contractors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -227,7 +227,7 @@ export default function ContractorsPage() {
     if (!selectedContractor) return;
     setIsUpdating(true);
     try {
-      const res = await fetch(`/api/superadmin/contractors/${selectedContractor.id}`, {
+      const res = await fetch(`/web/api/superadmin/contractors/${selectedContractor.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -263,7 +263,7 @@ export default function ContractorsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this contractor? This will also delete their user account.')) return;
     try {
-      const res = await fetch(`/api/superadmin/contractors/${id}`, {
+      const res = await fetch(`/web/api/superadmin/contractors/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

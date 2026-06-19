@@ -97,7 +97,7 @@ export default function PurchaseOrderView() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/purchase-orders/${id}`);
+      const response = await fetch(`/web/api/purchase-orders/${id}`);
       if (!response.ok) throw new Error('Failed to fetch purchase order');
       const data = await response.json();
       setOrder(data);
@@ -116,7 +116,7 @@ export default function PurchaseOrderView() {
     if (!order) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/purchase-orders/${id}`, {
+      const response = await fetch(`/web/api/purchase-orders/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'delivered' }),
@@ -148,7 +148,7 @@ export default function PurchaseOrderView() {
     if (!order) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/purchase-orders/${id}`, {
+      const response = await fetch(`/web/api/purchase-orders/${id}`, {
         method: 'DELETE',
       });
 
@@ -177,7 +177,7 @@ export default function PurchaseOrderView() {
     if (!order) return;
     setIsDownloading(true);
     try {
-      const response = await fetch(`/api/purchase-orders/${order.id}/pdf`);
+      const response = await fetch(`/web/api/purchase-orders/${order.id}/pdf`);
       if (!response.ok) throw new Error('Failed to generate PDF');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

@@ -101,7 +101,7 @@ export default function VisitorsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/visitors?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/visitors?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch visitors');
       const data = await response.json();
       setVisitors(data.visitors);
@@ -132,7 +132,7 @@ export default function VisitorsPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/visitors/${visitorToDelete.id}`, {
+      const response = await fetch(`/web/api/visitors/${visitorToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -169,7 +169,7 @@ export default function VisitorsPage() {
 
   const handleCheckOut = async (visitor: Visitor) => {
     try {
-      const response = await fetch(`/api/visitors/${visitor.id}`, {
+      const response = await fetch(`/web/api/visitors/${visitor.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -110,7 +110,7 @@ export default function EquipmentPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/equipment?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/equipment?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch equipment');
       const data = await response.json();
       setEquipment(data.equipment);
@@ -141,7 +141,7 @@ export default function EquipmentPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/equipment/${equipmentToDelete.id}`, {
+      const response = await fetch(`/web/api/equipment/${equipmentToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -447,7 +447,7 @@ export default function EquipmentPage() {
           { name: 'Excavator CAT 320', type: 'Excavator', serialNo: 'EX-001', serialNumber: 'SN-320-001', rentalCost: '50000', dailyRate: '15000', status: 'Active', lastMaintenanceDate: '2025-01-15', nextMaintenanceDate: '2025-04-15' },
           { name: 'Concrete Mixer', type: 'Mixer', serialNo: 'MX-002', serialNumber: 'SN-MX-002', rentalCost: '', dailyRate: '5000', status: 'Active', lastMaintenanceDate: '', nextMaintenanceDate: '' },
         ]}
-        endpoint="/api/equipment/import"
+        endpoint="/web/api/equipment/import"
         requestBodyKey="equipment"
         extraBody={activeSite ? { siteId: activeSite.id } : undefined}
         onSuccess={() => { fetchEquipment(); toast({ title: "Import Complete", description: "Equipment imported successfully", variant: "success" }); }}

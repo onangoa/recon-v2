@@ -143,7 +143,7 @@ export default function InventoryItemView() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/inventory/${id}`);
+      const response = await fetch(`/web/api/inventory/${id}`);
       if (!response.ok) throw new Error('Failed to fetch item details');
       const data = await response.json();
       setItem(data);
@@ -159,7 +159,7 @@ export default function InventoryItemView() {
   const fetchTransfers = async () => {
     setIsLoadingTransfers(true);
     try {
-      const response = await fetch(`/api/inventory/${id}/transfers`);
+      const response = await fetch(`/web/api/inventory/${id}/transfers`);
       if (!response.ok) throw new Error('Failed to fetch transfers');
       const data = await response.json();
       setTransfers(data);
@@ -172,7 +172,7 @@ export default function InventoryItemView() {
 
   const fetchSites = async () => {
     try {
-      const response = await fetch('/api/sites');
+      const response = await fetch('/web/api/sites');
       if (!response.ok) throw new Error('Failed to fetch sites');
       const data = await response.json();
       setSites(data.sites || []);
@@ -220,7 +220,7 @@ export default function InventoryItemView() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${item.id}/transfers`, {
+      const response = await fetch(`/web/api/inventory/${item.id}/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,7 +260,7 @@ export default function InventoryItemView() {
   const handleApproveTransfer = async (transferId: string) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${id}/transfers/${transferId}`, {
+      const response = await fetch(`/web/api/inventory/${id}/transfers/${transferId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'approved' }),
@@ -292,7 +292,7 @@ export default function InventoryItemView() {
   const handleRejectTransfer = async (transferId: string) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${id}/transfers/${transferId}`, {
+      const response = await fetch(`/web/api/inventory/${id}/transfers/${transferId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rejected', rejectionReason: 'Rejected by user' }),
@@ -344,7 +344,7 @@ export default function InventoryItemView() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${item.id}/usage`, {
+      const response = await fetch(`/web/api/inventory/${item.id}/usage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +393,7 @@ export default function InventoryItemView() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/${item.id}/stock-in`, {
+      const response = await fetch(`/web/api/inventory/${item.id}/stock-in`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

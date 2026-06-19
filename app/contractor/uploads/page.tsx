@@ -102,7 +102,7 @@ export default function SiteUploadsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/documents?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/documents?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch documents');
       const data = await response.json();
       setDocuments(data.documents);
@@ -133,7 +133,7 @@ export default function SiteUploadsPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/documents/${documentToDelete.id}`, {
+      const response = await fetch(`/web/api/documents/${documentToDelete.id}`, {
         method: 'DELETE',
       });
 

@@ -50,7 +50,7 @@ export default function CreatePayrollPeriodPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/payroll-periods', {
+      const response = await fetch('/web/api/payroll-periods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

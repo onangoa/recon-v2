@@ -41,7 +41,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
   useEffect(() => {
     const fetchPeriod = async () => {
       try {
-        const response = await fetch(`/api/payroll-periods/${id}`);
+        const response = await fetch(`/web/api/payroll-periods/${id}`);
         if (!response.ok) throw new Error('Failed to fetch period');
         const data = await response.json();
         
@@ -67,7 +67,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/payroll-periods/${id}`, {
+      const response = await fetch(`/web/api/payroll-periods/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

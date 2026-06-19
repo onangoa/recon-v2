@@ -57,7 +57,7 @@ export default function EditWalletPage({ params }: { params: Promise<{ id: strin
   const fetchWallet = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/wallets/${walletId}`);
+      const response = await fetch(`/web/api/wallets/${walletId}`);
       if (!response.ok) throw new Error('Failed to fetch wallet');
       const data = await response.json();
       setFormData({
@@ -93,7 +93,7 @@ export default function EditWalletPage({ params }: { params: Promise<{ id: strin
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/wallets/${walletId}`, {
+      const response = await fetch(`/web/api/wallets/${walletId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

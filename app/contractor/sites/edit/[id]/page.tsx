@@ -48,7 +48,7 @@ export default function EditSitePage() {
   useEffect(() => {
     const fetchSite = async () => {
       try {
-        const response = await fetch(`/api/sites/${siteId}`);
+        const response = await fetch(`/web/api/sites/${siteId}`);
         if (response.ok) {
           const site: Site = await response.json();
           setFormData({
@@ -107,7 +107,7 @@ export default function EditSitePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/sites/${siteId}`, {
+      const response = await fetch(`/web/api/sites/${siteId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

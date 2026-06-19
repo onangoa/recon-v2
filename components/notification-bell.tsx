@@ -45,7 +45,7 @@ export default function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/web/api/notifications');
       const data = await response.json();
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
@@ -65,7 +65,7 @@ export default function NotificationBell() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch('/api/notifications', {
+      await fetch('/web/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isRead: true }),
@@ -78,7 +78,7 @@ export default function NotificationBell() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch('/api/notifications', {
+      await fetch('/web/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 'all', isRead: true }),

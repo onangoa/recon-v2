@@ -58,7 +58,7 @@ export default function CreateSitePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/sites', {
+      const response = await fetch('/web/api/sites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

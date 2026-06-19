@@ -111,7 +111,7 @@ export default function ApprovalsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      let url = `/api/wallets/transactions/approvals?page=${currentPage}&limit=${limit}`;
+      let url = `/web/api/wallets/transactions/approvals?page=${currentPage}&limit=${limit}`;
       if (walletId) url += `&walletId=${walletId}`;
       
       const response = await fetch(url);
@@ -157,7 +157,7 @@ export default function ApprovalsPage() {
 
     setIsApproving(true);
     try {
-      const response = await fetch('/api/wallets/transactions/approvals', {
+      const response = await fetch('/web/api/wallets/transactions/approvals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +199,7 @@ export default function ApprovalsPage() {
 
     setIsRejecting(true);
     try {
-      const response = await fetch(`/api/wallets/transactions/${transactionToReject}/reject`, {
+      const response = await fetch(`/web/api/wallets/transactions/${transactionToReject}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason }),
@@ -255,7 +255,7 @@ export default function ApprovalsPage() {
 
       for (const transactionId of selectedTransactions) {
         try {
-          const response = await fetch(`/api/wallets/transactions/${transactionId}/reject`, {
+          const response = await fetch(`/web/api/wallets/transactions/${transactionId}/reject`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason: rejectReason }),
@@ -293,7 +293,7 @@ export default function ApprovalsPage() {
   const handleApproveSingle = async (transactionId: string) => {
     setIsApprovingSingle(true);
     try {
-      const response = await fetch('/api/wallets/transactions/approvals', {
+      const response = await fetch('/web/api/wallets/transactions/approvals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

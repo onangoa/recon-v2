@@ -33,7 +33,7 @@ export default function RolesTab() {
   const fetchRoles = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/roles');
+      const response = await fetch('/web/api/roles');
       if (!response.ok) throw new Error('Failed to fetch roles');
       const data = await response.json();
       setRoles(data);
@@ -53,7 +53,7 @@ export default function RolesTab() {
     
     setIsDeleting(id);
     try {
-      const response = await fetch(`/api/roles/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/web/api/roles/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast({ title: "Success", description: "Role deleted successfully.", variant: "success" });
         fetchRoles();

@@ -48,7 +48,7 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
 
     const fetchDocument = async () => {
       try {
-        const response = await fetch(`/api/documents/${id}`);
+        const response = await fetch(`/web/api/documents/${id}`);
         if (!response.ok) throw new Error('Failed to fetch document');
         const data = await response.json();
         setFormData({
@@ -87,7 +87,7 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/documents/${id}`, {
+      const response = await fetch(`/web/api/documents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

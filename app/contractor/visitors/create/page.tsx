@@ -53,7 +53,7 @@ export default function CreateVisitorPage() {
     uploadData.append('file', file);
 
     try {
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/web/api/upload', {
         method: 'POST',
         body: uploadData,
       });
@@ -117,7 +117,7 @@ export default function CreateVisitorPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/visitors', {
+      const response = await fetch('/web/api/visitors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

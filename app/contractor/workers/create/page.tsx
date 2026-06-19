@@ -58,8 +58,8 @@ export default function CreateWorkerPage() {
     const fetchData = async () => {
       try {
         const [desigRes, shiftRes] = await Promise.all([
-          fetch('/api/designations'),
-          fetch('/api/shifts?contractorId=placeholder-id')
+          fetch('/web/api/designations'),
+          fetch('/web/api/shifts?contractorId=placeholder-id')
         ]);
         
         if (desigRes.ok) {
@@ -91,7 +91,7 @@ export default function CreateWorkerPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/workers', {
+      const response = await fetch('/web/api/workers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

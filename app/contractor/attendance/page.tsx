@@ -88,7 +88,7 @@ export default function AttendancePage() {
   const fetchAttendance = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/attendance?contractorId=${activeSite?.contractorId}`);
+      const res = await fetch(`/web/api/attendance?contractorId=${activeSite?.contractorId}`);
       if (!res.ok) throw new Error('Failed to fetch attendance');
       const data = await res.json();
       setAttendances(data);

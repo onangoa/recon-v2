@@ -88,7 +88,7 @@ export default function PayrollPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/payroll-periods?page=${currentPage}&limit=${limit}`);
+      const response = await fetch(`/web/api/payroll-periods?page=${currentPage}&limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch payroll periods');
       const data = await response.json();
       setPeriods(data.periods);

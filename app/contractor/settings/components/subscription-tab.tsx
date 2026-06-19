@@ -25,13 +25,13 @@ export default function SubscriptionTab() {
   const fetchSubscription = async () => {
     setIsLoading(true);
     try {
-      const resp = await fetch('/api/contractors?limit=1');
+      const resp = await fetch('/web/api/contractors?limit=1');
       const data = await resp.json();
       const contractor = data.contractors[0];
       
       if (contractor) {
         setContractorId(contractor.id);
-        const subResp = await fetch(`/api/contractors/${contractor.id}/subscription`);
+        const subResp = await fetch(`/web/api/contractors/${contractor.id}/subscription`);
         const subData = await subResp.json();
         setSubscriptionData(subData);
       }
@@ -51,7 +51,7 @@ export default function SubscriptionTab() {
     
     setIsUpdating(true);
     try {
-      const response = await fetch(`/api/contractors/${contractorId}/subscription`, {
+      const response = await fetch(`/web/api/contractors/${contractorId}/subscription`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId }),

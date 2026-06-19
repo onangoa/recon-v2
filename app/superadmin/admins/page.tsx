@@ -77,7 +77,7 @@ export default function AdminsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/superadmin/admins');
+      const res = await fetch('/web/api/superadmin/admins');
       const data = await res.json();
       setAdmins(data);
     } catch (error) {
@@ -98,7 +98,7 @@ export default function AdminsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/superadmin/admins', {
+      const res = await fetch('/web/api/superadmin/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -133,7 +133,7 @@ export default function AdminsPage() {
     e.preventDefault();
     if (!selectedAdmin) return;
     try {
-      const res = await fetch(`/api/superadmin/admins/${selectedAdmin.id}`, {
+      const res = await fetch(`/web/api/superadmin/admins/${selectedAdmin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -167,7 +167,7 @@ export default function AdminsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to remove this administrator?')) return;
     try {
-      const res = await fetch(`/api/superadmin/admins/${id}`, {
+      const res = await fetch(`/web/api/superadmin/admins/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

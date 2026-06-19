@@ -100,7 +100,7 @@ export default function InventoryCategoriesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/inventory/categories?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/web/api/inventory/categories?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
       if (!response.ok) throw new Error('Failed to fetch categories');
       const data = await response.json();
       setCategories(data.categories);
@@ -131,7 +131,7 @@ export default function InventoryCategoriesPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/inventory/categories/${categoryToDelete.id}`, {
+      const response = await fetch(`/web/api/inventory/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -419,7 +419,7 @@ export default function InventoryCategoriesPage() {
           { name: 'Building Materials', description: 'Cement, sand, gravel, bricks', parentId: '' },
           { name: 'Electrical Supplies', description: 'Wiring, switches, panels', parentId: '' },
         ]}
-        endpoint="/api/inventory/categories/import"
+        endpoint="/web/api/inventory/categories/import"
         requestBodyKey="categories"
         onSuccess={() => { fetchCategories(); toast({ title: "Import Complete", description: "Categories imported successfully", variant: "success" }); }}
       />

@@ -109,7 +109,7 @@ export default function ContractorDashboard() {
       setError(null);
       try {
         const query = activeSite ? `?siteId=${activeSite.id}` : '';
-        const response = await fetch(`/api/contractor/dashboard${query}`);
+        const response = await fetch(`/web/api/contractor/dashboard${query}`);
         if (!response.ok) throw new Error('Failed to fetch dashboard data');
         const data = await response.json();
         if (data.error) throw new Error(data.error);

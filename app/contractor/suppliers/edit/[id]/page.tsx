@@ -43,7 +43,7 @@ export default function EditSupplierPage() {
   useEffect(() => {
     const fetchSupplier = async () => {
       try {
-        const response = await fetch(`/api/suppliers/${supplierId}`);
+        const response = await fetch(`/web/api/suppliers/${supplierId}`);
         if (!response.ok) throw new Error('Failed to fetch supplier');
         
         const supplier = await response.json();
@@ -91,7 +91,7 @@ export default function EditSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/suppliers/${supplierId}`, {
+      const response = await fetch(`/web/api/suppliers/${supplierId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

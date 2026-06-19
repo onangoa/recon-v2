@@ -61,9 +61,9 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
       setIsLoading(true);
       try {
         const [workerRes, designRes, shiftRes] = await Promise.all([
-          fetch(`/api/workers/${id}`),
-          fetch('/api/designations'),
-          fetch('/api/shifts?contractorId=placeholder-id')
+          fetch(`/web/api/workers/${id}`),
+          fetch('/web/api/designations'),
+          fetch('/web/api/shifts?contractorId=placeholder-id')
         ]);
 
         if (!workerRes.ok) throw new Error('Failed to fetch worker');
@@ -104,7 +104,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/workers/${id}`, {
+      const response = await fetch(`/web/api/workers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

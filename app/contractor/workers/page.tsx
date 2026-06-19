@@ -113,7 +113,7 @@ export default function WorkersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      let url = `/api/workers?page=${currentPage}&limit=${limit}`;
+      let url = `/web/api/workers?page=${currentPage}&limit=${limit}`;
       if (searchQuery) url += `&search=${searchQuery}`;
       
       const response = await fetch(url);
@@ -147,7 +147,7 @@ export default function WorkersPage() {
     
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/workers/${workerToDelete.id}`, {
+      const response = await fetch(`/web/api/workers/${workerToDelete.id}`, {
         method: 'DELETE',
       });
 

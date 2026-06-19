@@ -65,7 +65,7 @@ export default function CreateWalletPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/wallets', {
+      const response = await fetch('/web/api/wallets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

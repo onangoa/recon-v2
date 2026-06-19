@@ -12,17 +12,17 @@ const PUBLIC_PATHS = [
 ];
 
 const AUTH_API_PATHS = [
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/register-contractor',
-  '/api/auth/refresh',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/subscription-plans',
-  '/api/payments',
-  '/api/mpesa',
-  '/api/callbacks',
-  '/api/attendance/biometric',
+  '/web/api/auth/login',
+  '/web/api/auth/register',
+  '/web/api/auth/register-contractor',
+  '/web/api/auth/refresh',
+  '/web/api/auth/forgot-password',
+  '/web/api/auth/reset-password',
+  '/web/api/subscription-plans',
+  '/web/api/payments',
+  '/web/api/mpesa',
+  '/web/api/callbacks',
+  '/web/api/attendance/biometric',
 ];
 
 async function verifyTokenEdge(token: string) {
@@ -87,7 +87,7 @@ export async function middleware(request: NextRequest) {
     const refreshToken = request.cookies.get('refreshToken')?.value;
     if (refreshToken) {
       try {
-        const refreshResponse = await fetch(new URL('/api/auth/refresh', request.url), {
+        const refreshResponse = await fetch(new URL('/web/api/auth/refresh', request.url), {
           method: 'POST',
           headers: { cookie: request.headers.get('cookie') || '' },
         });
@@ -123,7 +123,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith('/api/')) {
+  if (pathname.startsWith('/web/api/')) {
     if (!isAuthenticated && !isAuthApiPath(pathname)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

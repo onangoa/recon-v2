@@ -84,7 +84,7 @@ export function RegisterPageComponent() {
     // Fetch plans
     const fetchPlans = async () => {
       try {
-        const response = await fetch('/api/subscription-plans');
+        const response = await fetch('/web/api/subscription-plans');
         const data = await response.json();
         setPlans(data);
       } catch (error) {
@@ -126,7 +126,7 @@ export function RegisterPageComponent() {
     setIsLoading(true);
     try {
       const selectedPlan = plans.find(p => p.id === formData.planId);
-      const response = await fetch('/api/payments/initiate-registration', {
+      const response = await fetch('/web/api/payments/initiate-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,7 +164,7 @@ export function RegisterPageComponent() {
     const interval = setInterval(async () => {
       try {
         console.log('Polling payment status for:', checkoutRequestId);
-        const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
+        const response = await fetch(`/web/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
         const data = await response.json();
         
         console.log('Payment status response:', data);
@@ -252,7 +252,7 @@ export function RegisterPageComponent() {
 
     setIsCheckingStatus(true);
     try {
-      const response = await fetch(`/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
+      const response = await fetch(`/web/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
       const data = await response.json();
       
       console.log('Manual status check:', data);

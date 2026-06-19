@@ -108,7 +108,7 @@ export default function LicensesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/licenses?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
+      const response = await fetch(`/web/api/licenses?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite ? `&siteId=${activeSite.id}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch licenses');
       const data = await response.json();
       setLicenses(data.licenses);
@@ -139,7 +139,7 @@ export default function LicensesPage() {
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/licenses/${licenseToDelete.id}`, {
+      const response = await fetch(`/web/api/licenses/${licenseToDelete.id}`, {
         method: 'DELETE',
       });
 

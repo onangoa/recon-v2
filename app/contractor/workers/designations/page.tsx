@@ -111,7 +111,7 @@ export default function DesignationsPage() {
   const fetchDesignations = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/designations?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/web/api/designations?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
       if (!response.ok) throw new Error('Failed to fetch designations');
       const data = await response.json();
       setDesignations(data.designations);
@@ -140,7 +140,7 @@ export default function DesignationsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const url = editingId ? `/api/designations/${editingId}` : '/api/designations';
+      const url = editingId ? `/web/api/designations/${editingId}` : '/web/api/designations';
       const method = editingId ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -193,7 +193,7 @@ export default function DesignationsPage() {
     if (!designationToDelete) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/designations/${designationToDelete.id}`, {
+      const response = await fetch(`/web/api/designations/${designationToDelete.id}`, {
         method: 'DELETE',
       });
 

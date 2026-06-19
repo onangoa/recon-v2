@@ -71,7 +71,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const { activeSite, sites, setActiveSite } = useSite();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/web/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('user');
     localStorage.removeItem('activeSite');
     router.push('/');

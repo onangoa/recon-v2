@@ -87,7 +87,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
 
     const fetchMaterial = async () => {
       try {
-        const response = await fetch(`/api/inventory/${id}`);
+        const response = await fetch(`/web/api/inventory/${id}`);
         if (!response.ok) throw new Error('Failed to fetch material');
         const data = await response.json();
         setMaterial(data);
@@ -121,7 +121,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
 
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/inventory/categories?limit=100');
+        const response = await fetch('/web/api/inventory/categories?limit=100');
         const data = await response.json();
         if (data.categories && Array.isArray(data.categories)) {
           setCategories(data.categories);
@@ -133,7 +133,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
 
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch('/api/suppliers?limit=100');
+        const response = await fetch('/web/api/suppliers?limit=100');
         const data = await response.json();
         if (data.suppliers && Array.isArray(data.suppliers)) {
           setSuppliers(data.suppliers);
@@ -199,7 +199,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/inventory/${id}`, {
+      const response = await fetch(`/web/api/inventory/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
