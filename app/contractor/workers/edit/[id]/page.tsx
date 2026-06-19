@@ -50,6 +50,9 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     designationId: '',
     shiftId: '',
     status: 'Active',
+    paymentMode: 'manual',
+    paymentPhone: '',
+    paymentAccount: '',
     joinedAt: ''
   });
 
@@ -82,6 +85,9 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           designationId: worker.designationId || '',
           shiftId: worker.shiftId || '',
           status: worker.status,
+          paymentMode: worker.paymentMode || 'manual',
+          paymentPhone: worker.paymentPhone || '',
+          paymentAccount: worker.paymentAccount || '',
           joinedAt: worker.joinedAt ? new Date(worker.joinedAt).toISOString().split('T')[0] : ''
         });
       } catch (err: any) {
@@ -271,6 +277,68 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Payment Mode</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Mode of Payment *</label>
+                <select
+                  value={formData.paymentMode}
+                  onChange={(e) => setFormData({...formData, paymentMode: e.target.value, paymentPhone: '', paymentAccount: ''})}
+                  disabled={isSubmitting}
+                  className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                >
+                  <option value="manual">Manual Settlement</option>
+                  <option value="phone">Direct M-Pesa (Phone Number)</option>
+                  <option value="pochi">M-Pesa Pochi</option>
+                  <option value="till">M-Pesa Till Number</option>
+                  <option value="paybill">M-Pesa Paybill</option>
+                </select>
+              </div>
+              {(formData.paymentMode === 'phone' || formData.paymentMode === 'pochi') && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Payment Phone Number</label>
+                  <input
+                    type="text"
+                    value={formData.paymentPhone}
+                    onChange={(e) => setFormData({...formData, paymentPhone: e.target.value})}
+                    placeholder="e.g. 254712345678"
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
+                </div>
+              )}
+              {(formData.paymentMode === 'till' || formData.paymentMode === 'paybill') && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                    {formData.paymentMode === 'till' ? 'Till Number' : 'Paybill Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.paymentAccount}
+                    onChange={(e) => setFormData({...formData, paymentAccount: e.target.value})}
+                    placeholder={formData.paymentMode === 'till' ? 'e.g. 123456' : 'e.g. 123456'}
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
+                </div>
+              )}
+              {formData.paymentMode === 'paybill' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Account Number</label>
+                  <input
+                    type="text"
+                    value={formData.paymentPhone}
+                    onChange={(e) => setFormData({...formData, paymentPhone: e.target.value})}
+                    placeholder="Paybill account reference"
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

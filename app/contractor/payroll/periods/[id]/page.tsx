@@ -80,6 +80,9 @@ interface SalarySlip {
     name: string;
     phone: string | null;
     nationalId: string | null;
+    paymentMode: string;
+    paymentPhone: string | null;
+    paymentAccount: string | null;
   };
   designation: {
     title: string;
@@ -117,6 +120,11 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const [period, setPeriod] = useState<PayrollPeriod | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDisbursing, setIsDisbursing] = useState(false);
+  const [showDisburseDialog, setShowDisburseDialog] = useState(false);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState('');
+  const [disburseResult, setDisburseResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -159,6 +167,43 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleOpenDisburse = async () => {
+    try {
+      const res = await fetch('/api/wallets');
+      if (!res.ok) throw new Error('Failed to fetch wallets');
+      const data = await res.json();
+      setWallets(data.wallets || data);
+      setShowDisburseDialog(true);
+      setDisburseResult(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDisburse = async () => {
+    if (!selectedWalletId) {
+      toast({ title: "Error", description: "Please select a wallet", variant: "destructive" });
+      return;
+    }
+    setIsDisbursing(true);
+    try {
+      const res = await fetch(`/api/payroll-periods/${id}/disburse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletId: selectedWalletId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Disbursement failed');
+      setDisburseResult(data);
+      toast({ title: "Disbursement Initiated", description: `${data.mpesa} M-Pesa payments pending approval, ${data.manual} manual payments completed`, variant: "success" });
+      fetchPeriod();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsDisbursing(false);
     }
   };
 
@@ -241,8 +286,8 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
               <Button variant="outline" className="gap-2 text-primary border-primary/20">
                 <Download className="w-4 h-4" /> Export CSV
               </Button>
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-                <Send className="w-4 h-4" /> Bulk M-Pesa Payment
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={handleOpenDisburse}>
+                <Send className="w-4 h-4" /> Disburse Payroll
               </Button>
             </>
           )}
@@ -327,7 +372,14 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                           </div>
                           <div className="flex flex-col">
                             <span className="font-bold text-sm">{slip.worker.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{slip.worker.phone || 'No phone'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground">{slip.worker.phone || 'No phone'}</span>
+                              {slip.worker.paymentMode && slip.worker.paymentMode !== 'manual' && (
+                                <Badge className="text-[8px] px-1 py-0 bg-blue-100 text-blue-700 border-none uppercase font-bold">
+                                  {slip.worker.paymentMode}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -476,6 +528,179 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Disbursement Dialog */}
+      <Dialog open={showDisburseDialog} onOpenChange={setShowDisburseDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-emerald-600" />
+              Disburse Payroll
+            </DialogTitle>
+            <DialogDescription>
+              Select a wallet to fund payroll payments. M-Pesa payments will require approval; manual settlements are completed immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          {disburseResult ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-emerald-50 border-emerald-200">
+                  <CardContent className="pt-4 pb-3 text-center">
+                    <p className="text-2xl font-bold text-emerald-600">{disburseResult.mpesa}</p>
+                    <p className="text-xs text-emerald-700 font-bold uppercase">M-Pesa</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4 pb-3 text-center">
+                    <p className="text-2xl font-bold text-blue-600">{disburseResult.manual}</p>
+                    <p className="text-xs text-blue-700 font-bold uppercase">Manual</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="pt-4 pb-3 text-center">
+                    <p className="text-2xl font-bold text-amber-600">{disburseResult.skipped}</p>
+                    <p className="text-xs text-amber-700 font-bold uppercase">Skipped</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {disburseResult.transactions.length > 0 && (
+                <div className="max-h-60 overflow-y-auto border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Worker</TableHead>
+                        <TableHead className="text-xs">Mode</TableHead>
+                        <TableHead className="text-xs text-right">Amount</TableHead>
+                        <TableHead className="text-xs text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {disburseResult.transactions.map((t: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-sm font-medium">{t.workerName}</TableCell>
+                          <TableCell className="text-xs">
+                            <Badge className={`
+                              text-[9px] uppercase font-bold px-1.5 py-0 border-none
+                              ${t.mode === 'manual' ? 'bg-blue-100 text-blue-700' :
+                                t.mode === 'phone' ? 'bg-green-100 text-green-700' :
+                                t.mode === 'pochi' ? 'bg-purple-100 text-purple-700' :
+                                t.mode === 'till' ? 'bg-orange-100 text-orange-700' :
+                                t.mode === 'paybill' ? 'bg-teal-100 text-teal-700' :
+                                'bg-gray-100 text-gray-600'}
+                            `}>
+                              {t.mode}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm font-mono text-right">{formatCurrency(t.netPay)}</TableCell>
+                          <TableCell className="text-xs text-right">
+                            <Badge className={`
+                              text-[9px] uppercase font-bold px-1.5 py-0
+                              ${t.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                t.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
+                                'bg-red-100 text-red-700'}
+                            `}>
+                              {t.status === 'completed' ? 'Paid' : t.status === 'pending_approval' ? 'Pending' : t.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground italic">
+                M-Pesa payments are pending approval. Go to Wallet &gt; Approvals to release funds.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm font-semibold mb-1">Payroll Summary</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <p className="text-muted-foreground">Total Net Pay:</p>
+                  <p className="font-bold text-emerald-600">{formatCurrency(period.totalNetPay)}</p>
+                  <p className="text-muted-foreground">Employees:</p>
+                  <p className="font-bold">{period.totalEmployees}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                  Select Wallet *
+                </label>
+                <select
+                  value={selectedWalletId}
+                  onChange={(e) => setSelectedWalletId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Choose a wallet...</option>
+                  {wallets.map((w: any) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} - KES {w.balance.toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {filteredSlips.length > 0 && (
+                <div className="max-h-52 overflow-y-auto border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Worker</TableHead>
+                        <TableHead className="text-xs">Payment Mode</TableHead>
+                        <TableHead className="text-xs text-right">Net Pay</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSlips.map((slip) => (
+                        <TableRow key={slip.id}>
+                          <TableCell className="text-sm font-medium">{slip.worker.name}</TableCell>
+                          <TableCell className="text-xs">
+                            <Badge className={`
+                              text-[9px] uppercase font-bold px-1.5 py-0 border-none
+                              ${slip.worker.paymentMode === 'manual' || !slip.worker.paymentMode ? 'bg-gray-100 text-gray-600' :
+                                slip.worker.paymentMode === 'phone' ? 'bg-green-100 text-green-700' :
+                                slip.worker.paymentMode === 'pochi' ? 'bg-purple-100 text-purple-700' :
+                                slip.worker.paymentMode === 'till' ? 'bg-orange-100 text-orange-700' :
+                                'bg-teal-100 text-teal-700'}
+                            `}>
+                              {slip.worker.paymentMode || 'manual'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm font-mono text-right">{formatCurrency(slip.netPay)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {!disburseResult && (
+              <>
+                <Button variant="outline" onClick={() => setShowDisburseDialog(false)}>Cancel</Button>
+                <Button
+                  onClick={handleDisburse}
+                  disabled={isDisbursing || !selectedWalletId}
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isDisbursing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {isDisbursing ? 'Processing...' : 'Disburse Payroll'}
+                </Button>
+              </>
+            )}
+            {disburseResult && (
+              <Button onClick={() => setShowDisburseDialog(false)}>Close</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

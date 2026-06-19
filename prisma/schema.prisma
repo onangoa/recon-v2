@@ -106,6 +106,9 @@ model Worker {
   nationalId            String?         @unique
   designationId         String?
   shiftId               String?
+  paymentMode           String          @default("manual")
+  paymentPhone          String?
+  paymentAccount         String?
   status                String          @default("Active")
   joinedAt              DateTime        @default(now())
   createdAt             DateTime        @default(now())

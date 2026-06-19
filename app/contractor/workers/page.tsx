@@ -350,6 +350,14 @@ export default function WorkersPage() {
                           <Shield className="w-3 h-3 mr-1 opacity-60" />
                           Enroll: {worker.enrollId || 'N/A'}
                         </div>
+                        <div className="flex items-center">
+                          <CreditCard className="w-3 h-3 mr-1 opacity-60" />
+                          {worker.paymentMode === 'manual' || !worker.paymentMode ? 'Manual' :
+                            worker.paymentMode === 'phone' ? 'Direct M-Pesa' :
+                            worker.paymentMode === 'pochi' ? 'Pochi' :
+                            worker.paymentMode === 'till' ? 'Till' :
+                            worker.paymentMode === 'paybill' ? 'Paybill' : worker.paymentMode}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
