@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { hasPermission } from '@/lib/rbac';
 import { getCurrentUser } from '@/lib/auth';
+import { hashPassword } from '@/lib/jwt';
+import { EmailService } from '@/lib/notification-service';
 
 export async function GET(request: Request) {
   try {
@@ -80,7 +82,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
-    // Create User account for team member if email is provided
+    const temporaryPassword = body.password || Math.random().toString(36).slice(-10) + 'A1!';
+    const hashedPassword = await hashPassword(temporaryPassword);
+
     let userId = null;
     if (body.email) {
       const existingUser = await prisma.user.findUnique({ where: { email: body.email } });
@@ -90,13 +94,40 @@ export async function POST(request: Request) {
         const newUser = await prisma.user.create({
           data: {
             email: body.email,
-            password: 'password123', // Default password
+            password: hashedPassword,
             name: body.name,
             role: 'team_member',
             roleId: body.roleId || null,
           }
         });
         userId = newUser.id;
+
+        const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3010';
+        await EmailService.send({
+          to: body.email,
+          subject: 'Welcome to ReconSMI – Your Account Has Been Created',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+              <h2 style="color: #1e40af;">Welcome to ReconSMI!</h2>
+              <p>Hello <strong>${body.name}</strong>,</p>
+              <p>An account has been created for you on ReconSMI. Here are your login details:</p>
+              <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p style="margin: 4px 0;"><strong>Email:</strong> ${body.email}</p>
+                <p style="margin: 4px 0;"><strong>Temporary Password:</strong> ${temporaryPassword}</p>
+              </div>
+              <p style="margin-top: 16px;">
+                <a href="${appUrl}/login" style="background: #1e40af; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+                  Log In Now
+                </a>
+              </p>
+              <p style="margin-top: 16px; font-size: 13px; color: #64748b;">
+                Please change your password after your first login for security purposes.
+              </p>
+              <hr style="margin-top: 24px; border-color: #e2e8f0;" />
+              <p style="font-size: 12px; color: #94a3b8;">If you did not expect this email, please ignore it.</p>
+            </div>
+          `,
+        }).catch(err => console.error('Welcome email error:', err));
       }
     }
 
