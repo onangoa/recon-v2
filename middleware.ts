@@ -22,6 +22,7 @@ const AUTH_API_PATHS = [
   '/api/payments',
   '/api/mpesa',
   '/api/callbacks',
+  '/api/attendance/biometric',
 ];
 
 async function verifyTokenEdge(token: string) {

@@ -1,70 +1,107 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
-import { startOfDay, differenceInMinutes, parse } from 'date-fns';
+import { startOfDay, differenceInMinutes, addMinutes } from 'date-fns';
 
 /**
- * Webhook format:
- * [{
- *   'device_serial_num': 'AYTI14109277', 
- *   'enroll_id': 1, 
- *   'event': 0, 
- *   'intOut': 0, 
- *   'mode': 8, 
- *   'records_time': '2026-06-11 05:50:40', 
- *   'temperature': 0
- * }]
+ * Biometric Attendance Webhook
+ * 
+ * Device sends:
+ * {
+ *   "device_serial_num": "AYTI14109277",
+ *   "enroll_id": 1,
+ *   "event": 0,
+ *   "intOut": 0,          // 0 = Check-In, 1 = Check-Out (device may always send 0)
+ *   "mode": 8,
+ *   "records_time": "2026-06-19 12:53:53",
+ *   "temperature": 0
+ * }
+ * 
+ * Logic:
+ * - If intOut=1 → explicit check-out
+ * - If intOut=0 → infer direction:
+ *     - No attendance today → check-in
+ *     - Has open attendance (no checkOut) → check-out
+ *     - Has closed attendance (checkIn + checkOut both set) → new check-in (re-entry)
+ * - Break detection:
+ *     - If worker checks in again after checking out within the same day,
+ *       treat the gap as a break and resume the session.
  */
 
+const BREAK_THRESHOLD_MINUTES = 60;
+
+function parseLogTime(timeStr: string): Date {
+  return new Date(timeStr.replace(' ', 'T'));
+}
+
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'attendance:create');
-  if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
     const logs = Array.isArray(body) ? body : [body];
 
-    const results = [];
+    if (logs.length === 0) {
+      return NextResponse.json({ error: 'No records provided' }, { status: 400 });
+    }
+
+    const results: Array<{
+      enroll_id: number;
+      workerId?: string;
+      workerName?: string;
+      action: string;
+      time: string;
+      attendanceId?: string;
+      status: string;
+    }> = [];
+
+    const errors: Array<{ enroll_id: number; error: string }> = [];
 
     for (const log of logs) {
-      const { enroll_id, records_time, intOut, device_serial_num } = log;
+      const { enroll_id, records_time, intOut, device_serial_num, temperature } = log;
 
-      if (!enroll_id || !records_time) continue;
-
-      // Find worker by enrollId
-      const worker = await prisma.worker.findUnique({
-        where: { enrollId: String(enroll_id) },
-        include: { shift: true }
-      });
-
-      if (!worker) {
-        console.warn(`Worker with enrollId ${enroll_id} not found`);
+      if (!enroll_id || !records_time) {
+        errors.push({ enroll_id: enroll_id || 0, error: 'Missing enroll_id or records_time' });
         continue;
       }
 
-      const logTime = new Date(records_time.replace(' ', 'T')); // Handle format '2026-06-11 05:50:40'
+      const logTime = parseLogTime(records_time);
       const logDate = startOfDay(logTime);
 
-      // Find or create attendance record for today
-      let attendance = await prisma.attendance.findUnique({
+      const worker = await prisma.worker.findUnique({
+        where: { enrollId: String(enroll_id) },
+        include: { shift: true },
+      });
+
+      if (!worker) {
+        errors.push({ enroll_id, error: `Worker with enroll_id ${enroll_id} not found` });
+        continue;
+      }
+
+      const existingAttendance = await prisma.attendance.findUnique({
         where: {
           workerId_date: {
             workerId: worker.id,
-            date: logDate
-          }
-        }
+            date: logDate,
+          },
+        },
       });
 
-      // Simple Logic: 
-      // - If no record exists today, this is a CLOCK_IN
-      // - If record exists and no checkOut, this is a CLOCK_OUT
-      // - (Optional) Use intOut if device provides reliable direction: 0=In, 1=Out
-      
-      const isCheckIn = intOut === 0 || !attendance;
+      let action: string;
+      let attendanceId: string;
 
-      if (isCheckIn) {
-        if (!attendance) {
-          attendance = await prisma.attendance.create({
+      if (intOut === 1) {
+        action = 'check-out';
+      } else {
+        if (!existingAttendance) {
+          action = 'check-in';
+        } else if (existingAttendance.checkIn && !existingAttendance.checkOut) {
+          action = 'check-out';
+        } else {
+          action = 'check-in';
+        }
+      }
+
+      if (action === 'check-in') {
+        if (!existingAttendance) {
+          const attendance = await prisma.attendance.create({
             data: {
               contractorId: worker.contractorId,
               workerId: worker.id,
@@ -72,90 +109,244 @@ export async function POST(request: NextRequest) {
               date: logDate,
               checkIn: logTime,
               status: 'Present',
-              notes: `Biometric In (${device_serial_num})`,
+              notes: device_serial_num ? `Biometric In (${device_serial_num})` : 'Biometric In',
               logs: {
                 create: {
                   type: 'IN',
                   timestamp: logTime,
-                  deviceName: device_serial_num
-                }
-              }
-            }
+                  deviceName: device_serial_num || null,
+                },
+              },
+            },
           });
+          attendanceId = attendance.id;
+        } else if (existingAttendance.checkIn && existingAttendance.checkOut) {
+          const gapMinutes = existingAttendance.checkOut
+            ? differenceInMinutes(logTime, new Date(existingAttendance.checkOut))
+            : 0;
+
+          if (gapMinutes <= BREAK_THRESHOLD_MINUTES) {
+            await prisma.attendanceLog.create({
+              data: {
+                attendanceId: existingAttendance.id,
+                type: 'BREAK_END',
+                timestamp: logTime,
+                deviceName: device_serial_num || null,
+              },
+            });
+
+            const checkInTime = new Date(existingAttendance.checkIn!);
+            const totalMinutes = differenceInMinutes(logTime, checkInTime);
+
+            await prisma.attendance.update({
+              where: { id: existingAttendance.id },
+              data: {
+                checkOut: null,
+                overtimeHours: 0,
+                totalHours: 0,
+                notes: `${existingAttendance.notes || ''} | Break ended, re-entered (${device_serial_num || 'biometric'})`.trim(),
+              },
+            });
+
+            attendanceId = existingAttendance.id;
+            action = 'break-end';
+          } else {
+            await prisma.attendanceLog.create({
+              data: {
+                attendanceId: existingAttendance.id,
+                type: 'IN',
+                timestamp: logTime,
+                deviceName: device_serial_num || null,
+              },
+            });
+
+            if (logTime < new Date(existingAttendance.checkIn!)) {
+              await prisma.attendance.update({
+                where: { id: existingAttendance.id },
+                data: {
+                  checkIn: logTime,
+                  notes: `${existingAttendance.notes || ''} | Earlier check-in updated (${device_serial_num || 'biometric'})`.trim(),
+                },
+              });
+            }
+
+            attendanceId = existingAttendance.id;
+            action = 'check-in (existing)';
+          }
         } else {
-          // Record the log event even if we don't update checkIn
           await prisma.attendanceLog.create({
             data: {
-              attendanceId: attendance.id,
+              attendanceId: existingAttendance.id,
               type: 'IN',
               timestamp: logTime,
-              deviceName: device_serial_num
-            }
+              deviceName: device_serial_num || null,
+            },
           });
 
-          if (!attendance.checkIn || logTime < new Date(attendance.checkIn)) {
-            attendance = await prisma.attendance.update({
-              where: { id: attendance.id },
-              data: { checkIn: logTime }
+          if (!existingAttendance.checkIn || logTime < new Date(existingAttendance.checkIn!)) {
+            await prisma.attendance.update({
+              where: { id: existingAttendance.id },
+              data: { checkIn: logTime },
             });
           }
+
+          attendanceId = existingAttendance.id;
         }
       } else {
-        // Handle Check Out
-        if (attendance) {
-          // Record the log event
-          await prisma.attendanceLog.create({
+        // check-out
+        if (!existingAttendance) {
+          const attendance = await prisma.attendance.create({
             data: {
-              attendanceId: attendance.id,
-              type: 'OUT',
-              timestamp: logTime,
-              deviceName: device_serial_num
-            }
+              contractorId: worker.contractorId,
+              workerId: worker.id,
+              shiftId: worker.shiftId,
+              date: logDate,
+              checkOut: logTime,
+              status: 'Present',
+              notes: `Biometric Out (no prior check-in) (${device_serial_num || 'biometric'})`,
+              logs: {
+                create: {
+                  type: 'OUT',
+                  timestamp: logTime,
+                  deviceName: device_serial_num || null,
+                },
+              },
+            },
           });
+          attendanceId = attendance.id;
+        } else if (existingAttendance.checkOut) {
+          const currentCheckOut = new Date(existingAttendance.checkOut);
 
-          // Calculate hours
-          const checkIn = new Date(attendance.checkIn!);
-          const checkOut = logTime;
-          
-          if (checkOut > checkIn) {
-            const totalMinutes = differenceInMinutes(checkOut, checkIn);
-            const totalHours = totalMinutes / 60;
+          if (logTime > currentCheckOut) {
+            await prisma.attendanceLog.create({
+              data: {
+                attendanceId: existingAttendance.id,
+                type: 'OUT',
+                timestamp: logTime,
+                deviceName: device_serial_num || null,
+              },
+            });
+
+            const checkInTime = existingAttendance.checkIn
+              ? new Date(existingAttendance.checkIn)
+              : logTime;
+
+            const totalMinutes = differenceInMinutes(logTime, checkInTime);
+            const totalHours = Math.max(0, totalMinutes / 60);
 
             let overtimeHours = 0;
             if (worker.shift) {
               const shiftStart = worker.shift.startTime.split(':').map(Number);
               const shiftEnd = worker.shift.endTime.split(':').map(Number);
-              
+
               let shiftDurationMinutes = (shiftEnd[0] * 60 + shiftEnd[1]) - (shiftStart[0] * 60 + shiftStart[1]);
               if (shiftDurationMinutes < 0) shiftDurationMinutes += 24 * 60;
               shiftDurationMinutes -= worker.shift.breakDuration;
-              
+
               const shiftDurationHours = shiftDurationMinutes / 60;
               if (worker.shift.allowOvertime && totalHours > shiftDurationHours) {
                 overtimeHours = totalHours - shiftDurationHours;
               }
             }
 
-            // Only update checkOut if it's later than current checkOut
-            if (!attendance.checkOut || logTime > new Date(attendance.checkOut)) {
-              attendance = await prisma.attendance.update({
-                where: { id: attendance.id },
-                data: {
-                  checkOut: logTime,
-                  totalHours,
-                  overtimeHours,
-                  notes: `${attendance.notes || ''} | Biometric Out (${device_serial_num})`.trim()
-                }
-              });
-            }
+            await prisma.attendance.update({
+              where: { id: existingAttendance.id },
+              data: {
+                checkOut: logTime,
+                totalHours,
+                overtimeHours,
+                notes: `${existingAttendance.notes || ''} | Biometric Out (${device_serial_num || 'biometric'})`.trim(),
+              },
+            });
+          } else {
+            await prisma.attendanceLog.create({
+              data: {
+                attendanceId: existingAttendance.id,
+                type: 'OUT',
+                timestamp: logTime,
+                deviceName: device_serial_num || null,
+              },
+            });
           }
+
+          attendanceId = existingAttendance.id;
+          action = 'check-out (updated)';
+        } else {
+          // Open attendance — compute hours and close
+          await prisma.attendanceLog.create({
+            data: {
+              attendanceId: existingAttendance.id,
+              type: 'OUT',
+              timestamp: logTime,
+              deviceName: device_serial_num || null,
+            },
+          });
+
+          const checkInTime = existingAttendance.checkIn
+            ? new Date(existingAttendance.checkIn)
+            : logTime;
+
+          if (logTime > checkInTime) {
+            const totalMinutes = differenceInMinutes(logTime, checkInTime);
+            const totalHours = Math.max(0, totalMinutes / 60);
+
+            let overtimeHours = 0;
+            if (worker.shift) {
+              const shiftStart = worker.shift.startTime.split(':').map(Number);
+              const shiftEnd = worker.shift.endTime.split(':').map(Number);
+
+              let shiftDurationMinutes = (shiftEnd[0] * 60 + shiftEnd[1]) - (shiftStart[0] * 60 + shiftStart[1]);
+              if (shiftDurationMinutes < 0) shiftDurationMinutes += 24 * 60;
+              shiftDurationMinutes -= worker.shift.breakDuration;
+
+              const shiftDurationHours = shiftDurationMinutes / 60;
+              if (worker.shift.allowOvertime && totalHours > shiftDurationHours) {
+                overtimeHours = totalHours - shiftDurationHours;
+              }
+            }
+
+            await prisma.attendance.update({
+              where: { id: existingAttendance.id },
+              data: {
+                checkIn: existingAttendance.checkIn || logTime,
+                checkOut: logTime,
+                totalHours,
+                overtimeHours,
+                notes: `${existingAttendance.notes || ''} | Biometric Out (${device_serial_num || 'biometric'})`.trim(),
+              },
+            });
+          } else {
+            await prisma.attendance.update({
+              where: { id: existingAttendance.id },
+              data: {
+                checkOut: logTime,
+                notes: `${existingAttendance.notes || ''} | Biometric Out (${device_serial_num || 'biometric'})`.trim(),
+              },
+            });
+          }
+
+          attendanceId = existingAttendance.id;
         }
       }
 
-      results.push({ enroll_id, status: 'processed', attendanceId: attendance?.id });
+      const freshAttendance = await prisma.attendance.findUnique({ where: { id: attendanceId } });
+      results.push({
+        enroll_id,
+        workerId: worker.id,
+        workerName: worker.name,
+        action,
+        time: records_time,
+        attendanceId,
+        status: freshAttendance?.status || 'Present',
+      });
     }
 
-    return NextResponse.json({ success: true, processed: results.length, results });
+    return NextResponse.json({
+      success: true,
+      processed: results.length,
+      results,
+      ...(errors.length > 0 ? { errors } : {}),
+    });
   } catch (error) {
     console.error('Biometric webhook error:', error);
     return NextResponse.json({ error: 'Failed to process biometric data' }, { status: 500 });
