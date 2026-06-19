@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { getCurrentContractor } from '@/lib/auth';
+import { withContractorFilter } from '@/lib/contractor-isolation';
 
 export async function GET(request: Request) {
   try {
+    const contractor = await getCurrentContractor();
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -11,7 +18,7 @@ export async function GET(request: Request) {
 
     const skip = (page - 1) * limit;
 
-    const where = search
+    const baseWhere = search
       ? {
           OR: [
             { name: { contains: search, mode: 'insensitive' as const } },
@@ -19,6 +26,8 @@ export async function GET(request: Request) {
           ],
         }
       : {};
+
+    const where = withContractorFilter({ where: baseWhere }, contractor.id).where;
 
     const [sites, totalCount] = await Promise.all([
       prisma.site.findMany({
@@ -48,18 +57,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    
-    let contractorId = body.contractorId;
-    
-    if (!contractorId) {
-      const defaultContractor = await prisma.contractor.findFirst();
-      if (defaultContractor) {
-        contractorId = defaultContractor.id;
-      } else {
-        return NextResponse.json({ error: 'No contractor found' }, { status: 400 });
-      }
+    const contractor = await getCurrentContractor();
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
     }
+
+    const body = await request.json();
+    const contractorId = contractor.id;
     
     const site = await prisma.$transaction(async (tx) => {
       // If this site is being set as primary, unset any other primary sites for this contractor

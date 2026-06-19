@@ -1,13 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { getCurrentContractor } from '@/lib/auth';
+import { verifyContractorAccess } from '@/lib/contractor-isolation';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const contractor = await getCurrentContractor();
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
+    }
+
     const { id } = await params;
+
+    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
       include: {
@@ -33,19 +46,29 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const contractor = await getCurrentContractor();
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { items, ...poData } = body;
+
+    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
 
     // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       // 0. Get the current status to check for transitions
       const currentPO = await tx.purchaseOrder.findUnique({
         where: { id },
-        select: { status: true }
+        select: { status: true, site: { select: { contractorId: true } } }
       });
 
-      if (!currentPO) {
+      if (!currentPO || currentPO.site.contractorId !== contractor.id) {
         throw new Error('Purchase order not found');
       }
 
@@ -117,7 +140,7 @@ export async function PATCH(
     if (result.site) {
       await ActivityLogger.log({
         userId: 'system',
-        contractorId: result.site.contractorId,
+        contractorId: contractor.id,
         action: 'UPDATE',
         module: 'PURCHASE_ORDERS',
         description: `Updated purchase order: ${result.orderNumber}`,
@@ -138,7 +161,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const contractor = await getCurrentContractor();
+    if (!contractor) {
+      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
+    }
+
     const { id } = await params;
+
+    const hasAccess = await verifyContractorAccess(contractor.id, 'purchase-order', id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
       include: { site: true }
@@ -147,7 +181,7 @@ export async function DELETE(
     if (purchaseOrder && purchaseOrder.site) {
       await ActivityLogger.log({
         userId: 'system',
-        contractorId: purchaseOrder.site.contractorId,
+        contractorId: contractor.id,
         action: 'DELETE',
         module: 'PURCHASE_ORDERS',
         description: `Deleted purchase order: ${purchaseOrder.orderNumber}`,

@@ -313,9 +313,7 @@ export default function PurchaseOrdersList() {
                           >
                             <Pencil className="size-4" /> Edit Order
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 cursor-pointer">
-                            <Download className="w-4 h-4" /> Download PDF
-                          </DropdownMenuItem>
+                         
                           <DropdownMenuItem 
                             className="gap-2 text-destructive cursor-pointer"
                             onClick={() => {

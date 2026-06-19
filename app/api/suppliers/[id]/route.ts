@@ -38,15 +38,10 @@ export async function PATCH(
       where: { id },
       data: {
         name: body.name,
-        contactPerson: body.contactPerson,
-        email: body.email,
-        phone: body.phone,
-        address: body.address,
-        city: body.city,
-        country: body.country,
-        postalCode: body.postalCode,
-        website: body.website,
-        notes: body.notes,
+        contactPerson: body.contactPerson || null,
+        email: body.email || null,
+        phone: body.phone || null,
+        address: body.address || null,
       },
     });
 
