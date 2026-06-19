@@ -59,6 +59,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -198,7 +199,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Disbursement failed');
       setDisburseResult(data);
-      toast({ title: "Disbursement Initiated", description: `${data.mpesa} M-Pesa payments pending approval, ${data.manual} manual payments completed`, variant: "success" });
+      toast({ title: "Disbursement Complete", description: `${data.mpesa} M-Pesa payments pending approval, ${data.manual} manual payments completed${data.alreadyDisbursed > 0 ? `, ${data.alreadyDisbursed} already disbursed` : ''}`, variant: "success" });
       fetchPeriod();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -546,7 +547,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
 
           {disburseResult ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="bg-emerald-50 border-emerald-200">
                   <CardContent className="pt-4 pb-3 text-center">
                     <p className="text-2xl font-bold text-emerald-600">{disburseResult.mpesa}</p>
@@ -563,6 +564,12 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                   <CardContent className="pt-4 pb-3 text-center">
                     <p className="text-2xl font-bold text-amber-600">{disburseResult.skipped}</p>
                     <p className="text-xs text-amber-700 font-bold uppercase">Skipped</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-50 border-gray-200">
+                  <CardContent className="pt-4 pb-3 text-center">
+                    <p className="text-2xl font-bold text-gray-600">{disburseResult.alreadyDisbursed || 0}</p>
+                    <p className="text-xs text-gray-700 font-bold uppercase">Already Paid</p>
                   </CardContent>
                 </Card>
               </div>
@@ -601,9 +608,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                               text-[9px] uppercase font-bold px-1.5 py-0
                               ${t.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                                 t.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
-                                'bg-red-100 text-red-700'}
+                                'bg-gray-200 text-gray-600'}
                             `}>
-                              {t.status === 'completed' ? 'Paid' : t.status === 'pending_approval' ? 'Pending' : t.status}
+                              {t.status === 'completed' ? 'Paid' : t.status === 'pending_approval' ? 'Pending Approval' : t.status.replace(/_/g, ' ')}
                             </Badge>
                           </TableCell>
                         </TableRow>

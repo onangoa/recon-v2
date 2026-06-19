@@ -53,11 +53,34 @@ export async function POST(
       mpesa: 0,
       manual: 0,
       skipped: 0,
+      alreadyDisbursed: 0,
       transactions: [] as any[],
     };
 
+    const referencePrefix = `PAYROLL-${period.id.substring(0, 8)}-`;
+    const existingTransactions = await prisma.transaction.findMany({
+      where: { reference: { startsWith: referencePrefix } },
+      select: { reference: true, status: true },
+    });
+    const disbursedMap = new Map(existingTransactions.map(t => [t.reference, t.status]));
+
     for (const slip of period.salarySlips) {
       const worker = slip.worker;
+      const reference = `PAYROLL-${period.id.substring(0, 8)}-${slip.id.substring(0, 8)}`;
+
+      if (disbursedMap.has(reference) || slip.status === 'paid') {
+        const existingStatus = disbursedMap.get(reference);
+        results.alreadyDisbursed++;
+        results.transactions.push({
+          slipId: slip.id,
+          workerName: worker.name,
+          netPay: slip.netPay,
+          mode: worker.paymentMode || 'manual',
+          status: existingStatus || 'completed',
+          reason: slip.status === 'paid' ? 'Salary slip already marked as paid' : 'Transaction already exists',
+        });
+        continue;
+      }
 
       if (worker.paymentMode === 'manual' || !worker.paymentMode) {
         const transaction = await prisma.transaction.create({
@@ -151,7 +174,6 @@ export async function POST(
           reference: `PAYROLL-${period.id.substring(0, 8)}-${slip.id.substring(0, 8)}`,
           status: 'pending_approval',
           transactionType,
-          payoutType,
           accountReference: worker.paymentMode === 'phone' || worker.paymentMode === 'pochi' ? phoneNumber : accountNumber,
           transactionDesc: `Payroll: ${worker.name} - ${period.name}`,
           remarks: payoutType,

@@ -379,9 +379,7 @@ export default function ShiftsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                      </DropdownMenu>
-                    </div>
-                    
+
                     <div className="space-y-3 mt-4">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1.5">

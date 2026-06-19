@@ -62,8 +62,14 @@ export default function CreateWorkerPage() {
           fetch('/api/shifts?contractorId=placeholder-id')
         ]);
         
-        if (desigRes.ok) setDesignations(await desigRes.json());
-        if (shiftRes.ok) setShifts(await shiftRes.json());
+        if (desigRes.ok) {
+          const desigData = await desigRes.json();
+          setDesignations(desigData.designations || desigData);
+        }
+        if (shiftRes.ok) {
+          const shiftData = await shiftRes.json();
+          setShifts(shiftData.shifts || shiftData);
+        }
       } catch (error) {
         console.error('Failed to fetch data');
       }

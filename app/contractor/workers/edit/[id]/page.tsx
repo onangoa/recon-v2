@@ -74,8 +74,8 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
         const designs = await designRes.json();
         const shiftData = await shiftRes.json();
 
-        setDesignations(designs);
-        setShifts(shiftData);
+        setDesignations(designs.designations || designs);
+        setShifts(shiftData.shifts || shiftData);
         setFormData({
           name: worker.name,
           email: worker.email || '',
