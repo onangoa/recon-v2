@@ -70,29 +70,13 @@ interface Transaction {
   date: string;
 }
 
-const contractorsData = [
-  { month: 'Jan', count: 4 },
-  { month: 'Feb', count: 7 },
-  { month: 'Mar', count: 5 },
-  { month: 'Apr', count: 8 },
-  { month: 'May', count: 12 },
-  { month: 'Jun', count: 15 },
-];
-
-const revenueData = [
-  { date: 'Jan', revenue: 1200 },
-  { date: 'Feb', revenue: 2100 },
-  { date: 'Mar', revenue: 1800 },
-  { date: 'Apr', revenue: 2400 },
-  { date: 'May', revenue: 3200 },
-  { date: 'Jun', revenue: 4500 },
-];
-
-const planSalesData = [
-  { name: 'Basic', value: 45, color: '#10b981' },
-  { name: 'Professional', value: 35, color: '#3b82f6' },
-  { name: 'Enterprise', value: 20, color: '#8b5cf6' },
-];
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
 
 const contractorsConfig = {
   count: { label: 'New Contractors', color: '#3b82f6' },
@@ -111,17 +95,23 @@ const plansConfig = {
 export default function SuperadminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [contractorsData, setContractorsData] = useState<{ month: string; count: number }[]>([]);
+  const [revenueData, setRevenueData] = useState<{ date: string; revenue: number }[]>([]);
+  const [planSalesData, setPlanSalesData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/superadmin/dashboard');
-        const data = await res.json();
+        const data: DashboardResponse = await res.json();
         if (data.error) throw new Error(data.error);
         
         setStats(data.stats);
         setTransactions(data.recentTransactions);
+        setContractorsData(data.contractorsData);
+        setRevenueData(data.revenueData);
+        setPlanSalesData(data.planSalesData);
         setLoading(false);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -131,6 +121,240 @@ export default function SuperadminDashboard() {
 
     fetchData();
   }, []);
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  recentTransactions: Transaction[];
+  contractorsData: { month: string; count: number }[];
+  revenueData: { date: string; revenue: number }[];
+  planSalesData: { name: string; value: number; color: string }[];
+}
+
+
 
   const MetricCard = ({ label, value, icon: Icon, trend, trendValue, colorClass, prefix = "" }: any) => (
     <Card className="overflow-hidden border-none shadow-md transition-all hover:shadow-lg">

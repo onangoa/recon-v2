@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { generateAccessToken, generateRefreshToken, hashPassword, comparePassword, saveRefreshToken } from '@/lib/jwt';
 import { getPermissions } from '@/lib/rbac';
+import { resolveContractorForUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { contractor: true },
+      include: { contractor: true, teamMember: true },
     });
 
     if (!user) {
@@ -29,21 +30,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const contractor = await resolveContractorForUser(user.id);
+
     const accessToken = generateAccessToken({
       userId: user.id,
       email: user.email,
       role: user.role,
-      contractorId: user.contractor?.id || null,
+      contractorId: contractor?.id || null,
     });
 
     const refreshToken = generateRefreshToken(user.id);
     await saveRefreshToken(user.id, refreshToken);
 
-    if (user.contractor) {
+    if (contractor) {
       try {
         await ActivityLogger.log({
           userId: user.id,
-          contractorId: user.contractor.id,
+          contractorId: contractor.id,
           action: 'LOGIN',
           module: 'SETTINGS',
           description: `${user.name} logged in`,
@@ -56,9 +59,9 @@ export async function POST(request: NextRequest) {
     const permissions = await getPermissions(user.id);
 
     let sites: Array<{ id: string; name: string; location: string; status: string; isPrimary: boolean; projectId: string | null }> = [];
-    if (user.contractor) {
+    if (contractor) {
       sites = await prisma.site.findMany({
-        where: { contractorId: user.contractor.id },
+        where: { contractorId: contractor.id },
         select: {
           id: true,
           name: true,
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const needsOnboarding = user.contractor ? sites.length === 0 : false;
+    const needsOnboarding = contractor ? sites.length === 0 : false;
 
     const response = NextResponse.json({
       message: 'Login successful',
@@ -82,13 +85,13 @@ export async function POST(request: NextRequest) {
         avatar: user.avatar,
         permissions,
       },
-      contractor: user.contractor ? {
-        id: user.contractor.id,
-        companyName: user.contractor.companyName,
-        location: user.contractor.location,
-        phoneNumber: user.contractor.phoneNumber,
-        licenseNo: user.contractor.licenseNo,
-        userId: user.contractor.userId,
+      contractor: contractor ? {
+        id: contractor.id,
+        companyName: contractor.companyName,
+        location: contractor.location,
+        phoneNumber: contractor.phoneNumber,
+        licenseNo: contractor.licenseNo,
+        userId: contractor.userId,
       } : null,
       sites,
       selectedSiteId: sites.find(s => s.isPrimary)?.id || (sites.length > 0 ? sites[0].id : null),

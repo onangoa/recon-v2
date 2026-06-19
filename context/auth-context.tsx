@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user && contractor && needsOnboarding && pathname.startsWith('/contractor') && !pathname.includes('/sites/create') && !pathname.includes('/sites/create?') && pathname !== '/contractor/sites/create') {
+    if (user && contractor && needsOnboarding && user.role === 'contractor' && pathname.startsWith('/contractor') && !pathname.includes('/sites/create') && !pathname.includes('/sites/create?') && pathname !== '/contractor/sites/create') {
       router.push('/contractor/sites/create');
     }
   }, [user, contractor, isLoading, needsOnboarding, pathname, router]);

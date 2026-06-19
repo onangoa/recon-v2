@@ -40,18 +40,20 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    include: { contractor: { select: { id: true } } },
+    include: { contractor: { select: { id: true } }, teamMember: { select: { contractorId: true } } },
   });
 
   if (!user) {
     return { authenticated: false, payload: null, userId: null, contractorId: null };
   }
 
+  const resolvedContractorId = user.contractor?.id || user.teamMember?.contractorId || null;
+
   return {
     authenticated: true,
     payload,
     userId: payload.userId,
-    contractorId: payload.contractorId,
+    contractorId: resolvedContractorId,
   };
 }
 

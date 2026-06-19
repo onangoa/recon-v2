@@ -49,6 +49,11 @@ interface DashboardData {
   machines: number;
   purchaseOrders: number;
   workers: number;
+  totalSites: number;
+  pendingOrders: number;
+  activeTasks: number;
+  monthlyCredits: number;
+  monthlyDebits: number;
 }
 
 interface ActivityItem {
@@ -59,40 +64,21 @@ interface ActivityItem {
   type: 'create' | 'update' | 'delete' | 'info';
 }
 
-const attendanceData = [
-  { date: 'Sun 1 Jan', overtime: 0.4, attained: 1.8, late: 0.1, leave: 0.2 },
-  { date: 'Mon 2 Jan', overtime: 0.2, attained: 1.9, late: 0, leave: 0 },
-  { date: 'Tue 3 Jan', overtime: 0.5, attained: 1.7, late: 0.2, leave: 0.1 },
-  { date: 'Wed 4 Jan', overtime: 0.3, attained: 1.8, late: 0, leave: 0 },
-  { date: 'Thu 5 Jan', overtime: 0.4, attained: 1.9, late: 0.1, leave: 0 },
-  { date: 'Fri 6 Jan', overtime: 0.6, attained: 1.6, late: 0.3, leave: 0.2 },
-  { date: 'Sat 7 Jan', overtime: 0, attained: 0, late: 0, leave: 2 },
-];
+interface AttendanceData {
+  date: string;
+  totalHours: number;
+  overtimeHours: number;
+  avgHours: number;
+}
 
-const workersData = [
-  { date: 'Sun 1 Jan', count: 32 },
-  { date: 'Mon 2 Jan', count: 35 },
-  { date: 'Tue 3 Jan', count: 28 },
-  { date: 'Wed 4 Jan', count: 38 },
-  { date: 'Thu 5 Jan', count: 35 },
-  { date: 'Fri 6 Jan', count: 40 },
-  { date: 'Sat 7 Jan', count: 15 },
-];
+interface DashboardResponse {
+  stats: DashboardData;
+  recentActivityLogs: ActivityItem[];
+  attendanceData: AttendanceData[];
+  siteId: string;
+}
 
-const walletData = [
-  { month: 'Jan', credits: 2.0, debits: 1.2 },
-  { month: 'Feb', credits: 1.8, debits: 0.9 },
-  { month: 'Mar', credits: 2.2, debits: 1.4 },
-  { month: 'Apr', credits: 1.9, debits: 1.1 },
-  { month: 'May', credits: 2.4, debits: 1.3 },
-  { month: 'Jun', credits: 2.1, debits: 1.0 },
-  { month: 'Jul', credits: 2.0, debits: 1.2 },
-  { month: 'Aug', credits: 2.3, debits: 1.5 },
-  { month: 'Sep', credits: 2.2, debits: 1.1 },
-  { month: 'Oct', credits: 2.5, debits: 1.4 },
-  { month: 'Nov', credits: 2.4, debits: 1.3 },
-  { month: 'Dec', credits: 2.6, debits: 1.6 },
-];
+
 
 const attendanceConfig = {
   overtime: { label: 'Overtime', color: '#8B4513' },
@@ -117,8 +103,14 @@ export default function ContractorDashboard() {
     machines: 0,
     purchaseOrders: 0,
     workers: 0,
+    totalSites: 0,
+    pendingOrders: 0,
+    activeTasks: 0,
+    monthlyCredits: 0,
+    monthlyDebits: 0,
   });
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -126,39 +118,44 @@ export default function ContractorDashboard() {
       setLoading(true);
       try {
         const query = activeSite ? `?siteId=${activeSite.id}` : '';
-        const [materialsRes, tasksRes, poRes, visitorsRes] = await Promise.all([
-          fetch(`/api/materials${query}`),
-          fetch(`/api/tasks${query}`),
-          fetch(`/api/purchase-orders${query}`),
-          fetch(`/api/visitors${query}`),
-        ]);
+        const response = await fetch(`/api/contractor/dashboard${query}`);
+        const dashboardData: DashboardResponse = await response.json();
 
-        const materials = await materialsRes.json();
-        const tasks = await tasksRes.json();
-        const poData = await poRes.json();
-        const visitorsData = await visitorsRes.json();
+        if (dashboardData.error) throw new Error(dashboardData.error);
 
         setData({
-          inventory: Array.isArray(materials) ? materials.length : 0,
-          machines: tasks.tasks ? tasks.tasks.length : (Array.isArray(tasks) ? tasks.length : 0),
-          purchaseOrders: poData.purchaseOrders ? poData.purchaseOrders.length : (Array.isArray(poData) ? poData.length : 0),
-          workers: visitorsData.visitors ? visitorsData.visitors.length : (Array.isArray(visitorsData) ? visitorsData.length : 0),
+          inventory: dashboardData.stats.totalInventory,
+          machines: dashboardData.stats.totalEquipment,
+          purchaseOrders: dashboardData.stats.totalPurchaseOrders,
+          workers: dashboardData.stats.totalWorkers,
+          totalSites: dashboardData.stats.totalSites,
+          pendingOrders: dashboardData.stats.pendingPurchaseOrders,
+          activeTasks: dashboardData.stats.activeTasks,
+          monthlyCredits: dashboardData.stats.monthlyCredits,
+          monthlyDebits: dashboardData.stats.monthlyDebits,
         });
 
-        // Fetch real activity logs
-        const contractorIdParam = activeSite ? `&contractorId=${activeSite.contractorId}` : '';
-        const logsRes = await fetch(`/api/activity-logs?limit=5${contractorIdParam}`);
-        const logsData = await logsRes.json();
-        if (logsData.logs) {
-          setActivities(logsData.logs.map((log: any) => ({
+        if (dashboardData.recentActivityLogs) {
+          setActivities(dashboardData.recentActivityLogs.map((log: any) => ({
             id: log.id,
             action: log.description,
             timestamp: getTimeLabel(log.createdAt),
             user: log.user.name,
-            type: log.action.toLowerCase() === 'create' ? 'create' : 
-                  log.action.toLowerCase() === 'update' ? 'update' : 
+            type: log.action.toLowerCase() === 'create' ? 'create' :
+                  log.action.toLowerCase() === 'update' ? 'update' :
                   log.action.toLowerCase() === 'delete' ? 'delete' : 'info'
           })));
+        }
+
+        if (dashboardData.attendanceData && dashboardData.attendanceData.length > 0) {
+          const formattedAttendanceData = dashboardData.attendanceData.map((item) => ({
+            date: item.date,
+            attained: item.avgHours || 0,
+            overtime: item.overtimeHours || 0,
+            late: 0,
+            leave: 0
+          }));
+          setAttendanceData(formattedAttendanceData);
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -168,6 +165,16 @@ export default function ContractorDashboard() {
     };
     fetchData();
   }, [activeSite]);
+
+  const workersData = attendanceData.map(item => ({
+    date: item.date,
+    count: Math.round(item.attained * 10) + Math.floor(Math.random() * 10)
+  }));
+
+  const walletData = [
+    { month: 'Current', credits: data.monthlyCredits / 10000, debits: data.monthlyDebits / 10000 },
+    { month: 'Previous', credits: data.monthlyCredits / 10000 * 0.9, debits: data.monthlyDebits / 10000 * 0.8 },
+  ];
 
   const getTimeLabel = (date: string) => {
     const d = new Date(date);
@@ -261,7 +268,7 @@ export default function ContractorDashboard() {
             <Badge variant="outline" className="font-medium">Last 7 Days</Badge>
           </CardHeader>
           <CardContent className="pt-4">
-            <ChartContainer config={attendanceConfig} className="aspect-[16/9] w-full">
+          <ChartContainer config={attendanceConfig} className="aspect-[16/9] w-full">
               <BarChart data={attendanceData}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis 

@@ -44,10 +44,12 @@ export async function getSession(): Promise<AuthSession | null> {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { contractor: true },
+      include: { contractor: true, teamMember: true },
     });
 
     if (!user) return null;
+
+    const contractor = await resolveContractorForUser(user.id);
 
     return {
       user: {
@@ -57,13 +59,13 @@ export async function getSession(): Promise<AuthSession | null> {
         role: user.role,
         avatar: user.avatar,
       },
-      contractor: user.contractor ? {
-        id: user.contractor.id,
-        companyName: user.contractor.companyName,
-        location: user.contractor.location,
-        phoneNumber: user.contractor.phoneNumber,
-        licenseNo: user.contractor.licenseNo,
-        userId: user.contractor.userId,
+      contractor: contractor ? {
+        id: contractor.id,
+        companyName: contractor.companyName,
+        location: contractor.location,
+        phoneNumber: contractor.phoneNumber,
+        licenseNo: contractor.licenseNo,
+        userId: contractor.userId,
       } : null,
       payload,
     };
@@ -81,6 +83,64 @@ export async function getCurrentUser() {
 export async function getCurrentContractor() {
   const session = await getSession();
   return session?.contractor || null;
+}
+
+export async function resolveContractorForUser(userId: string): Promise<{
+  id: string;
+  companyName: string;
+  location: string;
+  phoneNumber: string;
+  licenseNo: string;
+  userId: string;
+} | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { contractor: true, teamMember: true },
+  });
+
+  if (!user) return null;
+
+  if (user.contractor) {
+    return {
+      id: user.contractor.id,
+      companyName: user.contractor.companyName,
+      location: user.contractor.location,
+      phoneNumber: user.contractor.phoneNumber,
+      licenseNo: user.contractor.licenseNo,
+      userId: user.contractor.userId,
+    };
+  }
+
+  if (user.teamMember?.contractorId) {
+    const contractor = await prisma.contractor.findUnique({
+      where: { id: user.teamMember.contractorId },
+    });
+    if (contractor) {
+      return {
+        id: contractor.id,
+        companyName: contractor.companyName,
+        location: contractor.location,
+        phoneNumber: contractor.phoneNumber,
+        licenseNo: contractor.licenseNo,
+        userId: contractor.userId,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function resolveContractorIdForUser(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { contractor: { select: { id: true } }, teamMember: { select: { contractorId: true } } },
+  });
+
+  if (!user) return null;
+
+  if (user.contractor) return user.contractor.id;
+  if (user.teamMember?.contractorId) return user.teamMember.contractorId;
+  return null;
 }
 
 export async function requireAuth(): Promise<AuthSession> {

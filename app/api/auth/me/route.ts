@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 import { getPermissions } from '@/lib/rbac';
+import { resolveContractorForUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,19 +19,20 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      include: { contractor: true },
+      include: { contractor: true, teamMember: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
+    const contractor = await resolveContractorForUser(user.id);
     const permissions = await getPermissions(user.id);
 
     let sites: Array<{ id: string; name: string; location: string; status: string; isPrimary: boolean; projectId: string | null }> = [];
-    if (user.contractor) {
+    if (contractor) {
       sites = await prisma.site.findMany({
-        where: { contractorId: user.contractor.id },
+        where: { contractorId: contractor.id },
         select: {
           id: true,
           name: true,
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const needsOnboarding = user.contractor ? sites.length === 0 : false;
+    const needsOnboarding = contractor ? sites.length === 0 : false;
 
     return NextResponse.json({
       user: {
@@ -53,13 +55,13 @@ export async function GET(request: NextRequest) {
         avatar: user.avatar,
         permissions,
       },
-      contractor: user.contractor ? {
-        id: user.contractor.id,
-        companyName: user.contractor.companyName,
-        location: user.contractor.location,
-        phoneNumber: user.contractor.phoneNumber,
-        licenseNo: user.contractor.licenseNo,
-        userId: user.contractor.userId,
+      contractor: contractor ? {
+        id: contractor.id,
+        companyName: contractor.companyName,
+        location: contractor.location,
+        phoneNumber: contractor.phoneNumber,
+        licenseNo: contractor.licenseNo,
+        userId: contractor.userId,
       } : null,
       sites,
       selectedSiteId: sites.find(s => s.isPrimary)?.id || (sites.length > 0 ? sites[0].id : null),
