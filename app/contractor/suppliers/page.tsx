@@ -19,7 +19,10 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  FileDown
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -63,6 +66,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { exportToCSV, exportToPDF } from '@/lib/export';
 
 interface Supplier {
   id: string;
@@ -170,6 +174,36 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    const data = suppliers.map(s => ({
+      'Name': s.name,
+      'Contact Person': s.contactPerson || '',
+      'Email': s.email || '',
+      'Phone': s.phone || '',
+      'Address': s.address || '',
+      'City': s.city || '',
+      'Country': s.country || '',
+      'Website': s.website || '',
+    }));
+    exportToCSV(data, `suppliers-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Name', 'Contact Person', 'Email', 'Phone', 'Address', 'City', 'Country'];
+    const rows = suppliers.map(s => [
+      s.name,
+      s.contactPerson || 'N/A',
+      s.email || 'N/A',
+      s.phone || 'N/A',
+      s.address || 'N/A',
+      s.city || 'N/A',
+      s.country || 'N/A',
+    ]);
+    exportToPDF('Suppliers', headers, rows, `suppliers-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -201,12 +235,30 @@ export default function SuppliersPage() {
             <p className="text-muted-foreground mt-1 text-sm italic">Manage relationships with your construction material and equipment providers.</p>
           </div>
         </div>
-        <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
-          <Link href="/contractor/suppliers/create">
-            <Plus className="w-4 h-4" />
-            <span>Add Supplier</span>
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={suppliers.length === 0}>
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="w-4 h-4" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                <FileDown className="w-4 h-4" /> Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
+            <Link href="/contractor/suppliers/create">
+              <Plus className="w-4 h-4" />
+              <span>Add Supplier</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="border-none shadow-md overflow-hidden">

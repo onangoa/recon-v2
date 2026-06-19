@@ -52,6 +52,8 @@
     "input-otp": "1.4.2",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.564.0",
     "mpesa-servc": "file:../mpesa/mpesa-servc-1.1.0.tgz",
     "next": "16.2.6",

@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 
 interface OrderItem {
   id: string;
@@ -50,6 +51,7 @@ export default function EditPurchaseOrder() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
+  const { activeSite } = useSite();
   const id = params.id as string;
   
   const [formData, setFormData] = useState({
@@ -65,13 +67,14 @@ export default function EditPurchaseOrder() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const isDelivered = formData.status === 'delivered';
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [suppliersRes, inventoryRes, poRes] = await Promise.all([
           fetch('/api/suppliers?limit=100'),
-          fetch('/api/inventory?limit=1000'),
+          fetch(`/api/inventory?limit=1000${activeSite ? `&siteId=${activeSite.id}` : ''}`),
           fetch(`/api/purchase-orders/${id}`)
         ]);
         
@@ -115,7 +118,7 @@ export default function EditPurchaseOrder() {
     };
 
     fetchData();
-  }, [id, toast]);
+  }, [id, toast, activeSite?.id]);
 
   const addItem = () => {
     setItems([...items, {
@@ -177,6 +180,8 @@ export default function EditPurchaseOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isDelivered) return;
+
     if (!formData.supplierId) {
       toast({
         title: "Validation Error",
@@ -267,6 +272,12 @@ export default function EditPurchaseOrder() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-8">
         <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl">
+          {isDelivered && (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <p className="text-sm text-amber-800 font-medium">This purchase order has been delivered and cannot be edited.</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Order Number</label>
@@ -274,7 +285,7 @@ export default function EditPurchaseOrder() {
                 type="text"
                 value={formData.orderNumber}
                 onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDelivered}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -283,7 +294,7 @@ export default function EditPurchaseOrder() {
               <select 
                 value={formData.supplierId}
                 onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDelivered}
                 className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               >
                 <option value="">Select Supplier</option>
@@ -301,7 +312,7 @@ export default function EditPurchaseOrder() {
                 type="date"
                 value={formData.orderDate}
                 onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDelivered}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -311,7 +322,7 @@ export default function EditPurchaseOrder() {
                 type="date"
                 value={formData.expectedDeliveryDate}
                 onChange={(e) => setFormData({ ...formData, expectedDeliveryDate: e.target.value })}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDelivered}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -345,7 +356,7 @@ export default function EditPurchaseOrder() {
                         <select
                           value={item.materialId || ''}
                           onChange={(e) => updateItem(item.id, 'materialId', e.target.value)}
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isDelivered}
                           className="w-full rounded border-gray-300 text-xs focus:ring-primary focus:border-primary"
                         >
                           <option value="">Manual Entry</option>
@@ -360,7 +371,7 @@ export default function EditPurchaseOrder() {
                           value={item.description}
                           onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                           placeholder="Description"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isDelivered}
                           className="w-full rounded border-gray-300 text-xs focus:ring-primary focus:border-primary"
                         />
                       </td>
@@ -370,7 +381,7 @@ export default function EditPurchaseOrder() {
                           value={item.quantity}
                           onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
                           min="1"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || isDelivered}
                           className="w-full rounded border-gray-300 text-xs text-center focus:ring-primary focus:border-primary"
                         />
                       </td>
@@ -391,7 +402,7 @@ export default function EditPurchaseOrder() {
                               type="button"
                               onClick={() => updateItem(item.id, 'manualPrice', true)}
                               className="text-xs text-primary hover:underline disabled:opacity-50"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || isDelivered}
                               title="Click to manually edit price"
                             >
                               Edit
@@ -408,7 +419,7 @@ export default function EditPurchaseOrder() {
                                 }
                               }}
                               className="text-xs text-primary hover:underline disabled:opacity-50"
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || isDelivered}
                               title="Click to reset to inventory price"
                             >
                               Reset
@@ -455,7 +466,7 @@ export default function EditPurchaseOrder() {
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Enter any additional notes"
               rows={3}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDelivered}
               className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
@@ -463,7 +474,7 @@ export default function EditPurchaseOrder() {
           <div className="flex gap-4 pt-6 border-t border-gray-100">
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDelivered}
               className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
             >
               {isSubmitting ? (

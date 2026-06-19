@@ -6,7 +6,7 @@ import {
   Package, 
   Plus, 
   Search, 
-  RotateCcw, 
+  RotateCcw,
   ChevronRight,
   MoreVertical,
   Layers,
@@ -18,7 +18,11 @@ import {
   ChevronLeft,
   CheckCircle2,
   MinusCircle,
-  Eye
+  Eye,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  FileDown
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -74,6 +78,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useSite } from '@/hooks/use-site';
+import { exportToCSV, exportToPDF } from '@/lib/export';
+import CsvImportDialog from '@/components/csv-import-dialog';
 
 interface InventoryItem {
   id: string;
@@ -112,6 +118,7 @@ export default function InventoryPage() {
   const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Usage recording states
   const [itemForUsage, setItemForUsage] = useState<InventoryItem | null>(null);
@@ -251,6 +258,37 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    const data = inventory.map(item => ({
+      'Name': item.name,
+      'Category': item.category?.name || 'Uncategorized',
+      'Quantity': String(item.quantity),
+      'Unit': item.unit,
+      'Min Stock': String(item.minStock),
+      'SKU': item.sku || '',
+      'Status': item.status,
+      'Site': item.site.name,
+    }));
+    exportToCSV(data, `inventory-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Name', 'Category', 'Qty', 'Unit', 'Min Stock', 'SKU', 'Status', 'Site'];
+    const rows = inventory.map(item => [
+      item.name,
+      item.category?.name || 'N/A',
+      String(item.quantity),
+      item.unit,
+      String(item.minStock),
+      item.sku || 'N/A',
+      item.status,
+      item.site.name,
+    ]);
+    exportToPDF('Inventory', headers, rows, `inventory-${new Date().toISOString().split('T')[0]}`, { 2: { halign: 'center' }, 4: { halign: 'center' } });
+    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
+  };
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -271,6 +309,22 @@ export default function InventoryPage() {
           <p className="text-muted-foreground mt-1 text-sm italic">Track and manage site materials and equipment stock levels.</p>
         </div>
         <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={inventory.length === 0}>
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="w-4 h-4" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                <FileDown className="w-4 h-4" /> Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/contractor/inventory/categories">
               <Layers className="w-4 h-4" />
@@ -282,6 +336,10 @@ export default function InventoryPage() {
               <Plus className="w-4 h-4" />
               <span>Add Item</span>
             </Link>
+          </Button>
+          <Button variant="outline" className="gap-2" disabled={!activeSite} onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="w-4 h-4" />
+            <span>Import CSV</span>
           </Button>
         </div>
       </div>
@@ -561,6 +619,31 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        title="Inventory Items"
+        description="Upload a CSV file to bulk import inventory items. Download the template for the required format."
+        columns={[
+          { key: 'name', label: 'Name', required: true },
+          { key: 'quantity', label: 'Quantity', required: true },
+          { key: 'unit', label: 'Unit', required: true },
+          { key: 'minStock', label: 'Min Stock', required: false },
+          { key: 'sku', label: 'SKU', required: false },
+          { key: 'description', label: 'Description', required: false },
+          { key: 'status', label: 'Status', required: false },
+          { key: 'categoryId', label: 'Category ID', required: false },
+        ]}
+        templateRows={[
+          { name: 'Cement Bags', quantity: '500', unit: 'bags', minStock: '100', sku: 'CMT-001', description: 'Portland cement', status: 'In Stock', categoryId: '' },
+          { name: 'Steel Rods', quantity: '200', unit: 'pieces', minStock: '50', sku: 'STL-002', description: 'Reinforcement steel', status: 'In Stock', categoryId: '' },
+        ]}
+        endpoint="/api/inventory/import"
+        requestBodyKey="items"
+        extraBody={activeSite ? { siteId: activeSite.id } : undefined}
+        onSuccess={() => { fetchInventory(); toast({ title: "Import Complete", description: "Inventory items imported successfully", variant: "success" }); }}
+      />
     </div>
   );
 }

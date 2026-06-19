@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
-  RotateCcw, 
+  RotateCcw,
   ChevronRight,
   MoreVertical,
   Layers,
@@ -16,7 +16,8 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
-  CheckCircle2
+  CheckCircle2,
+  Upload
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -61,6 +62,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import CsvImportDialog from '@/components/csv-import-dialog';
 
 interface Category {
   id: string;
@@ -92,6 +94,7 @@ export default function InventoryCategoriesPage() {
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -204,7 +207,11 @@ export default function InventoryCategoriesPage() {
             <span>Add Category</span>
           </Link>
         </Button>
-      </div>
+        <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
+          <Upload className="w-4 h-4" />
+          <span>Import CSV</span>
+        </Button>
+       </div>
 
       <Card className="border-none shadow-md overflow-hidden">
         <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
@@ -397,6 +404,25 @@ export default function InventoryCategoriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        title="Inventory Categories"
+        description="Upload a CSV file to bulk import inventory categories. Download the template for the required format."
+        columns={[
+          { key: 'name', label: 'Name', required: true },
+          { key: 'description', label: 'Description', required: false },
+          { key: 'parentId', label: 'Parent Category ID', required: false },
+        ]}
+        templateRows={[
+          { name: 'Building Materials', description: 'Cement, sand, gravel, bricks', parentId: '' },
+          { name: 'Electrical Supplies', description: 'Wiring, switches, panels', parentId: '' },
+        ]}
+        endpoint="/api/inventory/categories/import"
+        requestBodyKey="categories"
+        onSuccess={() => { fetchCategories(); toast({ title: "Import Complete", description: "Categories imported successfully", variant: "success" }); }}
+      />
     </div>
   );
 }

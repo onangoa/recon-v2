@@ -129,13 +129,10 @@ export async function PUT(
             details: {
               deleteMany: {},
               create: calc.componentDetails.map(d => ({
-                salaryComponentId: d.salaryComponentId,
-                componentName: d.componentName,
-                componentType: d.componentType,
-                deductionType: d.deductionType,
+                name: d.componentName,
+                type: d.componentType,
+                amount: d.amount || 0,
                 isStatutory: d.isStatutory,
-                amount: d.amount,
-                percentage: d.percentage,
               }))
             }
           },
@@ -155,13 +152,10 @@ export async function PUT(
             status: 'processed',
             details: {
               create: calc.componentDetails.map(d => ({
-                salaryComponentId: d.salaryComponentId,
-                componentName: d.componentName,
-                componentType: d.componentType,
-                deductionType: d.deductionType,
+                name: d.componentName,
+                type: d.componentType,
+                amount: d.amount || 0,
                 isStatutory: d.isStatutory,
-                amount: d.amount,
-                percentage: d.percentage,
               }))
             }
           }

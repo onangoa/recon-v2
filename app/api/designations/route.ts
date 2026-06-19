@@ -6,11 +6,39 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contractorId = searchParams.get('contractorId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const skip = (page - 1) * limit;
 
-    const designations = await prisma.designation.findMany({
-      where: contractorId ? { contractorId } : {},
+    const where: any = contractorId ? { contractorId } : {};
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search } },
+        { description: { contains: search } },
+      ];
+    }
+
+    const [designations, total] = await Promise.all([
+      prisma.designation.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.designation.count({ where })
+    ]);
+
+    return NextResponse.json({
+      designations,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
     });
-    return NextResponse.json(designations);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch designations' }, { status: 500 });
   }

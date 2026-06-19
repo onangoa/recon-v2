@@ -82,6 +82,7 @@ model Contractor {
   subscriptionPlan        SubscriptionPlan         @relation(fields: [subscriptionPlanId], references: [id])
   designations            Designation[]
   notificationPreferences NotificationPreference[]
+  inventoryCategories   InventoryCategory[]
   payrollPeriods          PayrollPeriod[]
   projects                Project[]
   roles                   Role[]
@@ -506,13 +507,16 @@ model InventoryCategory {
   name          String
   description   String?
   slug          String?             @unique
+  contractorId  String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   inventory     Inventory[]
   parent        InventoryCategory?  @relation("SubCategories", fields: [parentId], references: [id])
   subCategories InventoryCategory[] @relation("SubCategories")
+  contractor    Contractor?         @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([parentId])
+  @@index([contractorId])
 }
 
 model License {

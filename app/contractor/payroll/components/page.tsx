@@ -57,6 +57,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { 
   Select, 
@@ -67,6 +77,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 import Link from 'next/link';
 
 interface SalaryComponent {
@@ -85,6 +96,7 @@ interface SalaryComponent {
 
 export default function SalaryComponentsPage() {
   const { toast } = useToast();
+  const { activeSite } = useSite();
   const [components, setComponents] = useState<SalaryComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +110,9 @@ export default function SalaryComponentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingComponent, setEditingComponent] = useState<SalaryComponent | null>(null);
+  const [componentToDelete, setComponentToDelete] = useState<SalaryComponent | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -116,7 +131,7 @@ export default function SalaryComponentsPage() {
   const fetchComponents = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/salary-components?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      const response = await fetch(`/api/salary-components?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite?.contractorId ? `&contractorId=${activeSite.contractorId}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch components');
       const data = await response.json();
       setComponents(data.components);
@@ -156,11 +171,14 @@ export default function SalaryComponentsPage() {
           amount: formData.amount ? parseFloat(formData.amount) : null,
           percentage: formData.percentage ? parseFloat(formData.percentage) : null,
           sortOrder: parseInt(formData.sortOrder),
-          contractorId: 'placeholder-id'
+          contractorId: activeSite?.contractorId || null
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save component');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save component');
+      }
 
       toast({ title: "Success", description: `Salary component ${editingComponent ? 'updated' : 'created'} successfully` });
       handleCloseDialog();
@@ -204,6 +222,45 @@ export default function SalaryComponentsPage() {
       isActive: true,
       sortOrder: '0'
     });
+  };
+
+  const handleDelete = async () => {
+    if (!componentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/salary-components/${componentToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete component');
+      }
+
+      toast({
+        title: "Success",
+        description: "Salary component has been removed",
+      });
+      setIsDeleteDialogOpen(false);
+      setComponentToDelete(null);
+      fetchComponents();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete component",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null) return 'N/A';
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   return (
@@ -306,7 +363,15 @@ export default function SalaryComponentsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(comp)}><Pencil className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => {
+                              setComponentToDelete(comp);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -424,6 +489,32 @@ export default function SalaryComponentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Delete Component
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you absolutely sure you want to delete <strong>{componentToDelete?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

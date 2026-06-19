@@ -7,7 +7,7 @@ import {
   Hammer, 
   Plus, 
   Search, 
-  RotateCcw, 
+  RotateCcw,
   MoreVertical,
   Pencil,
   Trash2,
@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Calendar,
   MapPin,
-  Fuel
+  Fuel,
+  Upload
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -66,6 +67,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useSite } from '@/hooks/use-site';
+import CsvImportDialog from '@/components/csv-import-dialog';
 
 interface Equipment {
   id: string;
@@ -102,6 +104,7 @@ export default function EquipmentPage() {
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchEquipment = async () => {
     setIsLoading(true);
@@ -227,6 +230,10 @@ export default function EquipmentPage() {
             <Plus className="w-4 h-4" />
             <span>Add Equipment</span>
           </Link>
+        </Button>
+        <Button variant="outline" className="gap-2" disabled={!activeSite} onClick={() => setIsImportDialogOpen(true)}>
+          <Upload className="w-4 h-4" />
+          <span>Import CSV</span>
         </Button>
       </div>
 
@@ -419,6 +426,32 @@ export default function EquipmentPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        title="Equipment"
+        description="Upload a CSV file to bulk import equipment. Download the template for the required format."
+        columns={[
+          { key: 'name', label: 'Name', required: true },
+          { key: 'type', label: 'Type', required: true },
+          { key: 'serialNo', label: 'Serial No', required: false },
+          { key: 'serialNumber', label: 'Serial Number', required: false },
+          { key: 'rentalCost', label: 'Rental Cost', required: false },
+          { key: 'dailyRate', label: 'Daily Rate', required: false },
+          { key: 'status', label: 'Status', required: false },
+          { key: 'lastMaintenanceDate', label: 'Last Service Date', required: false },
+          { key: 'nextMaintenanceDate', label: 'Next Service Date', required: false },
+        ]}
+        templateRows={[
+          { name: 'Excavator CAT 320', type: 'Excavator', serialNo: 'EX-001', serialNumber: 'SN-320-001', rentalCost: '50000', dailyRate: '15000', status: 'Active', lastMaintenanceDate: '2025-01-15', nextMaintenanceDate: '2025-04-15' },
+          { name: 'Concrete Mixer', type: 'Mixer', serialNo: 'MX-002', serialNumber: 'SN-MX-002', rentalCost: '', dailyRate: '5000', status: 'Active', lastMaintenanceDate: '', nextMaintenanceDate: '' },
+        ]}
+        endpoint="/api/equipment/import"
+        requestBodyKey="equipment"
+        extraBody={activeSite ? { siteId: activeSite.id } : undefined}
+        onSuccess={() => { fetchEquipment(); toast({ title: "Import Complete", description: "Equipment imported successfully", variant: "success" }); }}
+      />
     </div>
   );
 }

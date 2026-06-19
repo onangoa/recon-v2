@@ -60,6 +60,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
     }
 
+    const existingPO = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!existingPO) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    if (existingPO.status === 'delivered') {
+      return NextResponse.json({ error: 'Cannot edit a delivered purchase order' }, { status: 400 });
+    }
+
     // Start a transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       // 0. Get the current status to check for transitions
@@ -178,7 +191,15 @@ export async function DELETE(
       include: { site: true }
     });
 
-    if (purchaseOrder && purchaseOrder.site) {
+    if (!purchaseOrder) {
+      return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
+    }
+
+    if (purchaseOrder.status === 'delivered') {
+      return NextResponse.json({ error: 'Cannot delete a delivered purchase order' }, { status: 400 });
+    }
+
+    if (purchaseOrder.site) {
       await ActivityLogger.log({
         userId: 'system',
         contractorId: contractor.id,

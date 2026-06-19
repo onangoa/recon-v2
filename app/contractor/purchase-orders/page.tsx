@@ -20,7 +20,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  PackageCheck
+  PackageCheck,
+  FileSpreadsheet,
+  FileDown
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -68,6 +70,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useSite } from '@/hooks/use-site';
+import { exportToCSV, exportToPDF } from '@/lib/export';
 
 interface PurchaseOrder {
   id: string;
@@ -173,6 +176,33 @@ export default function PurchaseOrdersList() {
     }
   };
 
+  const handleExportCSV = () => {
+    const data = orders.map(o => ({
+      'Order Number': o.orderNumber,
+      'Supplier': o.supplier.name,
+      'Items': o.items.length,
+      'Total (KES)': o.total.toLocaleString(),
+      'Date': new Date(o.orderDate).toLocaleDateString(),
+      'Status': o.status,
+    }));
+    exportToCSV(data, `purchase-orders-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['PO #', 'Supplier', 'Items', 'Total (KES)', 'Date', 'Status'];
+    const rows = orders.map(o => [
+      o.orderNumber,
+      o.supplier.name,
+      String(o.items.length),
+      o.total.toLocaleString(),
+      new Date(o.orderDate).toLocaleDateString(),
+      o.status.toUpperCase(),
+    ]);
+    exportToPDF('Purchase Orders', headers, rows, `purchase-orders-${new Date().toISOString().split('T')[0]}`, { 2: { halign: 'center' }, 3: { halign: 'right' } });
+    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -195,10 +225,22 @@ export default function PurchaseOrdersList() {
           <p className="text-muted-foreground mt-1 text-sm italic">Generate and track official purchase orders for materials and services.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2 h-10">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 h-10" disabled={orders.length === 0}>
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="w-4 h-4" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                <FileDown className="w-4 h-4" /> Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white h-10 shadow-sm">
             <Link href="/contractor/purchase-orders/create">
               <Plus className="w-4 h-4" />
@@ -312,6 +354,7 @@ export default function PurchaseOrdersList() {
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
                             onClick={() => router.push(`/contractor/purchase-orders/edit/${order.id}`)}
+                            disabled={order.status === 'delivered'}
                           >
                             <Pencil className="size-4" /> Edit Order
                           </DropdownMenuItem>
@@ -322,6 +365,7 @@ export default function PurchaseOrdersList() {
                               setOrderToDelete(order);
                               setIsDeleteDialogOpen(true);
                             }}
+                            disabled={order.status === 'delivered'}
                           >
                             <Trash2 className="size-4" /> Delete Order
                           </DropdownMenuItem>

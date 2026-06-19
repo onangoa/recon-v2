@@ -1,24 +1,38 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyAuth } from '@/lib/auth-middleware';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAuth(request);
+    if (!auth.authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '100');
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
-        { name: { contains: search } },
-        { description: { contains: search } },
-      ],
-    } : {};
+    const where: any = {};
+
+    const contractorFilter = auth.contractorId
+      ? { OR: [{ contractorId: auth.contractorId }, { contractorId: null }] }
+      : {};
+
+    const searchFilter = search
+      ? { OR: [{ name: { contains: search } }, { description: { contains: search } }] }
+      : {};
+
+    const combinedWhere = {
+      ...contractorFilter,
+      ...searchFilter,
+    };
 
     const [categories, total] = await Promise.all([
       prisma.inventoryCategory.findMany({
-        where,
+        where: combinedWhere,
         include: {
           parent: true,
           subCategories: true,
@@ -32,7 +46,7 @@ export async function GET(request: Request) {
         skip,
         take: limit,
       }),
-      prisma.inventoryCategory.count({ where })
+      prisma.inventoryCategory.count({ where: combinedWhere })
     ]);
 
     return NextResponse.json({
@@ -50,8 +64,13 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyAuth(request);
+    if (!auth.authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     
     if (!body.name) {
@@ -63,6 +82,7 @@ export async function POST(request: Request) {
         name: body.name,
         description: body.description,
         parentId: body.parentId || null,
+        contractorId: auth.contractorId || null,
       },
       include: {
         parent: true

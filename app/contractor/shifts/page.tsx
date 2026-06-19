@@ -35,6 +35,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useSite } from '@/hooks/use-site';
 import { useToast } from '@/hooks/use-toast';
 
@@ -59,6 +69,9 @@ export default function ShiftsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [shiftToDelete, setShiftToDelete] = useState<Shift | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -165,14 +178,22 @@ export default function ShiftsPage() {
   };
 
   const handleDeleteShift = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this shift?')) return;
+    setShiftToDelete(shifts.find(s => s.id === id) || null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteShift = async () => {
+    if (!shiftToDelete) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/shifts/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/shifts/${shiftToDelete.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete shift');
       toast({
         title: 'Success',
         description: 'Shift deleted'
       });
+      setIsDeleteDialogOpen(false);
+      setShiftToDelete(null);
       fetchShifts();
     } catch (error) {
       console.error(error);
@@ -181,6 +202,8 @@ export default function ShiftsPage() {
         description: 'Failed to delete shift',
         variant: 'destructive'
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -356,6 +379,8 @@ export default function ShiftsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                      </DropdownMenu>
+                    </div>
                     
                     <div className="space-y-3 mt-4">
                       <div className="flex items-center justify-between text-sm">
@@ -390,10 +415,36 @@ export default function ShiftsPage() {
                   </div>
                 </Card>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+             </div>
+           )}
+         </CardContent>
+       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Delete Shift
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you absolutely sure you want to delete <strong>{shiftToDelete?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDeleteShift();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

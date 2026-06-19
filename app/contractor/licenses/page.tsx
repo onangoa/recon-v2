@@ -314,6 +314,11 @@ export default function LicensesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                            <Link href={`/contractor/licenses/edit/${license.id}`}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </Link>
+                          </DropdownMenuItem>
                           {license.fileData && (
                             <DropdownMenuItem 
                               className="gap-2 cursor-pointer"

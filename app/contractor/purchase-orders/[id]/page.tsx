@@ -91,6 +91,7 @@ export default function PurchaseOrderView() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const fetchOrder = async () => {
     setIsLoading(true);
@@ -172,6 +173,32 @@ export default function PurchaseOrderView() {
     }
   };
 
+  const downloadPdf = async () => {
+    if (!order) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/purchase-orders/${order.id}/pdf`);
+      if (!response.ok) throw new Error('Failed to generate PDF');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PO-${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to download PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -232,16 +259,20 @@ export default function PurchaseOrderView() {
               <span>Mark as Delivered</span>
             </Button>
           )}
-          <Button variant="outline" className="gap-2" asChild>
-            <Link href={`/contractor/purchase-orders/edit/${order.id}`}>
-              <Pencil className="w-4 h-4" />
-              <span>Edit</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="gap-2 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="w-4 h-4" />
-            <span>Delete</span>
-          </Button>
+          {order.status !== 'delivered' && (
+            <Button variant="outline" className="gap-2" asChild>
+              <Link href={`/contractor/purchase-orders/edit/${order.id}`}>
+                <Pencil className="w-4 h-4" />
+                <span>Edit</span>
+              </Link>
+            </Button>
+          )}
+          {order.status !== 'delivered' && (
+            <Button variant="outline" className="gap-2 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -373,9 +404,9 @@ export default function PurchaseOrderView() {
                 </div>
               )}
               <div className="pt-4 border-t">
-                <Button variant="outline" className="w-full gap-2 h-10 border-primary/20 hover:bg-primary/5 text-primary transition-colors">
-                  <Download className="w-4 h-4" />
-                  <span>Download PO PDF</span>
+                <Button variant="outline" className="w-full gap-2 h-10 border-primary/20 hover:bg-primary/5 text-primary transition-colors" onClick={downloadPdf} disabled={isDownloading}>
+                  {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  <span>{isDownloading ? 'Generating...' : 'Download PO PDF'}</span>
                 </Button>
               </div>
             </CardContent>
