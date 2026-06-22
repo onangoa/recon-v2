@@ -1,22 +1,28 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth, mobileSuccessOk } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
-  const machine = await prisma.equipment.findUnique({ where: { id } });
-  if (!machine) return mobileError('Machine not found', 404);
+  const machine = await prisma.equipment.findUnique({
+    where: { id },
+    include: { site: true },
+  });
+  if (!machine) return Response.json({ success: false, message: 'Machine not found' }, { status: 404 });
 
-  return mobileSuccess({
+  return mobileSuccessOk({
     id: machine.id,
     name: machine.name,
     model: machine.serialNo,
     registration_number: machine.serialNumber,
-    condition_key: machine.status,
-    type_key: machine.type,
+    type: machine.type,
+    condition: machine.status,
+    site: machine.site ? { id: machine.site.id, title: machine.site.name } : null,
     site_id: machine.siteId,
     daily_rate: machine.dailyRate,
     rental_cost: machine.rentalCost,
@@ -29,7 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
   const body = await request.json();
@@ -43,19 +51,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.rental_cost !== undefined) data.rentalCost = body.rental_cost;
 
   const machine = await prisma.equipment.update({ where: { id }, data });
-  return mobileSuccess({
-    id: machine.id,
-    name: machine.name,
-    condition_key: machine.status,
-    type_key: machine.type,
-  }, 'Machine updated successfully');
+  return Response.json({
+    success: true,
+    message: 'Machine updated successfully.',
+    machine: { id: machine.id, name: machine.name, type: machine.type, condition: machine.status },
+  });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
   await prisma.equipment.delete({ where: { id } });
-  return mobileSuccess(null, 'Machine deleted successfully');
+  return Response.json({ success: true, message: 'Machine deleted successfully.' });
 }

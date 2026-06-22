@@ -1,14 +1,16 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ walletId: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { walletId } = await params;
 
   const wallet = await prisma.wallet.findUnique({ where: { id: walletId } });
-  if (!wallet) return mobileError('Wallet not found', 404);
+  if (!wallet) return Response.json({ success: false, message: 'Wallet not found' }, { status: 404 });
 
   const page = parseInt(request.nextUrl.searchParams.get('page') || '1');
   const limit = parseInt(request.nextUrl.searchParams.get('limit') || '20');
@@ -24,19 +26,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     prisma.transaction.count({ where: { walletId } }),
   ]);
 
-  return mobileSuccess({
-    data: transactions.map(t => ({
+  return Response.json({
+    total,
+    rows: transactions.map(t => ({
       id: t.id,
       amount: t.amount,
       type: t.type,
       description: t.description,
       status: t.status,
       reference: t.reference,
-      receipt_number: t.mpesaReceiptNumber || t.receiptNumber,
-      phone_number: t.phoneNumber,
-      transaction_type: t.transactionType,
+      receipt_number: t.mpesaReceiptNumber || t.receiptNumber || null,
+      phone_number: t.phoneNumber || null,
+      transaction_type: t.transactionType || null,
       created_at: t.createdAt,
     })),
-    meta: { page, limit, total },
   });
 }

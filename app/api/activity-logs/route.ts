@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId || auth.companyId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: true, message: 'Company not found.' }, { status: 400 });
 
   const page = parseInt(request.nextUrl.searchParams.get('page') || '1');
   const limit = parseInt(request.nextUrl.searchParams.get('limit') || '20');
@@ -28,17 +30,25 @@ export async function GET(request: NextRequest) {
     prisma.activityLog.count({ where }),
   ]);
 
-  return mobileSuccess({
+  return Response.json({
+    error: false,
+    message: 'Activity logs retrieved successfully',
     data: logs.map(l => ({
       id: l.id,
-      action: l.action,
-      module: l.module,
-      description: l.description,
-      target_id: l.targetId,
-      details: l.details,
-      user: l.user,
+      actor_id: l.user?.id || null,
+      actor_name: l.user?.name || 'System',
+      actor_type: l.user ? 'user' : 'system',
+      type_id: l.targetId || null,
+      parent_type_id: null,
+      type: l.module || l.action,
+      parent_type: null,
+      type_title: l.module || null,
+      parent_type_title: null,
+      activity: l.action,
+      message: l.description || l.action,
       created_at: l.createdAt,
+      updated_at: l.updatedAt,
     })),
-    meta: { page, limit, total },
+    total,
   });
 }

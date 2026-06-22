@@ -1,16 +1,18 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ transactionId: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { transactionId } = await params;
 
   const transaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
-  if (!transaction) return mobileError('Transaction not found', 404);
+  if (!transaction) return Response.json({ success: false, message: 'Transaction not found' }, { status: 404 });
 
-  return mobileSuccess({
+  return Response.json({
     id: transaction.id,
     amount: transaction.amount,
     type: transaction.type,

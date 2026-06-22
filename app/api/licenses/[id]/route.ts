@@ -1,35 +1,41 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth, cuidToInt } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
   const { id } = await params;
 
-  const license = await prisma.license.findUnique({ where: { id } });
-  if (!license) return mobileError('License not found', 404);
+  const license = await prisma.license.findUnique({ where: { id }, include: { site: true } });
+  if (!license) return Response.json({ error: true, message: 'License not found.' }, { status: 404 });
 
-  return mobileSuccess({
-    id: license.id,
-    name: license.name,
-    license_type: license.type,
-    license_number: license.licenseNumber,
-    issuing_authority: license.issuingAuthority,
-    issue_date: license.issueDate,
-    expiry_date: license.expiryDate,
-    category: license.category,
-    status: license.status,
-    site_id: license.siteId,
-    has_file: !!(license.fileName && license.fileData),
-    created_at: license.createdAt,
-    updated_at: license.updatedAt,
+  return Response.json({
+    error: false,
+    data: {
+      id: license.id,
+      license_number: license.licenseNumber,
+      license_type: license.type,
+      license_type_raw: license.type,
+      issuing_authority: license.issuingAuthority,
+      site: license.site ? { id: license.siteId, title: license.site.name } : null,
+      issue_date: license.issueDate,
+      expiry_date: license.expiryDate,
+      license_status: license.status,
+      document_path: license.fileName || null,
+      created_at: license.createdAt,
+      updated_at: license.updatedAt,
+    },
   });
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
   const { id } = await params;
 
   const body = await request.json();
@@ -43,19 +49,39 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.category !== undefined) data.category = body.category;
   if (body.status !== undefined) data.status = body.status;
 
-  const license = await prisma.license.update({ where: { id }, data });
-  return mobileSuccess({
+  const license = await prisma.license.update({ where: { id }, data, include: { site: true } });
+
+  return Response.json({
+    error: false,
+    message: 'License updated successfully.',
     id: license.id,
-    name: license.name,
-    license_type: license.type,
-  }, 'License updated successfully');
+    type: 'license',
+    title: license.name,
+    data: {
+      id: license.id,
+      license_number: license.licenseNumber,
+      license_type: license.type,
+      issuing_authority: license.issuingAuthority,
+      site: license.site ? { id: license.siteId, title: license.site.name } : null,
+      issue_date: license.issueDate,
+      expiry_date: license.expiryDate,
+      license_status: license.status,
+      created_at: license.createdAt,
+      updated_at: license.updatedAt,
+    },
+  });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
   const { id } = await params;
 
+  const license = await prisma.license.findUnique({ where: { id } });
+  if (!license) return Response.json({ error: true, message: `License not found1.${id}` }, { status: 404 });
+
   await prisma.license.delete({ where: { id } });
-  return mobileSuccess(null, 'License deleted successfully');
+  return Response.json({ error: false, message: 'License deleted successfully.', id, type: 'license', title: license.name });
 }

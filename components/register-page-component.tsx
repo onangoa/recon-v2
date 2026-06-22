@@ -81,14 +81,18 @@ export function RegisterPageComponent() {
       setFormData(prev => ({ ...prev, ...JSON.parse(savedData) }));
     }
 
-    // Fetch plans
     const fetchPlans = async () => {
       try {
-        const response = await fetch('/web/api/subscription-plans');
+        const response = await fetch('/api/subscriptions/plans');
+        if (!response.ok) {
+          console.error('Failed to fetch plans:', response.status);
+          return;
+        }
         const data = await response.json();
-        setPlans(data);
+        const plansData = Array.isArray(data) ? data : (data.data && Array.isArray(data.data)) ? data.data : [];
+        setPlans(plansData);
       } catch (error) {
-        console.error('Failed to fetch plans');
+        console.error('Failed to fetch plans', error);
       }
     };
     fetchPlans();
@@ -131,14 +135,19 @@ export function RegisterPageComponent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: formData.mpesaNumber,
-          amount: selectedPlan?.price,
+          amount: selectedPlan?.price ?? 0,
           email: formData.email,
           formData: formData,
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to initiate payment');
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Server error. Please try again later.');
+      }
+      if (!response.ok) throw new Error(data?.error || 'Failed to initiate payment');
 
       console.log('Payment initiation response:', data);
 
@@ -165,7 +174,17 @@ export function RegisterPageComponent() {
       try {
         console.log('Polling payment status for:', checkoutRequestId);
         const response = await fetch(`/web/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
-        const data = await response.json();
+        if (!response.ok) {
+          console.error('Payment status check failed:', response.status);
+          return;
+        }
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          console.error('Failed to parse payment status response');
+          return;
+        }
         
         console.log('Payment status response:', data);
 
@@ -253,7 +272,14 @@ export function RegisterPageComponent() {
     setIsCheckingStatus(true);
     try {
       const response = await fetch(`/web/api/payments/status?checkoutRequestId=${checkoutRequestId}`);
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        toast({ title: "Error", description: "Failed to check payment status. Please try again.", variant: "destructive" });
+        setIsCheckingStatus(false);
+        return;
+      }
       
       console.log('Manual status check:', data);
 
@@ -483,7 +509,7 @@ export function RegisterPageComponent() {
                       <Badge variant="outline" className="w-fit mb-2 text-[10px] font-black uppercase tracking-widest border-[#8B4513]/20 text-[#8B4513]">{plan.name}</Badge>
                       <CardTitle className="text-3xl font-black text-[#8B4513]">
                         <span className="text-sm font-medium text-[#5D4037] align-top mt-1 inline-block mr-1">KES</span>
-                        {plan.price.toLocaleString()}
+                        {(Number(plan.price ?? 0)).toLocaleString()}
                         <span className="text-xs font-medium text-[#5D4037] align-bottom ml-1">/mo</span>
                       </CardTitle>
                     </CardHeader>
@@ -491,15 +517,15 @@ export function RegisterPageComponent() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-[#5D4037]">Max Sites</span>
-                          <span className="font-bold text-[#3E2723]">{plan.maxSites}</span>
+                          <span className="font-bold text-[#3E2723]">{plan.maxSites ?? '-'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-[#5D4037]">Max Team</span>
-                          <span className="font-bold text-[#3E2723]">{plan.maxTeamMembers}</span>
+                          <span className="font-bold text-[#3E2723]">{plan.maxTeamMembers ?? '-'}</span>
                         </div>
                       </div>
                       <div className="pt-4 border-t border-[#8B4513]/10 space-y-2">
-                        {JSON.parse(plan.features || '[]').map((feature: string, i: number) => (
+                        {(Array.isArray(plan.features) ? plan.features : (() => { try { return JSON.parse(plan.features || '[]'); } catch { return []; } })()).map((feature: string, i: number) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                             <span>{feature}</span>

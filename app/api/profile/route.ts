@@ -1,38 +1,53 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
-  if (!auth.userId) return mobileError('User not found', 404);
+  if (!auth.userId) return Response.json({ success: false, message: 'User not found' }, { status: 404 });
 
   const user = await prisma.user.findUnique({
     where: { id: auth.userId },
     include: { contractor: true, teamMember: true },
   });
-  if (!user) return mobileError('User not found', 404);
+  if (!user) return Response.json({ success: false, message: 'User not found' }, { status: 404 });
 
   const nameParts = user.name.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
 
-  return mobileSuccess({
-    id: user.id,
-    email: user.email,
-    first_name: nameParts[0] || '',
-    last_name: nameParts.slice(1).join(' ') || '',
-    phone: user.teamMember?.phone || user.contractor?.phoneNumber || null,
-    avatar: user.avatar,
-    role: user.role,
-    company_name: user.contractor?.companyName || null,
+  return Response.json({
+    success: true,
+    message: 'Profile retrieved successfully',
+    data: {
+      id: user.id,
+      first_name: firstName,
+      last_name: lastName,
+      email: user.email,
+      phone: user.teamMember?.phone || user.contractor?.phoneNumber || null,
+      photo_url: user.avatar ? `/storage/${user.avatar}` : '/storage/photos/no-image.jpg',
+      address: null,
+      city: null,
+      state: null,
+      country: null,
+      zip: null,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+    },
   });
 }
 
 export async function PUT(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
-  if (!auth.userId) return mobileError('User not found', 404);
+  if (!auth.userId) return Response.json({ success: false, message: 'User not found' }, { status: 404 });
 
   const body = await request.json();
   const name = [body.first_name, body.last_name].filter(Boolean).join(' ') || undefined;
@@ -54,13 +69,20 @@ export async function PUT(request: NextRequest) {
 
   const nameParts = user.name.split(' ');
 
-  return mobileSuccess({
-    id: user.id,
-    email: user.email,
-    first_name: nameParts[0] || '',
-    last_name: nameParts.slice(1).join(' ') || '',
-    phone: user.teamMember?.phone || user.contractor?.phoneNumber || null,
-    avatar: user.avatar,
-    role: user.role,
-  }, 'Profile updated successfully');
+  return Response.json({
+    success: true,
+    message: 'Profile updated successfully',
+    data: {
+      id: user.id,
+      first_name: nameParts[0] || '',
+      last_name: nameParts.slice(1).join(' ') || '',
+      email: user.email,
+      phone: user.teamMember?.phone || user.contractor?.phoneNumber || null,
+      address: null,
+      city: null,
+      state: null,
+      country: null,
+      zip: null,
+    },
+  });
 }

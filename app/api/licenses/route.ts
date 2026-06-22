@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth, cuidToInt } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId || auth.companyId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: 'No company selected.' }, { status: 400 });
 
   const siteId = request.nextUrl.searchParams.get('site_id') || auth.siteId;
   const siteIds = siteId
@@ -19,36 +21,40 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'desc' },
   });
 
-  return mobileSuccess(licenses.map(l => ({
-    id: l.id,
-    name: l.name,
-    license_type: l.type,
-    license_number: l.licenseNumber,
-    issuing_authority: l.issuingAuthority,
-    issue_date: l.issueDate,
-    expiry_date: l.expiryDate,
-    category: l.category,
-    status: l.status,
-    site_id: l.siteId,
-    has_file: !!(l.fileName && l.fileData),
-    created_at: l.createdAt,
-    updated_at: l.updatedAt,
-  })));
+  return Response.json({
+    rows: licenses.map(l => ({
+      id: l.id,
+      license_number: l.licenseNumber,
+      license_type: l.type,
+      issuing_authority: l.issuingAuthority,
+      site: l.siteId,
+      issue_date: l.issueDate,
+      expiry_date: l.expiryDate,
+      license_status: l.status,
+      obj_status: l.status,
+      created_at: l.createdAt,
+      updated_at: l.updatedAt,
+      actions: '',
+    })),
+    total: licenses.length,
+  });
 }
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: 'No company selected.' }, { status: 400 });
 
   const body = await request.json();
   const siteId = body.site_id || auth.siteId;
-  if (!siteId) return mobileError('site_id is required', 400);
+  if (!siteId) return Response.json({ error: true, message: 'site_id is required' }, { status: 400 });
 
   const site = await prisma.site.findFirst({ where: { id: siteId, contractorId } });
-  if (!site) return mobileError('Site not found', 404);
+  if (!site) return Response.json({ error: true, message: 'Site not found' }, { status: 404 });
 
   const license = await prisma.license.create({
     data: {
@@ -64,12 +70,24 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return mobileSuccess({
+  return Response.json({
+    error: false,
+    message: 'License created successfully.',
     id: license.id,
-    name: license.name,
-    license_type: license.type,
-    license_number: license.licenseNumber,
-    expiry_date: license.expiryDate,
-    site_id: license.siteId,
-  }, 'License created successfully');
+    type: 'license',
+    title: license.name,
+    data: {
+      id: license.id,
+      license_number: license.licenseNumber,
+      license_type: license.type,
+      issuing_authority: license.issuingAuthority,
+      site: { id: license.siteId, title: site.name },
+      issue_date: license.issueDate,
+      expiry_date: license.expiryDate,
+      license_status: license.status,
+      document_path: null,
+      created_at: license.createdAt,
+      updated_at: license.updatedAt,
+    },
+  });
 }

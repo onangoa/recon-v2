@@ -15,6 +15,7 @@ import {
   BreadcrumbPage, 
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
+import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'next/navigation';
 import ProfileTab from './components/profile-tab';
@@ -24,6 +25,14 @@ import SubscriptionTab from './components/subscription-tab';
 import RolesTab from './components/roles-tab';
 
 export default function ContractorSettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><span>Loading...</span></div>}>
+      <ContractorSettingsContent />
+    </Suspense>
+  );
+}
+
+function ContractorSettingsContent() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'profile';
 

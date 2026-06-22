@@ -1,38 +1,40 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
   const component = await prisma.salaryComponent.findUnique({ where: { id } });
-  if (!component) return mobileError('Salary component not found', 404);
+  if (!component) return Response.json({ success: false, message: 'Salary component not found' }, { status: 404 });
 
-  return mobileSuccess({
-    id: component.id,
-    name: component.name,
-    type: component.type,
-    description: component.description,
-    amount: component.amount,
-    is_percentage: component.isPercentage,
-    percentage: component.percentage,
-    calculation_type: component.calculationType,
-    deduction_type: component.deductionType,
-    is_statutory: component.isStatutory,
-    is_taxable: component.isTaxable,
-    sort_order: component.sortOrder,
-    is_recurring: component.isRecurring,
-    is_active: component.isActive,
-    created_at: component.createdAt,
-    updated_at: component.updatedAt,
+  return Response.json({
+    success: true,
+    data: {
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      amount_type: component.calculationType || 'fixed',
+      amount: String(component.amount || 0),
+      percentage: String(component.percentage || 0),
+      is_taxable: component.isTaxable,
+      is_statutory: component.isStatutory,
+      deduction_type: component.deductionType || null,
+      is_active: component.isActive,
+      description: component.description,
+    },
   });
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
   const body = await request.json();
@@ -52,14 +54,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.is_active !== undefined) data.isActive = body.is_active;
 
   const component = await prisma.salaryComponent.update({ where: { id }, data });
-  return mobileSuccess({ id: component.id, name: component.name }, 'Salary component updated successfully');
+  return Response.json({
+    success: true,
+    data: {
+      id: component.id,
+      name: component.name,
+      type: component.type,
+      amount_type: component.calculationType || 'fixed',
+      amount: String(component.amount || 0),
+      percentage: String(component.percentage || 0),
+      is_taxable: component.isTaxable,
+      is_statutory: component.isStatutory,
+      deduction_type: component.deductionType || null,
+      is_active: component.isActive,
+      description: component.description,
+    },
+  });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { id } = await params;
 
   await prisma.salaryComponent.delete({ where: { id } });
-  return mobileSuccess(null, 'Salary component deleted successfully');
+  return Response.json({ success: true, message: 'Salary component deleted successfully' });
 }

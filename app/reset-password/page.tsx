@@ -19,7 +19,7 @@ import {
   CardDescription,
   CardFooter
 } from '@/components/ui/card';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
 import { AuthNavbar } from '@/components/auth-navbar';
@@ -191,5 +191,9 @@ export function ResetPasswordPage() {
 }
 
 export default function ResetPassword() {
-  return <ResetPasswordPage />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><span>Loading...</span></div>}>
+      <ResetPasswordPage />
+    </Suspense>
+  );
 }

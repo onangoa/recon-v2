@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
-import { prisma } from '@/lib/prisma';
+import { mobileAuth, mobileError } from '@/lib/mobile-auth';
 import { revokeAllUserRefreshTokens } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
@@ -9,5 +8,5 @@ export async function POST(request: NextRequest) {
 
   await revokeAllUserRefreshTokens(auth.userId!);
 
-  return mobileSuccess(null, 'Logged out successfully');
+  return Response.json({ success: true, message: 'Logged out successfully' });
 }

@@ -41,16 +41,26 @@ export async function POST(request: NextRequest) {
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
+
+    if (!body.siteId) {
+      return NextResponse.json({ error: 'siteId is required' }, { status: 400 });
+    }
+
+    const site = await prisma.site.findUnique({ where: { id: body.siteId } });
+    if (!site) {
+      return NextResponse.json({ error: 'Site not found' }, { status: 400 });
+    }
+
     const incident = await prisma.safetyIncident.create({
       data: {
         siteId: body.siteId,
-        title: body.title,
-        description: body.description,
-        type: body.type,
-        severity: body.severity,
+        title: body.title || 'Untitled Incident',
+        description: body.description || '',
+        type: body.type || 'other',
+        severity: body.severity || 'low',
         status: body.status || 'Reported',
-        incidentDate: new Date(body.incidentDate),
-        reportedBy: body.reportedBy,
+        incidentDate: body.incidentDate ? new Date(body.incidentDate) : new Date(),
+        reportedBy: body.reportedBy || permCheck.userId || 'unknown',
         attachments: body.attachments,
       },
       include: {

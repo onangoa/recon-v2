@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  allowedDevOrigins: ['d739-41-81-7-105.ngrok-free.app'],
+  allowedDevOrigins: ['61ca-105-160-112-186.ngrok-free.app'],
 }
 
 export default nextConfig

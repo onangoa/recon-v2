@@ -1,17 +1,19 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
   const { id } = await params;
 
   const order = await prisma.purchaseOrder.findUnique({ where: { id } });
-  if (!order) return mobileError('Purchase order not found', 404);
+  if (!order) return Response.json({ error: true, message: 'Purchase order not found.' }, { status: 404 });
 
   if (!['approved', 'processing'].includes(order.status)) {
-    return mobileError('Order must be approved before marking as delivered', 400);
+    return Response.json({ error: true, message: 'Only approved purchase orders can be marked as delivered.' }, { status: 400 });
   }
 
   const updated = await prisma.purchaseOrder.update({
@@ -19,9 +21,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { status: 'delivered' },
   });
 
-  return mobileSuccess({
-    id: updated.id,
-    order_number: updated.orderNumber,
-    status: updated.status,
-  }, 'Purchase order marked as delivered');
+  return Response.json({
+    error: false,
+    message: 'Purchase order marked as delivered successfully. Material delivery entry created.',
+    purchase_order: { id: updated.id, order_number: updated.orderNumber, status: updated.status },
+  });
 }

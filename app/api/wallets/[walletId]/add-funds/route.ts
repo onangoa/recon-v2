@@ -1,18 +1,20 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ walletId: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { walletId } = await params;
 
   const wallet = await prisma.wallet.findUnique({ where: { id: walletId } });
-  if (!wallet) return mobileError('Wallet not found', 404);
+  if (!wallet) return Response.json({ success: false, message: 'Wallet not found' }, { status: 404 });
 
   const body = await request.json();
   const amount = parseFloat(body.amount);
-  if (!amount || amount <= 0) return mobileError('Invalid amount', 400);
+  if (!amount || amount <= 0) return Response.json({ success: false, message: 'Invalid amount' }, { status: 400 });
 
   const transaction = await prisma.transaction.create({
     data: {
@@ -30,12 +32,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { balance: { increment: amount } },
   });
 
-  return mobileSuccess({
-    id: transaction.id,
-    amount: transaction.amount,
-    type: transaction.type,
-    status: transaction.status,
-    reference: transaction.reference,
-    created_at: transaction.createdAt,
-  }, 'Funds added successfully');
+  return Response.json({
+    success: true,
+    message: 'Payment initiated successfully. Please complete the payment on your phone.',
+    data: {
+      transaction_id: transaction.id,
+      checkout_request_id: transaction.reference,
+    },
+  });
 }

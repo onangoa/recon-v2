@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth, mobileSuccessOk } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId || auth.companyId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ success: false, message: 'No company associated' }, { status: 403 });
 
   const siteIds = await prisma.site.findMany({
     where: { contractorId },
@@ -25,24 +27,23 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'desc' },
   });
 
-  return mobileSuccess(suppliers.map(s => ({
+  return Response.json(suppliers.map(s => ({
     id: s.id,
     name: s.name,
     contact_person: s.contactPerson,
     email: s.email,
     phone: s.phone,
-    address: s.address,
-    created_at: s.createdAt,
-    updated_at: s.updatedAt,
   })));
 }
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
   const body = await request.json();
-  if (!body.name) return mobileError('Supplier name is required', 400);
+  if (!body.name) return Response.json({ success: false, message: 'Supplier name is required' }, { status: 400 });
 
   const supplier = await prisma.supplier.create({
     data: {
@@ -54,8 +55,18 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return mobileSuccess({
-    id: supplier.id,
-    name: supplier.name,
-  }, 'Supplier created successfully');
+  return Response.json({
+    success: true,
+    message: 'Supplier created successfully.',
+    supplier: {
+      id: supplier.id,
+      name: supplier.name,
+      contact_person: supplier.contactPerson,
+      email: supplier.email,
+      phone: supplier.phone,
+      address: supplier.address,
+      created_at: supplier.createdAt,
+      updated_at: supplier.updatedAt,
+    },
+  });
 }

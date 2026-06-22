@@ -54,20 +54,27 @@ export function ForgotPasswordPage() {
       });
 
       console.log('Response status:', response.status);
-      const data = await response.json();
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Server error. Please try again later.');
+      }
+
       console.log('Response data:', data);
 
       if (response.ok) {
         toast({
           title: "Reset link sent",
-          description: data.message,
+          description: data?.message || "If an account exists for this email, you will receive reset instructions.",
         });
         setIsSubmitted(true);
         setResendTimer(30);
       } else {
         toast({
           title: "Error",
-          description: data.error || "Something went wrong",
+          description: data?.error || data?.message || "Something went wrong",
           variant: "destructive",
         });
       }

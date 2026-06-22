@@ -1,26 +1,31 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ error: true, message: 'Unauthorized' }, { status: 401 });
+  }
 
   const body = await request.json();
   const { id, needConfirm } = body;
 
-  if (!id) return mobileError('Notification id is required', 400);
+  if (!id) return Response.json({ error: true, message: 'Notification id is required' }, { status: 400 });
 
   const notification = await prisma.notification.findUnique({ where: { id } });
-  if (!notification) return mobileError('Notification not found', 404);
+  if (!notification) return Response.json({ error: true, message: 'Notification not found' }, { status: 404 });
 
+  const newReadStatus = needConfirm ? !notification.isRead : true;
   await prisma.notification.update({
     where: { id },
-    data: { isRead: true },
+    data: { isRead: newReadStatus },
   });
 
-  return mobileSuccess({
-    id: notification.id,
-    is_read: true,
-  }, 'Notification updated successfully');
+  if (needConfirm) {
+    const msg = newReadStatus ? 'Notification marked as read' : 'Notification marked as unread';
+    return Response.json({ error: false, message: msg });
+  }
+
+  return Response.json({ error: false });
 }

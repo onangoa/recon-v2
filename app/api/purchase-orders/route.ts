@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId || auth.companyId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: 'No company selected.' }, { status: 400 });
 
   const siteId = request.nextUrl.searchParams.get('site_id') || auth.siteId;
   const siteIds = siteId
@@ -20,46 +22,43 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'desc' },
   });
 
-  return mobileSuccess(orders.map(o => ({
-    id: o.id,
-    order_number: o.orderNumber,
-    site_id: o.siteId,
-    supplier_id: o.supplierId,
-    supplier_name: o.supplier.name,
-    status: o.status,
-    subtotal: o.subtotal,
-    tax: o.tax,
-    total: o.total,
-    order_date: o.orderDate,
-    expected_delivery_date: o.expectedDeliveryDate,
-    notes: o.notes,
-    items: o.items.map(i => ({
-      id: i.id,
-      description: i.description,
-      quantity: i.quantity,
-      unit_price: i.unitPrice,
-      total_price: i.totalPrice,
+  return Response.json({
+    rows: orders.map(o => ({
+      id: o.id,
+      order_number: o.orderNumber,
+      supplier: o.supplier?.name || null,
+      site: null,
+      total_amount: String(o.total),
+      status: o.status,
+      priority: 'medium',
+      obj_status: o.status,
+      obj_priority: 'medium',
+      delivery_date: o.expectedDeliveryDate,
+      created_at: o.createdAt,
+      updated_at: o.updatedAt,
+      actions: '',
     })),
-    created_at: o.createdAt,
-    updated_at: o.updatedAt,
-  })));
+    total: orders.length,
+  });
 }
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: 'No company selected.' }, { status: 400 });
 
   const body = await request.json();
   const siteId = body.site_id || auth.siteId;
-  if (!siteId) return mobileError('site_id is required', 400);
+  if (!siteId) return Response.json({ error: true, message: 'site_id is required' }, { status: 400 });
 
   const site = await prisma.site.findFirst({ where: { id: siteId, contractorId } });
-  if (!site) return mobileError('Site not found', 404);
+  if (!site) return Response.json({ error: true, message: 'Site not found' }, { status: 404 });
 
-  if (!body.supplier_id) return mobileError('supplier_id is required', 400);
+  if (!body.supplier_id) return Response.json({ error: true, message: 'supplier_id is required' }, { status: 400 });
 
   const items = body.items || [];
   const subtotal = items.reduce((sum: number, i: any) => sum + (i.total_price || i.quantity * i.unit_price), 0);
@@ -88,14 +87,20 @@ export async function POST(request: NextRequest) {
         })),
       },
     },
-    include: { items: true },
+    include: { supplier: true, items: true },
   });
 
-  return mobileSuccess({
-    id: order.id,
-    order_number: order.orderNumber,
-    status: order.status,
-    total: order.total,
-    items: order.items.map(i => ({ id: i.id, description: i.description })),
-  }, 'Purchase order created successfully');
+  return Response.json({
+    error: false,
+    message: 'Purchase order created successfully.',
+    purchase_order: {
+      id: order.id,
+      order_number: order.orderNumber,
+      status: order.status,
+      total: order.total,
+      supplier: { id: order.supplier?.id, name: order.supplier?.name },
+      site: { id: order.siteId },
+      items: order.items.map(i => ({ id: i.id, description: i.description, quantity: i.quantity, unit_price: i.unitPrice, total_price: i.totalPrice })),
+    },
+  });
 }

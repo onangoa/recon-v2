@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -80,6 +80,14 @@ interface PendingTransaction {
 }
 
 export default function ApprovalsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+      <ApprovalsContent />
+    </Suspense>
+  );
+}
+
+function ApprovalsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const walletId = searchParams.get('walletId');

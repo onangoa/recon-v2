@@ -62,13 +62,48 @@ export async function mobileAuth(request: NextRequest): Promise<MobileAuthResult
   };
 }
 
+export function cuidToInt(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash) + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 export function mobileSuccess(data: any, message?: string) {
   return Response.json({ error: false, message: message || 'Success', data }, { status: 200 });
 }
 
 export function mobileError(message: string, status: number = 400) {
   if (status === 401) {
-    return Response.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+    return Response.json({ message: 'Unauthenticated.' }, { status: 401 });
   }
-  return Response.json({ message, error: message }, { status });
+  return Response.json({ error: true, message }, { status });
+}
+
+export function mobileSuccessOk(data: any, message?: string) {
+  const response: any = { success: true, data };
+  if (message) response.message = message;
+  return Response.json(response, { status: 200 });
+}
+
+export function mobileSuccessMsg(message: string) {
+  return Response.json({ success: true, message }, { status: 200 });
+}
+
+export function mobileErrorOk(message: string, status: number = 400) {
+  return Response.json({ success: false, message }, { status });
+}
+
+export function mobileListRows(rows: any[], total: number) {
+  return Response.json({ rows, total }, { status: 200 });
+}
+
+export function mobileCountData(count: number, data: any[]) {
+  return Response.json({ count, data }, { status: 200 });
+}
+
+export function mobileStatusSuccess(data: any) {
+  return Response.json({ status: 'success', data }, { status: 200 });
 }

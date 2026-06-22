@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, generateAccessToken, generateRefreshToken, saveRefreshToken } from '@/lib/jwt';
-import { mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { cuidToInt } from '@/lib/mobile-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,12 +9,32 @@ export async function POST(request: NextRequest) {
     const { first_name, last_name, email, password, password_confirmation, phone } = body;
 
     if (!email || !password) {
-      return mobileError('Email and password are required', 400);
+      return Response.json({
+        error: true,
+        message: {
+          email: !email ? ['The email field is required.'] : undefined,
+          password: !password ? ['The password field is required.'] : undefined,
+        },
+      }, { status: 422 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return mobileError('Email already registered', 400);
+      return Response.json({
+        error: true,
+        message: {
+          email: ['The email has already been taken.'],
+        },
+      }, { status: 422 });
+    }
+
+    if (password.length < 6) {
+      return Response.json({
+        error: true,
+        message: {
+          password: ['Password must be at least 6 characters long.'],
+        },
+      }, { status: 422 });
     }
 
     const name = [first_name, last_name].filter(Boolean).join(' ');
@@ -30,28 +50,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const accessToken = generateAccessToken({
-      userId: user.id,
+    const session = {
+      id: cuidToInt(user.id),
       email: user.email,
-      role: user.role,
-      contractorId: null,
+      name: user.name,
+      role: 'user',
+    };
+
+    return Response.json({
+      error: false,
+      session,
+      message: 'Registration data saved. Please complete your subscription to create your account.',
+      redirect_url: '/subscription-plan/index',
     });
-
-    const refreshToken = generateRefreshToken(user.id);
-    await saveRefreshToken(user.id, refreshToken);
-
-    return mobileSuccess({
-      access_token: accessToken,
-      user: {
-        id: user.id,
-        first_name: first_name || '',
-        last_name: last_name || '',
-        email: user.email,
-        phone: phone || null,
-        role: 'user',
-      },
-    }, 'User registered successfully');
   } catch (error: any) {
-    return mobileError(error.message || 'Registration failed', 500);
+    return Response.json({ error: true, message: error.message || 'Registration failed' }, { status: 500 });
   }
 }

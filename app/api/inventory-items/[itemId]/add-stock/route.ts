@@ -1,19 +1,23 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ itemId: string }> }) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
   const { itemId } = await params;
 
   const body = await request.json();
   const { quantity, cost, notes } = body;
 
-  if (!quantity || quantity <= 0) return mobileError('Quantity must be positive', 400);
+  if (!quantity || quantity <= 0) {
+    return Response.json({ success: false, message: 'Insufficient stock for this operation.' }, { status: 200 });
+  }
 
   const item = await prisma.inventory.findUnique({ where: { id: itemId } });
-  if (!item) return mobileError('Item not found', 404);
+  if (!item) return Response.json({ success: false, message: 'Item not found' }, { status: 404 });
 
   const updated = await prisma.inventory.update({
     where: { id: itemId },
@@ -30,5 +34,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     },
   });
 
-  return mobileSuccess({ id: updated.id, quantity: updated.quantity }, 'Stock added successfully');
+  return Response.json({
+    success: true,
+    message: 'Stock added successfully.',
+    inventory_item: { id: updated.id, name: updated.name, quantity: updated.quantity },
+  });
 }

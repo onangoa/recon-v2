@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth, mobileSuccessOk } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId || auth.companyId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ error: 'No company selected.' }, { status: 400 });
 
   const siteId = request.nextUrl.searchParams.get('site_id') || auth.siteId;
   const siteIds = siteId
@@ -16,39 +18,46 @@ export async function GET(request: NextRequest) {
 
   const machines = await prisma.equipment.findMany({
     where: { siteId: { in: siteIds } },
+    include: { site: true },
     orderBy: { createdAt: 'desc' },
   });
 
-  return mobileSuccess(machines.map(m => ({
-    id: m.id,
-    name: m.name,
-    model: m.serialNo,
-    registration_number: m.serialNumber,
-    condition_key: m.status,
-    type_key: m.type,
-    site_id: m.siteId,
-    daily_rate: m.dailyRate,
-    rental_cost: m.rentalCost,
-    last_service: m.lastService,
-    next_service: m.nextService,
-    created_at: m.createdAt,
-    updated_at: m.updatedAt,
-  })));
+  return Response.json({
+    total: machines.length,
+    data: machines.map(m => ({
+      id: m.id,
+      name: m.name,
+      model: m.serialNo,
+      registration_number: m.serialNumber,
+      type: m.type,
+      condition: m.status,
+      site: m.site ? { id: m.site.id, title: m.site.name } : null,
+      site_id: m.siteId,
+      daily_rate: m.dailyRate,
+      rental_cost: m.rentalCost,
+      last_service: m.lastService,
+      next_service: m.nextService,
+      created_at: m.createdAt,
+      updated_at: m.updatedAt,
+    })),
+  });
 }
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
   const contractorId = auth.contractorId;
-  if (!contractorId) return mobileError('No company associated', 403);
+  if (!contractorId) return Response.json({ success: false, message: 'No company selected.' }, { status: 400 });
 
   const body = await request.json();
   const siteId = body.site_id || auth.siteId;
-  if (!siteId) return mobileError('site_id is required', 400);
+  if (!siteId) return Response.json({ success: false, message: 'No company selected.' }, { status: 400 });
 
   const site = await prisma.site.findFirst({ where: { id: siteId, contractorId } });
-  if (!site) return mobileError('Site not found', 404);
+  if (!site) return Response.json({ success: false, message: 'You do not have permission to create machines.' }, { status: 400 });
 
   const machine = await prisma.equipment.create({
     data: {
@@ -63,13 +72,9 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return mobileSuccess({
-    id: machine.id,
-    name: machine.name,
-    model: machine.serialNo,
-    registration_number: machine.serialNumber,
-    condition_key: machine.status,
-    type_key: machine.type,
-    site_id: machine.siteId,
-  }, 'Machine created successfully');
+  return Response.json({
+    success: true,
+    message: 'Machine created successfully.',
+    machine: { id: machine.id, name: machine.name, type: machine.type, condition: machine.status, site_id: machine.siteId },
+  });
 }

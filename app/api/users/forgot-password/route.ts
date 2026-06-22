@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { mobileError, mobileSuccess } from '@/lib/mobile-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,16 +7,16 @@ export async function POST(request: NextRequest) {
     const { email } = body;
 
     if (!email) {
-      return mobileError('Email is required', 400);
+      return Response.json({ error: true, message: 'Email is required' });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return mobileSuccess(null, 'Reset password instructions sent to your email.');
+      return Response.json({ error: true, message: 'Password reset link couldn\'t be sent.' });
     }
 
-    return mobileSuccess(null, 'Reset password instructions sent to your email.');
+    return Response.json({ error: false, message: 'Password reset link emailed successfully.' });
   } catch (error: any) {
-    return mobileError(error.message || 'Failed to process request', 500);
+    return Response.json({ error: true, message: 'Password reset link couldn\'t be sent.' });
   }
 }

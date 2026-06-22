@@ -1,16 +1,18 @@
 import { NextRequest } from 'next/server';
-import { mobileAuth, mobileError, mobileSuccess } from '@/lib/mobile-auth';
+import { mobileAuth } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const auth = await mobileAuth(request);
-  if (!auth.authenticated) return mobileError('Unauthenticated', 401);
+  if (!auth.authenticated) {
+    return Response.json({ success: false, message: 'Unauthenticated' }, { status: 401 });
+  }
 
-  if (!auth.userId) return mobileError('User not found', 404);
+  if (!auth.userId) return Response.json({ success: false, message: 'User not found' }, { status: 404 });
 
   const formData = await request.formData();
   const file = formData.get('profile_image') as File | null;
-  if (!file) return mobileError('No image uploaded', 400);
+  if (!file) return Response.json({ success: false, message: 'No profile image provided' }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const base64 = buffer.toString('base64');
@@ -22,5 +24,9 @@ export async function POST(request: NextRequest) {
     data: { avatar: dataUrl },
   });
 
-  return mobileSuccess({ avatar: dataUrl }, 'Profile picture updated successfully');
+  return Response.json({
+    success: true,
+    message: 'Profile picture updated successfully',
+    data: { photo_url: dataUrl },
+  });
 }

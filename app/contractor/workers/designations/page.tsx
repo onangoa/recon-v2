@@ -218,9 +218,6 @@ export default function DesignationsPage() {
       setIsDeleting(false);
     }
   };
-    setEditingId(null);
-    setFormData({ title: '', description: '', salary: '', paymentFrequency: 'monthly', isActive: true });
-  };
 
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return 'N/A';
