@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -34,6 +35,7 @@ interface Shift {
 
 export default function CreateWorkerPage() {
   const { toast } = useToast();
+  const { activeSite } = useSite();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
@@ -59,7 +61,7 @@ export default function CreateWorkerPage() {
       try {
         const [desigRes, shiftRes] = await Promise.all([
           fetch('/web/api/designations'),
-          fetch('/web/api/shifts?contractorId=placeholder-id')
+          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`)
         ]);
         
         if (desigRes.ok) {
@@ -68,14 +70,14 @@ export default function CreateWorkerPage() {
         }
         if (shiftRes.ok) {
           const shiftData = await shiftRes.json();
-          setShifts(shiftData.shifts || shiftData);
+          setShifts(Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []));
         }
       } catch (error) {
         console.error('Failed to fetch data');
       }
     };
     fetchData();
-  }, []);
+  }, [activeSite?.contractorId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

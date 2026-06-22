@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -34,6 +35,7 @@ interface Shift {
 export default function EditWorkerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
+  const { activeSite } = useSite();
   const router = useRouter();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -63,19 +65,22 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
         const [workerRes, designRes, shiftRes] = await Promise.all([
           fetch(`/web/api/workers/${id}`),
           fetch('/web/api/designations'),
-          fetch('/web/api/shifts?contractorId=placeholder-id')
+          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`)
         ]);
 
         if (!workerRes.ok) throw new Error('Failed to fetch worker');
         if (!designRes.ok) throw new Error('Failed to fetch designations');
-        if (!shiftRes.ok) throw new Error('Failed to fetch shifts');
 
         const worker = await workerRes.json();
         const designs = await designRes.json();
-        const shiftData = await shiftRes.json();
+        let shiftList: Shift[] = [];
+        if (shiftRes.ok) {
+          const shiftData = await shiftRes.json();
+          shiftList = Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []);
+        }
 
         setDesignations(designs.designations || designs);
-        setShifts(shiftData.shifts || shiftData);
+        setShifts(shiftList);
         setFormData({
           name: worker.name,
           email: worker.email || '',
@@ -98,7 +103,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     };
 
     fetchData();
-  }, [id, toast]);
+  }, [id, toast, activeSite?.contractorId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
