@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'inventory:read');
+  const permCheck = await requireContractorPermission(request, 'inventory:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const inventory = await prisma.inventory.findUnique({
-      where: { id },
+    const inventory = await prisma.inventory.findFirst({
+      where: { id, site: { contractorId } },
       include: {
         category: true,
         movements: {
@@ -40,16 +41,17 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'inventory:update');
+  const permCheck = await requireContractorPermission(request, 'inventory:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
     
     const quantity = body.quantity !== undefined ? parseFloat(body.quantity) : undefined;
     
-    const currentInventory = await prisma.inventory.findUnique({
-      where: { id },
+    const currentInventory = await prisma.inventory.findFirst({
+      where: { id, site: { contractorId } },
     });
 
     if (!currentInventory) {
@@ -95,10 +97,18 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'inventory:delete');
+  const permCheck = await requireContractorPermission(request, 'inventory:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
+    const existing = await prisma.inventory.findFirst({
+      where: { id, site: { contractorId } },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Inventory item not found' }, { status: 404 });
+    }
     await prisma.inventory.delete({
       where: { id },
     });

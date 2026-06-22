@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'equipment:read');
+  const permCheck = await requireContractorPermission(request as any, 'equipment:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const equipment = await prisma.equipment.findUnique({
-      where: { id },
+    const equipment = await prisma.equipment.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
@@ -31,11 +32,20 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'equipment:update');
+  const permCheck = await requireContractorPermission(request as any, 'equipment:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.equipment.findFirst({
+      where: { id, site: { contractorId } },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+    }
 
     const equipment = await prisma.equipment.update({
       where: { id },
@@ -55,7 +65,7 @@ export async function PATCH(
     });
 
     await ActivityLogger.log({
-      userId: 'system',
+      userId: permCheck.userId || 'system',
       contractorId: equipment.site.contractorId,
       action: 'UPDATE',
       module: 'EQUIPMENT',
@@ -75,26 +85,29 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'equipment:delete');
+  const permCheck = await requireContractorPermission(request as any, 'equipment:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const equipment = await prisma.equipment.findUnique({
-      where: { id },
+    const equipment = await prisma.equipment.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
-    if (equipment) {
-      await ActivityLogger.log({
-        userId: 'system',
-        contractorId: equipment.site.contractorId,
-        action: 'DELETE',
-        module: 'EQUIPMENT',
-        description: `Deleted equipment: ${equipment.name}`,
-        targetId: equipment.id,
-        details: { name: equipment.name, type: equipment.type, serialNo: equipment.serialNo }
-      });
+    if (!equipment) {
+      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
     }
+
+    await ActivityLogger.log({
+      userId: permCheck.userId || 'system',
+      contractorId: equipment.site.contractorId,
+      action: 'DELETE',
+      module: 'EQUIPMENT',
+      description: `Deleted equipment: ${equipment.name}`,
+      targetId: equipment.id,
+      details: { name: equipment.name, type: equipment.type, serialNo: equipment.serialNo }
+    });
 
     await prisma.equipment.delete({
       where: { id },

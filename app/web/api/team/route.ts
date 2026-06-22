@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 import { hashPassword } from '@/lib/jwt';
 import { EmailService } from '@/lib/notification-service';
 
 export async function GET(request: NextRequest) {
   try {
-    const permCheck = await requirePermission(request, 'team:read');
+    const permCheck = await requireContractorPermission(request, 'team:read');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = { contractorId };
     
     if (search) {
       where.OR = [
@@ -63,18 +64,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const permCheck = await requirePermission(request, 'team:create');
+    const permCheck = await requireContractorPermission(request, 'team:create');
     if (!permCheck.authorized) return permCheck.error;
 
+    const contractorId = permCheck.contractorId!;
     const body = await request.json();
     
     if (!body.name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-    }
-
-    const contractorId = permCheck.contractorId;
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
 
     const temporaryPassword = body.password || Math.random().toString(36).slice(-10) + 'A1!';
@@ -139,6 +136,13 @@ export async function POST(request: NextRequest) {
         siteId: body.siteId || null,
       },
     });
+
+    if (body.siteId) {
+      const site = await prisma.site.findUnique({ where: { id: body.siteId }});
+      if (!site || site.contractorId !== contractorId) {
+        return NextResponse.json({ error: 'Invalid site' }, { status: 400 });
+      }
+    }
 
     await ActivityLogger.log({
       userId: permCheck.userId || 'system',

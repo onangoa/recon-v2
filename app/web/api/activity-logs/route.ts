@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'dashboard:read');
+  const permCheck = await requireContractorPermission(request, 'dashboard:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
     const module = searchParams.get('module');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (contractorId) where.contractorId = contractorId;
+    const where: any = { contractorId };
     if (module) where.module = module;
 
     const [logs, total] = await Promise.all([

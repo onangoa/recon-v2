@@ -83,7 +83,7 @@ export function RegisterPageComponent() {
 
     const fetchPlans = async () => {
       try {
-        const response = await fetch('/api/subscriptions/plans');
+        const response = await fetch('/web/api/subscription-plans');
         if (!response.ok) {
           console.error('Failed to fetch plans:', response.status);
           return;

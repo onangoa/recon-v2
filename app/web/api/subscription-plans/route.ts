@@ -3,13 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'settings:read');
-  if (!permCheck.authorized) return permCheck.error;
   try {
     const plans = await prisma.subscriptionPlan.findMany({
-      include: {
-        contractors: true,
-      },
+      orderBy: { price: 'asc' },
     });
     return NextResponse.json(plans);
   } catch (error) {

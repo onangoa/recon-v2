@@ -11,8 +11,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const skip = (page - 1) * limit;
 
+    // Non-superadmin users can only see their own contractor
+    const where = permCheck.contractorId ? { id: permCheck.contractorId } : {};
+
     const [contractors, total] = await Promise.all([
       prisma.contractor.findMany({
+        where,
         include: {
           user: true,
           subscriptionPlan: true,
@@ -21,7 +25,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: skip,
       }),
-      prisma.contractor.count()
+      prisma.contractor.count({ where })
     ]);
 
     return NextResponse.json({

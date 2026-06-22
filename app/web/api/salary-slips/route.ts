@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'salary_slips:read');
+  const permCheck = await requireContractorPermission(request, 'salary_slips:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
     const payrollPeriodId = searchParams.get('payrollPeriodId');
     const workerId = searchParams.get('workerId');
 
     const slips = await prisma.salarySlip.findMany({
       where: {
+        contractorId,
         ...(payrollPeriodId ? { payrollPeriodId } : {}),
         ...(workerId ? { workerId } : {}),
       },
@@ -29,14 +31,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'salary_slips:create');
+  const permCheck = await requireContractorPermission(request, 'salary_slips:create');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
-    const { 
-      workerId, 
-      payrollPeriodId, 
-      contractorId, 
+    const contractorId = permCheck.contractorId!;
+    const {
+      workerId,
+      payrollPeriodId,
       designationId,
       workingHours,
       attainedHours,
@@ -60,6 +62,10 @@ export async function POST(request: NextRequest) {
 
     if (!worker) {
       return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+    }
+
+    if (worker.contractorId !== contractorId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const designation = designationId 

@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:read');
+  const permCheck = await requireContractorPermission(request, 'wallets:read');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const resolvedParams = await params;
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: resolvedParams.id },
+    const wallet = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId },
       include: {
         _count: {
           select: { transactions: true },
@@ -34,14 +35,22 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:update');
+  const permCheck = await requireContractorPermission(request, 'wallets:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const resolvedParams = await params;
     const body = await request.json();
     
     if (!body.name) {
       return NextResponse.json({ error: 'Wallet name is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
     const wallet = await prisma.wallet.update({
@@ -63,13 +72,14 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:delete');
+  const permCheck = await requireContractorPermission(request, 'wallets:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const resolvedParams = await params;
     
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: resolvedParams.id },
+    const wallet = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId },
       include: {
         _count: {
           select: { transactions: true },

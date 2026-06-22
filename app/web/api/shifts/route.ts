@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'shifts:read');
+  const permCheck = await requireContractorPermission(request, 'shifts:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
-    const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
-
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
-    }
+    const contractorId = permCheck.contractorId!;
 
     const shifts = await prisma.shift.findMany({
       where: { contractorId },
@@ -32,13 +27,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'shifts:create');
+  const permCheck = await requireContractorPermission(request, 'shifts:create');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const body = await request.json();
-    const { contractorId, name, startTime, endTime, breakDuration, workingDays, allowOvertime } = body;
+    const { name, startTime, endTime, breakDuration, workingDays, allowOvertime } = body;
 
-    if (!contractorId || !name || !startTime || !endTime || !workingDays) {
+    if (!name || !startTime || !endTime || !workingDays) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     await ActivityLogger.log({
-      userId: 'system', // In a real app, get from session
+      userId: permCheck.userId || 'system',
       contractorId,
       action: 'CREATE',
       module: 'SHIFTS',

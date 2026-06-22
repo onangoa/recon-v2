@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getTransaction, 
-  getWalletTransactions, 
-  getTransactionsByStatus,
-  getTransactionsByType,
+import {
+  getWalletTransactions,
   TransactionStatus,
-  TransactionType 
+  TransactionType
 } from '@/lib/mpesa-service';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/require-permission';
@@ -13,6 +10,7 @@ import { requirePermission } from '@/lib/require-permission';
 export async function GET(req: NextRequest) {
   const permCheck = await requirePermission(req, 'wallets:read');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId;
   try {
     const { searchParams } = new URL(req.url);
     const transactionId = searchParams.get('transactionId');
@@ -22,9 +20,25 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    if (!contractorId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Contractor account required'
+      }, { status: 403 });
+    }
+
+    const contractorWallets = await prisma.wallet.findMany({
+      where: { contractorId },
+      select: { id: true }
+    });
+    const walletIdList = contractorWallets.map(w => w.id);
+
     // Get single transaction by ID
     if (transactionId) {
-      const transaction = await getTransaction(transactionId);
+      const transaction = await prisma.transaction.findFirst({
+        where: { id: transactionId, wallet: { contractorId } },
+        include: { wallet: true }
+      });
 
       if (!transaction) {
         return NextResponse.json({
@@ -42,8 +56,8 @@ export async function GET(req: NextRequest) {
     // Get transactions by wallet
     if (walletId) {
       // Validate wallet exists
-      const wallet = await prisma.wallet.findUnique({
-        where: { id: walletId }
+      const wallet = await prisma.wallet.findFirst({
+        where: { id: walletId, contractorId }
       });
 
       if (!wallet) {
@@ -80,18 +94,27 @@ export async function GET(req: NextRequest) {
         }, { status: 400 });
       }
 
-      const result = await getTransactionsByStatus(status, limit, offset);
+      const [transactions, total] = await Promise.all([
+        prisma.transaction.findMany({
+          where: { status, walletId: { in: walletIdList } },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+          include: { wallet: true }
+        }),
+        prisma.transaction.count({ where: { status, walletId: { in: walletIdList } } })
+      ]);
 
       return NextResponse.json({
         success: true,
         data: {
-          transactions: result.transactions,
+          transactions,
           pagination: {
-            total: result.total,
-            page: result.page,
-            totalPages: result.totalPages,
-            limit: limit,
-            offset: offset
+            total,
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit),
+            limit,
+            offset
           }
         }
       });
@@ -107,26 +130,36 @@ export async function GET(req: NextRequest) {
         }, { status: 400 });
       }
 
-      const result = await getTransactionsByType(type, limit, offset);
+      const [transactions, total] = await Promise.all([
+        prisma.transaction.findMany({
+          where: { type, walletId: { in: walletIdList } },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+          include: { wallet: true }
+        }),
+        prisma.transaction.count({ where: { type, walletId: { in: walletIdList } } })
+      ]);
 
       return NextResponse.json({
         success: true,
         data: {
-          transactions: result.transactions,
+          transactions,
           pagination: {
-            total: result.total,
-            page: result.page,
-            totalPages: result.totalPages,
-            limit: limit,
-            offset: offset
+            total,
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit),
+            limit,
+            offset
           }
         }
       });
     }
 
-    // Get all transactions with pagination
+    // Get all transactions for this contractor's wallets
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
+        where: { walletId: { in: walletIdList } },
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
@@ -134,7 +167,7 @@ export async function GET(req: NextRequest) {
           wallet: true
         }
       }),
-      prisma.transaction.count()
+      prisma.transaction.count({ where: { walletId: { in: walletIdList } } })
     ]);
 
     return NextResponse.json({

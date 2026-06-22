@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'sites:read');
+  const permCheck = await requireContractorPermission(request, 'sites:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const site = await prisma.site.findUnique({
-      where: { id },
+    const site = await prisma.site.findFirst({
+      where: { id, contractorId },
     });
 
     if (!site) {
@@ -30,15 +31,16 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'sites:update');
+  const permCheck = await requireContractorPermission(request, 'sites:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const body = await request.json();
     const { id } = await params;
     
     const updatedSite = await prisma.$transaction(async (tx) => {
-      const site = await tx.site.findUnique({
-        where: { id },
+      const site = await tx.site.findFirst({
+        where: { id, contractorId },
         select: { contractorId: true },
       });
 
@@ -67,8 +69,8 @@ export async function PUT(
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
-      contractorId: updatedSite.contractorId,
+      userId: permCheck.userId || 'system', 
+      contractorId,
       action: 'UPDATE',
       module: 'SITES',
       description: `Updated site: ${updatedSite.name}`,
@@ -89,13 +91,14 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'sites:delete');
+  const permCheck = await requireContractorPermission(request, 'sites:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     // Check for related records
-    const site = await prisma.site.findUnique({
-      where: { id },
+    const site = await prisma.site.findFirst({
+      where: { id, contractorId },
       include: {
         _count: {
           select: {
@@ -134,8 +137,8 @@ export async function DELETE(
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
-      contractorId: site.contractorId,
+      userId: permCheck.userId || 'system', 
+      contractorId,
       action: 'DELETE',
       module: 'SITES',
       description: `Deleted site: ${site.name}`,

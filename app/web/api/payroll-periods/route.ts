@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'payroll:read');
+  const permCheck = await requireContractorPermission(request, 'payroll:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const where = contractorId ? { contractorId } : {};
+    const where = { contractorId };
 
     const [periods, total] = await Promise.all([
       prisma.payrollPeriod.findMany({
@@ -70,20 +70,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'payroll:create');
+  const permCheck = await requireContractorPermission(request, 'payroll:create');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
-    
-    let contractorId = body.contractorId;
-    if (!contractorId || contractorId === 'placeholder-id') {
-      const firstContractor = await prisma.contractor.findFirst();
-      contractorId = firstContractor?.id;
-    }
-
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
-    }
+    const contractorId = permCheck.contractorId!;
 
     const period = await prisma.payrollPeriod.create({
       data: {

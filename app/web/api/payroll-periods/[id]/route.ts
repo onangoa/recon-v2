@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'payroll:read');
+  const permCheck = await requireContractorPermission(request, 'payroll:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const period = await prisma.payrollPeriod.findUnique({
-      where: { id },
+    const period = await prisma.payrollPeriod.findFirst({
+      where: { id, contractorId },
       include: {
         createdBy: true,
         salarySlips: {
@@ -58,8 +59,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'payroll:update');
+  const permCheck = await requireContractorPermission(request, 'payroll:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
@@ -68,8 +70,8 @@ export async function PUT(
     // Check if we are starting processing
     if (status === 'processing') {
       // 1. Fetch the period and contractor info
-      const period = await prisma.payrollPeriod.findUnique({
-        where: { id },
+      const period = await prisma.payrollPeriod.findFirst({
+        where: { id, contractorId },
         include: { contractor: true }
       });
 
@@ -217,10 +219,18 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'payroll:delete');
+  const permCheck = await requireContractorPermission(request, 'payroll:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
+    const existing = await prisma.payrollPeriod.findFirst({
+      where: { id, contractorId },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Payroll period not found' }, { status: 404 });
+    }
     // Check if it has salary slips
     const slipCount = await prisma.salarySlip.count({
       where: { payrollPeriodId: id },

@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'visitors:read');
+  const permCheck = await requireContractorPermission(request as any, 'visitors:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const visitor = await prisma.visitor.findUnique({
-      where: { id },
+    const visitor = await prisma.visitor.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
@@ -31,11 +32,20 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'visitors:update');
+  const permCheck = await requireContractorPermission(request as any, 'visitors:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.visitor.findFirst({
+      where: { id, site: { contractorId } },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Visitor not found' }, { status: 404 });
+    }
 
     const visitor = await prisma.visitor.update({
       where: { id },
@@ -50,7 +60,7 @@ export async function PUT(
     });
 
     await ActivityLogger.log({
-      userId: 'system',
+      userId: permCheck.userId || 'system',
       contractorId: visitor.site.contractorId,
       action: 'UPDATE',
       module: 'VISITORS',
@@ -70,18 +80,23 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'visitors:delete');
+  const permCheck = await requireContractorPermission(request as any, 'visitors:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const visitor = await prisma.visitor.findUnique({
-      where: { id },
+    const visitor = await prisma.visitor.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
-    if (visitor && visitor.site) {
+    if (!visitor) {
+      return NextResponse.json({ error: 'Visitor not found' }, { status: 404 });
+    }
+
+    if (visitor.site) {
       await ActivityLogger.log({
-        userId: 'system',
+        userId: permCheck.userId || 'system',
         contractorId: visitor.site.contractorId,
         action: 'DELETE',
         module: 'VISITORS',

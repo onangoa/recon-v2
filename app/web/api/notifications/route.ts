@@ -6,12 +6,10 @@ export async function GET(request: NextRequest) {
   const permCheck = await requirePermission(request, 'settings:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
-    // In a real app, get userId from session
-    const user = await prisma.user.findFirst();
-    if (!user) return NextResponse.json([]);
+    const userId = permCheck.userId!;
 
     const notifications = await prisma.notification.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 20
     });
@@ -29,14 +27,20 @@ export async function PUT(request: NextRequest) {
     const { id, isRead } = await request.json();
     
     if (id === 'all') {
-      const user = await prisma.user.findFirst();
-      if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      const userId = permCheck.userId!;
 
       await prisma.notification.updateMany({
-        where: { userId: user.id, isRead: false },
+        where: { userId, isRead: false },
         data: { isRead: true }
       });
     } else {
+      const userId = permCheck.userId!;
+      const notification = await prisma.notification.findFirst({
+        where: { id, userId }
+      });
+      if (!notification) {
+        return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
+      }
       await prisma.notification.update({
         where: { id },
         data: { isRead }

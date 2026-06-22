@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'shifts:read');
+  const permCheck = await requireContractorPermission(request, 'shifts:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const shift = await prisma.shift.findUnique({
-      where: { id },
+    const shift = await prisma.shift.findFirst({
+      where: { id, contractorId },
       include: {
         workers: true
       }
@@ -33,12 +34,21 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'shifts:update');
+  const permCheck = await requireContractorPermission(request, 'shifts:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
     const { name, startTime, endTime, breakDuration, workingDays, allowOvertime } = body;
+
+    const existing = await prisma.shift.findFirst({
+      where: { id, contractorId },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Shift not found' }, { status: 404 });
+    }
 
     const shift = await prisma.shift.update({
       where: { id },
@@ -53,7 +63,7 @@ export async function PUT(
     });
 
     await ActivityLogger.log({
-      userId: 'system',
+      userId: permCheck.userId || 'system',
       contractorId: shift.contractorId,
       action: 'UPDATE',
       module: 'SHIFTS',
@@ -73,21 +83,28 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'shifts:delete');
+  const permCheck = await requireContractorPermission(request, 'shifts:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const shift = await prisma.shift.delete({
-      where: { id }
+    const existing = await prisma.shift.findFirst({
+      where: { id, contractorId },
+      select: { id: true, name: true, contractorId: true }
     });
+    if (!existing) {
+      return NextResponse.json({ error: 'Shift not found' }, { status: 404 });
+    }
+
+    await prisma.shift.delete({ where: { id } });
 
     await ActivityLogger.log({
-      userId: 'system',
-      contractorId: shift.contractorId,
+      userId: permCheck.userId || 'system',
+      contractorId: existing.contractorId,
       action: 'DELETE',
       module: 'SHIFTS',
-      description: `Deleted shift: ${shift.name}`,
-      targetId: shift.id
+      description: `Deleted shift: ${existing.name}`,
+      targetId: existing.id
     });
 
     return NextResponse.json({ message: 'Shift deleted successfully' });

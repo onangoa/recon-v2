@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'documents:read');
+  const permCheck = await requireContractorPermission(request as any, 'documents:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const document = await prisma.document.findUnique({
-      where: { id },
+    const document = await prisma.document.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
@@ -31,11 +32,20 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'documents:update');
+  const permCheck = await requireContractorPermission(request as any, 'documents:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.document.findFirst({
+      where: { id, site: { contractorId } },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
 
     const document = await prisma.document.update({
       where: { id },
@@ -49,7 +59,7 @@ export async function PUT(
     });
 
     await ActivityLogger.log({
-      userId: 'system',
+      userId: permCheck.userId || 'system',
       contractorId: document.site.contractorId,
       action: 'UPDATE',
       module: 'DOCUMENTS',
@@ -69,18 +79,23 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'documents:delete');
+  const permCheck = await requireContractorPermission(request as any, 'documents:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const document = await prisma.document.findUnique({
-      where: { id },
+    const document = await prisma.document.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
-    if (document && document.site) {
+    if (!document) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    if (document.site) {
       await ActivityLogger.log({
-        userId: 'system',
+        userId: permCheck.userId || 'system',
         contractorId: document.site.contractorId,
         action: 'DELETE',
         module: 'DOCUMENTS',

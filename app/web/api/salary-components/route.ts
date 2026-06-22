@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'salary_components:read');
+  const permCheck = await requireContractorPermission(request, 'salary_components:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100');
     const skip = (page - 1) * limit;
 
-    const where = contractorId ? { contractorId } : {};
+    const where = { contractorId };
 
     const [components, total] = await Promise.all([
       prisma.salaryComponent.findMany({
@@ -42,18 +42,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'salary_components:create');
+  const permCheck = await requireContractorPermission(request, 'salary_components:create');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
-    
-    if (!body.contractorId) {
-      return NextResponse.json({ error: 'Contractor ID is required' }, { status: 400 });
-    }
-
-    const contractor = await prisma.contractor.findUnique({
-      where: { id: body.contractorId }
-    });
+    const contractorId = permCheck.contractorId!;
 
     if (!contractor) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
@@ -74,13 +67,13 @@ export async function POST(request: NextRequest) {
         isRecurring: body.isRecurring ?? true,
         description: body.description,
         sortOrder: body.sortOrder ?? 0,
-        contractorId: body.contractorId,
+        contractorId,
       },
     });
 
     try {
       await ActivityLogger.log({
-        userId: contractor.userId || 'system',
+        userId: permCheck.userId || 'system',
         contractorId: component.contractorId,
         action: 'CREATE',
         module: 'PAYROLL',

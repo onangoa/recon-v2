@@ -1,6 +1,7 @@
 import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
 import { EmailService } from '@/lib/notification-service';
+import { hashPassword } from '@/lib/jwt';
 
 // M-Pesa Configuration
 export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
@@ -445,12 +446,15 @@ const processRegistration = async (formData: any, transactionId: string) => {
       return;
     }
 
+    // Hash the password before storing
+    const hashedPassword = await hashPassword(password);
+
     // Create User and Contractor in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email,
-          password, // In production, use bcrypt
+          password: hashedPassword,
           name,
           role: 'contractor',
         },

@@ -2,22 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { startOfDay, endOfDay, differenceInMinutes, format } from 'date-fns';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
   try {
-    const permCheck = await requirePermission(request, 'attendance:read');
+const permCheck = await requireContractorPermission(request, 'attendance:read');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
     const workerId = searchParams.get('workerId');
     const date = searchParams.get('date');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
-    }
 
     const where: any = { contractorId };
     if (workerId) where.workerId = workerId;
@@ -57,12 +53,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const permCheck = await requirePermission(request, 'attendance:create');
+const permCheck = await requireContractorPermission(request, 'attendance:create');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
 
-    const { workerId, contractorId, type, notes } = body; // type: 'CLOCK_IN' or 'CLOCK_OUT'
+    const body = await request.json();
+    const { workerId, type, notes } = body; // type: 'CLOCK_IN' or 'CLOCK_OUT'
 
-    if (!workerId || !contractorId || !type) {
+    if (!workerId || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -73,6 +71,10 @@ export async function POST(request: NextRequest) {
 
     if (!worker) {
       return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+    }
+
+    if (worker.contractorId !== contractorId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const today = new Date();

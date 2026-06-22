@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const permCheck = await requirePermission(request, 'team:read');
+    const permCheck = await requireContractorPermission(request, 'team:read');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const member = await prisma.teamMember.findUnique({
-      where: { id },
+    const member = await prisma.teamMember.findFirst({
+      where: { id, contractorId },
     });
 
     if (!member) {
@@ -31,11 +32,19 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const permCheck = await requirePermission(request, 'team:update');
+const permCheck = await requireContractorPermission(request, 'team:update');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
 
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.teamMember.findFirst({
+      where: { id, contractorId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Team member not found' }, { status: 404 });
+    }
 
     const member = await prisma.teamMember.update({
       where: { id },
@@ -84,12 +93,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const permCheck = await requirePermission(request, 'team:delete');
+const permCheck = await requireContractorPermission(request, 'team:delete');
     if (!permCheck.authorized) return permCheck.error;
+    const contractorId = permCheck.contractorId!;
 
     const { id } = await params;
-    const member = await prisma.teamMember.findUnique({
-      where: { id }
+    const member = await prisma.teamMember.findFirst({
+      where: { id, contractorId }
     });
 
     if (!member) {

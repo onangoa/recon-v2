@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
+import { verifySiteOwnership } from '@/lib/contractor-isolation';
 
 export async function GET(request: Request) {
-  const permCheck = await requirePermission(request, 'equipment:read');
+  const permCheck = await requireContractorPermission(request as any, 'equipment:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -14,12 +16,16 @@ export async function GET(request: Request) {
     const siteId = searchParams.get('siteId');
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    
+    const where: any = { site: { contractorId } };
+
     if (siteId) {
+      const owns = await verifySiteOwnership(contractorId, siteId);
+      if (!owns) {
+        return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+      }
       where.siteId = siteId;
     }
-    
+
     if (search) {
       where.OR = [
         { name: { contains: search } },
@@ -56,13 +62,19 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const permCheck = await requirePermission(request, 'equipment:create');
+  const permCheck = await requireContractorPermission(request as any, 'equipment:create');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const body = await request.json();
     
     if (!body.siteId) {
       return NextResponse.json({ error: 'Site ID is required' }, { status: 400 });
+    }
+
+    const owns = await verifySiteOwnership(contractorId, body.siteId);
+    if (!owns) {
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
     }
     
     if (!body.name) {
@@ -72,10 +84,6 @@ export async function POST(request: Request) {
     if (!body.machineType) {
       return NextResponse.json({ error: 'Machine type is required' }, { status: 400 });
     }
-
-    const site = await prisma.site.findUnique({
-      where: { id: body.siteId }
-    });
 
     const equipment = await prisma.equipment.create({
       data: {
@@ -95,17 +103,15 @@ export async function POST(request: Request) {
       },
     });
 
-    if (site) {
-      await ActivityLogger.log({
-        userId: 'system',
-        contractorId: site.contractorId,
-        action: 'CREATE',
-        module: 'EQUIPMENT',
-        description: `Added equipment: ${equipment.name}`,
-        targetId: equipment.id,
-        details: { name: equipment.name, type: equipment.type, serialNumber: equipment.serialNumber, status: equipment.status }
-      });
-    }
+    await ActivityLogger.log({
+      userId: permCheck.userId || 'system',
+      contractorId,
+      action: 'CREATE',
+      module: 'EQUIPMENT',
+      description: `Added equipment: ${equipment.name}`,
+      targetId: equipment.id,
+      details: { name: equipment.name, type: equipment.type, serialNumber: equipment.serialNumber, status: equipment.status }
+    });
 
     return NextResponse.json(equipment);
   } catch (error) {

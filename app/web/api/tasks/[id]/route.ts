@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'tasks:read');
+  const permCheck = await requireContractorPermission(request, 'tasks:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const task = await prisma.task.findUnique({
-      where: { id },
+    const task = await prisma.task.findFirst({
+      where: { id, site: { contractorId } },
       include: {
         project: true,
         site: true,
@@ -31,11 +32,21 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'tasks:update');
+  const permCheck = await requireContractorPermission(request, 'tasks:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
+
+    const existing = await prisma.task.findFirst({
+      where: { id, site: { contractorId } },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
     const updateData: any = { ...body };
     if (body.dueDate) updateData.dueDate = new Date(body.dueDate);
 
@@ -50,7 +61,7 @@ export async function PUT(
 
     if (task.site) {
       await ActivityLogger.log({
-        userId: 'system',
+        userId: permCheck.userId || 'system',
         contractorId: task.site.contractorId,
         action: 'UPDATE',
         module: 'INVENTORY',
@@ -70,18 +81,23 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'tasks:delete');
+  const permCheck = await requireContractorPermission(request, 'tasks:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const task = await prisma.task.findUnique({
-      where: { id },
+    const task = await prisma.task.findFirst({
+      where: { id, site: { contractorId } },
       include: { site: true }
     });
 
-    if (task && task.site) {
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    if (task.site) {
       await ActivityLogger.log({
-        userId: 'system',
+        userId: permCheck.userId || 'system',
         contractorId: task.site.contractorId,
         action: 'DELETE',
         module: 'INVENTORY',

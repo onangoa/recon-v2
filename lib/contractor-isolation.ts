@@ -274,6 +274,33 @@ export async function verifyContractorAccess(
 }
 
 /**
+ * Get all site IDs belonging to a contractor
+ * @param contractorId - The contractor ID
+ * @returns Promise<string[]> - Array of site IDs
+ */
+export async function getContractorSiteIds(contractorId: string): Promise<string[]> {
+  const sites = await prisma.site.findMany({
+    where: { contractorId },
+    select: { id: true }
+  });
+  return sites.map(s => s.id);
+}
+
+/**
+ * Verify that a site belongs to the given contractor
+ * @param contractorId - The contractor ID
+ * @param siteId - The site ID
+ * @returns Promise<boolean>
+ */
+export async function verifySiteOwnership(contractorId: string, siteId: string): Promise<boolean> {
+  const site = await prisma.site.findFirst({
+    where: { id: siteId, contractorId },
+    select: { id: true }
+  });
+  return !!site;
+}
+
+/**
  * Get all contractor IDs for verification
  * @param userId - The user ID
  * @returns Promise<string | null> - The contractor ID or null

@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'designations:read');
+  const permCheck = await requireContractorPermission(request, 'designations:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { searchParams } = new URL(request.url);
-    const contractorId = searchParams.get('contractorId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const where: any = contractorId ? { contractorId } : {};
+    const where: any = { contractorId };
     
     if (search) {
       where.OR = [
@@ -48,21 +48,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'designations:create');
+  const permCheck = await requireContractorPermission(request, 'designations:create');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
-    
-    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
-    let contractorId = body.contractorId;
-    if (!contractorId || contractorId === 'placeholder-id') {
-      const firstContractor = await prisma.contractor.findFirst();
-      contractorId = firstContractor?.id;
-    }
-
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor ID required' }, { status: 400 });
-    }
+    const contractorId = permCheck.contractorId!;
 
     const designation = await prisma.designation.create({
       data: {

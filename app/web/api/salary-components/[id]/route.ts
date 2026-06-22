@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'salary_components:read');
+  const permCheck = await requireContractorPermission(request, 'salary_components:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const component = await prisma.salaryComponent.findUnique({
-      where: { id },
+    const component = await prisma.salaryComponent.findFirst({
+      where: { id, contractorId },
     });
     if (!component) {
       return NextResponse.json({ error: 'Salary component not found' }, { status: 404 });
@@ -27,12 +28,21 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'salary_components:update');
+  const permCheck = await requireContractorPermission(request, 'salary_components:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
+    const existing = await prisma.salaryComponent.findFirst({
+      where: { id, contractorId },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Salary component not found' }, { status: 404 });
+    }
+
     const data: any = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.type !== undefined) data.type = body.type;
@@ -54,18 +64,15 @@ export async function PUT(
     });
 
     try {
-      const contractor = await prisma.contractor.findFirst();
-      if (contractor) {
-        await ActivityLogger.log({
-          userId: contractor.userId || 'system',
-          contractorId: component.contractorId,
-          action: 'UPDATE',
-          module: 'PAYROLL',
-          description: `Updated salary component: ${component.name}`,
-          targetId: component.id,
-          details: { name: component.name, type: component.type }
-        });
-      }
+      await ActivityLogger.log({
+        userId: permCheck.userId || 'system',
+        contractorId: component.contractorId,
+        action: 'UPDATE',
+        module: 'PAYROLL',
+        description: `Updated salary component: ${component.name}`,
+        targetId: component.id,
+        details: { name: component.name, type: component.type }
+      });
     } catch (logError) {
       console.error('Failed to record activity log:', logError);
     }
@@ -80,31 +87,32 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'salary_components:delete');
+  const permCheck = await requireContractorPermission(request, 'salary_components:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const component = await prisma.salaryComponent.findUnique({
-      where: { id }
+    const component = await prisma.salaryComponent.findFirst({
+      where: { id, contractorId },
+      select: { id: true, name: true, type: true, contractorId: true }
     });
 
-    if (component) {
-      try {
-        const contractor = await prisma.contractor.findFirst();
-        if (contractor) {
-          await ActivityLogger.log({
-            userId: contractor.userId || 'system',
-            contractorId: component.contractorId,
-            action: 'DELETE',
-            module: 'PAYROLL',
-            description: `Deleted salary component: ${component.name}`,
-            targetId: component.id,
-            details: { name: component.name, type: component.type }
-          });
-        }
-      } catch (logError) {
-        console.error('Failed to record activity log:', logError);
-      }
+    if (!component) {
+      return NextResponse.json({ error: 'Salary component not found' }, { status: 404 });
+    }
+
+    try {
+      await ActivityLogger.log({
+        userId: permCheck.userId || 'system',
+        contractorId: component.contractorId,
+        action: 'DELETE',
+        module: 'PAYROLL',
+        description: `Deleted salary component: ${component.name}`,
+        targetId: component.id,
+        details: { name: component.name, type: component.type }
+      });
+    } catch (logError) {
+      console.error('Failed to record activity log:', logError);
     }
 
     await prisma.salaryComponent.delete({

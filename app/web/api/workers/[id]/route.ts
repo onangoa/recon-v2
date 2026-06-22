@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'workers:read');
+  const permCheck = await requireContractorPermission(request, 'workers:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const worker = await prisma.worker.findUnique({
-      where: { id },
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
       include: {
         designation: true,
         shift: true,
@@ -31,14 +32,15 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'workers:update');
+  const permCheck = await requireContractorPermission(request, 'workers:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
 
-    const worker = await prisma.worker.findUnique({
-      where: { id },
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
       select: { contractorId: true }
     });
 
@@ -103,8 +105,8 @@ export async function PUT(
     });
 
     await ActivityLogger.log({
-      userId: 'system',
-      contractorId: worker.contractorId,
+      userId: permCheck.userId || 'system',
+      contractorId,
       action: 'UPDATE',
       module: 'WORKERS',
       description: `Updated worker details: ${updatedWorker.name}`,
@@ -123,18 +125,25 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'workers:delete');
+  const permCheck = await requireContractorPermission(request, 'workers:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const worker = await prisma.worker.delete({
-      where: { id },
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
     });
+
+    if (!worker) {
+      return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+    }
+
+    await prisma.worker.delete({ where: { id } });
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
-      contractorId: worker.contractorId,
+      userId: permCheck.userId || 'system', 
+      contractorId,
       action: 'DELETE',
       module: 'WORKERS',
       description: `Deleted worker: ${worker.name}`,

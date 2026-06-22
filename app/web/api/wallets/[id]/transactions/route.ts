@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { initiateSTKPush, initiateB2C, initiateB2B, initiateB2Pochi } from '@/lib/mpesa';
 import { WalletService } from '@/lib/wallet-service';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:read');
+  const permCheck = await requireContractorPermission(request, 'wallets:read');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const resolvedParams = await params;
     const { searchParams } = new URL(request.url);
@@ -17,6 +18,13 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
+
+    const wallet = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId }
+    });
+    if (!wallet) {
+      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
+    }
 
     const whereCondition: any = { walletId: resolvedParams.id };
 
@@ -58,8 +66,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:create');
+  const permCheck = await requireContractorPermission(request, 'wallets:create');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const resolvedParams = await params;
     const body = await request.json();
@@ -72,8 +81,8 @@ export async function POST(
       );
     }
 
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: resolvedParams.id },
+    const wallet = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId },
     });
 
     if (!wallet) {

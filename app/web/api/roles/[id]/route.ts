@@ -12,6 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const contractorId = session.contractor?.id || null;
     const { id } = await params;
     const role = await prisma.role.findUnique({
       where: { id },
@@ -21,6 +22,11 @@ export async function GET(
     });
 
     if (!role) {
+      return NextResponse.json({ error: 'Role not found' }, { status: 404 });
+    }
+
+    // Allow access if role belongs to this contractor or is a shared/platform role
+    if (role.contractorId && role.contractorId !== contractorId && session.user.role !== 'superadmin') {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
@@ -41,6 +47,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const contractorId = session.contractor?.id || null;
     const { id } = await params;
     const body = await request.json();
     const { name, description, permissionIds } = body;
@@ -50,6 +57,10 @@ export async function PATCH(
     });
 
     if (!existingRole) {
+      return NextResponse.json({ error: 'Role not found' }, { status: 404 });
+    }
+
+    if (existingRole.contractorId && existingRole.contractorId !== contractorId) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
@@ -88,12 +99,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const contractorId = session.contractor?.id || null;
     const { id } = await params;
     const existingRole = await prisma.role.findUnique({
       where: { id }
     });
 
     if (!existingRole) {
+      return NextResponse.json({ error: 'Role not found' }, { status: 404 });
+    }
+
+    if (existingRole.contractorId && existingRole.contractorId !== contractorId) {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 

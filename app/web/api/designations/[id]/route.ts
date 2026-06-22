@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { requirePermission } from '@/lib/require-permission';
+import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'designations:read');
+  const permCheck = await requireContractorPermission(request, 'designations:read');
   if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId!;
     const { id } = await params;
-    const designation = await prisma.designation.findUnique({
-      where: { id },
+    const designation = await prisma.designation.findFirst({
+      where: { id, contractorId },
     });
     if (!designation) {
       return NextResponse.json({ error: 'Designation not found' }, { status: 404 });
@@ -27,17 +28,19 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'designations:update');
+  const permCheck = await requireContractorPermission(request, 'designations:update');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
     const body = await request.json();
-    
-    // For demo/dev purposes, get the first contractor if ID is missing or placeholder
-    let contractorId = body.contractorId;
-    if (contractorId === 'placeholder-id') {
-      const firstContractor = await prisma.contractor.findFirst();
-      contractorId = firstContractor?.id;
+
+    const existing = await prisma.designation.findFirst({
+      where: { id, contractorId },
+      select: { id: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Designation not found' }, { status: 404 });
     }
 
     const designation = await prisma.designation.update({
@@ -48,13 +51,12 @@ export async function PUT(
         salary: body.salary,
         paymentFrequency: body.paymentFrequency,
         isActive: body.isActive,
-        contractorId: contractorId, // Update if provided/resolved
       },
     });
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
+      userId: permCheck.userId || 'system',
       contractorId: designation.contractorId,
       action: 'UPDATE',
       module: 'DESIGNATIONS',
@@ -74,22 +76,29 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'designations:delete');
+  const permCheck = await requireContractorPermission(request, 'designations:delete');
   if (!permCheck.authorized) return permCheck.error;
+  const contractorId = permCheck.contractorId!;
   try {
     const { id } = await params;
-    const designation = await prisma.designation.delete({
-      where: { id },
+    const existing = await prisma.designation.findFirst({
+      where: { id, contractorId },
+      select: { id: true, title: true, contractorId: true }
     });
+    if (!existing) {
+      return NextResponse.json({ error: 'Designation not found' }, { status: 404 });
+    }
+
+    await prisma.designation.delete({ where: { id } });
 
     // Record activity log
     await ActivityLogger.log({
-      userId: 'system', 
-      contractorId: designation.contractorId,
+      userId: permCheck.userId || 'system',
+      contractorId: existing.contractorId,
       action: 'DELETE',
       module: 'DESIGNATIONS',
-      description: `Deleted designation: ${designation.title}`,
-      targetId: designation.id,
+      description: `Deleted designation: ${existing.title}`,
+      targetId: existing.id,
     });
 
     return NextResponse.json({ message: 'Designation deleted' });
