@@ -64,7 +64,10 @@ export async function PATCH(
       sku: body.sku,
       categoryId: body.categoryId,
       unit: body.unit,
-      minStock: body.minStock !== undefined ? parseFloat(body.minStock) : undefined,
+      unitCost: body.unitCost !== undefined ? parseFloat(body.unitCost) : undefined,
+      minStock: (body.minStockLevel ?? body.minStock) !== undefined ? parseFloat(body.minStockLevel ?? body.minStock) : undefined,
+      maxStockLevel: body.maxStockLevel != null && body.maxStockLevel !== '' ? parseFloat(body.maxStockLevel) : body.maxStockLevel === '' ? null : undefined,
+      reorderPoint: body.reorderPoint != null && body.reorderPoint !== '' ? parseFloat(body.reorderPoint) : body.reorderPoint === '' ? null : undefined,
       location: body.location,
       status: body.status,
     };

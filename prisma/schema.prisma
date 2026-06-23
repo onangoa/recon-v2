@@ -494,6 +494,8 @@ model Inventory {
   unitCost     Float              @default(0)
   unit         String
   minStock     Float              @default(0)
+  maxStockLevel Float?
+  reorderPoint  Float?
   location     String?
   status       String             @default("in-stock")
   createdAt    DateTime           @default(now())
