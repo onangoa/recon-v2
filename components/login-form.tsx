@@ -167,7 +167,7 @@ export function LoginForm() {
             <p className="text-xs text-[#5D4037] font-medium">Don't have a contractor account?</p>
             <Button variant="outline" className="w-full h-11 font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 hover:border-[#8B4513] gap-2" asChild>
               <Link href="/register">
-                Register Your Firm <ChevronRight className="w-4 h-4" />
+                Join Now <ChevronRight className="w-4 h-4" />
               </Link>
             </Button>
           </CardFooter>

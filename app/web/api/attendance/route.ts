@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { startOfDay, endOfDay, differenceInMinutes, format } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { computeWorkedHours } from '@/lib/attendance-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -124,38 +125,19 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
         return NextResponse.json({ error: 'Already clocked out today' }, { status: 400 });
       }
 
-      // Calculate hours
+      // Calculate hours, overtime and lateness
       const checkIn = new Date(attendance.checkIn);
       const checkOut = today;
-      const totalMinutes = differenceInMinutes(checkOut, checkIn);
-      const totalHours = totalMinutes / 60;
-
-      let overtimeHours = 0;
-      if (worker.shift) {
-        // Simple overtime calculation: anything beyond shift duration
-        const shiftStart = worker.shift.startTime.split(':').map(Number);
-        const shiftEnd = worker.shift.endTime.split(':').map(Number);
-        
-        // Calculate shift duration in minutes
-        let shiftDurationMinutes = (shiftEnd[0] * 60 + shiftEnd[1]) - (shiftStart[0] * 60 + shiftStart[1]);
-        if (shiftDurationMinutes < 0) shiftDurationMinutes += 24 * 60; // Handle overnight shifts
-        
-        // Subtract break
-        shiftDurationMinutes -= worker.shift.breakDuration;
-        
-        const shiftDurationHours = shiftDurationMinutes / 60;
-        
-        if (worker.shift.allowOvertime && totalHours > shiftDurationHours) {
-          overtimeHours = totalHours - shiftDurationHours;
-        }
-      }
+      const worked = computeWorkedHours(checkIn, checkOut, worker.shift);
 
       attendance = await prisma.attendance.update({
         where: { id: attendance.id },
         data: {
           checkOut: today,
-          totalHours,
-          overtimeHours,
+          totalHours: worked.totalHours,
+          overtimeHours: worked.overtimeHours,
+          lateHours: worked.lateHours,
+          lateDays: worked.lateDays,
           notes: notes || attendance.notes
         }
       });

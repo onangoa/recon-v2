@@ -155,6 +155,8 @@ model Attendance {
   checkOut      DateTime?
   totalHours    Float           @default(0)
   overtimeHours Float           @default(0)
+  lateHours     Float           @default(0)
+  lateDays      Int             @default(0)
   status        String          @default("Present")
   notes         String?
   createdAt     DateTime        @default(now())

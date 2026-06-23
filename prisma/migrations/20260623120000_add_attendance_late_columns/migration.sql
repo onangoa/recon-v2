@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Attendance" ADD COLUMN "lateHours" REAL NOT NULL DEFAULT 0;
+ALTER TABLE "Attendance" ADD COLUMN "lateDays" INTEGER NOT NULL DEFAULT 0;

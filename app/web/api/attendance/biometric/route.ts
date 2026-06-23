@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { startOfDay, differenceInMinutes, addMinutes } from 'date-fns';
+import { startOfDay, differenceInMinutes } from 'date-fns';
+import { computeWorkedHours } from '@/lib/attendance-utils';
 
 /**
  * Biometric Attendance Webhook
@@ -231,30 +232,16 @@ export async function POST(request: NextRequest) {
               ? new Date(existingAttendance.checkIn)
               : logTime;
 
-            const totalMinutes = differenceInMinutes(logTime, checkInTime);
-            const totalHours = Math.max(0, totalMinutes / 60);
-
-            let overtimeHours = 0;
-            if (worker.shift) {
-              const shiftStart = worker.shift.startTime.split(':').map(Number);
-              const shiftEnd = worker.shift.endTime.split(':').map(Number);
-
-              let shiftDurationMinutes = (shiftEnd[0] * 60 + shiftEnd[1]) - (shiftStart[0] * 60 + shiftStart[1]);
-              if (shiftDurationMinutes < 0) shiftDurationMinutes += 24 * 60;
-              shiftDurationMinutes -= worker.shift.breakDuration;
-
-              const shiftDurationHours = shiftDurationMinutes / 60;
-              if (worker.shift.allowOvertime && totalHours > shiftDurationHours) {
-                overtimeHours = totalHours - shiftDurationHours;
-              }
-            }
+            const worked = computeWorkedHours(checkInTime, logTime, worker.shift);
 
             await prisma.attendance.update({
               where: { id: existingAttendance.id },
               data: {
                 checkOut: logTime,
-                totalHours,
-                overtimeHours,
+                totalHours: worked.totalHours,
+                overtimeHours: worked.overtimeHours,
+                lateHours: worked.lateHours,
+                lateDays: worked.lateDays,
                 notes: `${existingAttendance.notes || ''} | Biometric Out (${device_serial_num || 'biometric'})`.trim(),
               },
             });
@@ -287,31 +274,17 @@ export async function POST(request: NextRequest) {
             : logTime;
 
           if (logTime > checkInTime) {
-            const totalMinutes = differenceInMinutes(logTime, checkInTime);
-            const totalHours = Math.max(0, totalMinutes / 60);
-
-            let overtimeHours = 0;
-            if (worker.shift) {
-              const shiftStart = worker.shift.startTime.split(':').map(Number);
-              const shiftEnd = worker.shift.endTime.split(':').map(Number);
-
-              let shiftDurationMinutes = (shiftEnd[0] * 60 + shiftEnd[1]) - (shiftStart[0] * 60 + shiftStart[1]);
-              if (shiftDurationMinutes < 0) shiftDurationMinutes += 24 * 60;
-              shiftDurationMinutes -= worker.shift.breakDuration;
-
-              const shiftDurationHours = shiftDurationMinutes / 60;
-              if (worker.shift.allowOvertime && totalHours > shiftDurationHours) {
-                overtimeHours = totalHours - shiftDurationHours;
-              }
-            }
+            const worked = computeWorkedHours(checkInTime, logTime, worker.shift);
 
             await prisma.attendance.update({
               where: { id: existingAttendance.id },
               data: {
                 checkIn: existingAttendance.checkIn || logTime,
                 checkOut: logTime,
-                totalHours,
-                overtimeHours,
+                totalHours: worked.totalHours,
+                overtimeHours: worked.overtimeHours,
+                lateHours: worked.lateHours,
+                lateDays: worked.lateDays,
                 notes: `${existingAttendance.notes || ''} | Biometric Out (${device_serial_num || 'biometric'})`.trim(),
               },
             });
