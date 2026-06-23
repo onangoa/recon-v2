@@ -70,7 +70,17 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { activeSite, sites, setActiveSite } = useSite();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+
+  const displayName = user?.name || 'User';
+  const displayEmail = user?.email || '';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U';
+  const avatarUrl = user?.avatar || undefined;
 
   const handleLogout = async () => {
     await fetch('/web/api/auth/logout', { method: 'POST' });
@@ -229,11 +239,11 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="/placeholder-user.jpg" alt="Antwon" />
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">A</AvatarFallback>
+                      <AvatarImage src={avatarUrl} alt={displayName} />
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold text-primary">Antwon</span>
+                      <span className="truncate font-semibold text-primary">{displayName}</span>
                       <span className="truncate text-xs opacity-70">Site Contractor</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
@@ -248,12 +258,12 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarImage src="/placeholder-user.jpg" alt="Antwon" />
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">A</AvatarFallback>
+                        <AvatarImage src={avatarUrl} alt={displayName} />
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">Antwon</span>
-                        <span className="truncate text-xs text-muted-foreground">antwon@construction.ke</span>
+                        <span className="truncate font-semibold">{displayName}</span>
+                        <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
