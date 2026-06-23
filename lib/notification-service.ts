@@ -71,7 +71,7 @@ export class EmailService {
   }
 }
 
-export type NotificationType = 'payroll' | 'safety' | 'inventory' | 'team' | 'system';
+export type NotificationType = 'payroll' | 'safety' | 'inventory' | 'team' | 'license' | 'system';
 
 interface SendNotificationOptions {
   userId: string;
@@ -80,6 +80,7 @@ interface SendNotificationOptions {
   message: string;
   type: NotificationType;
   link?: string;
+  html?: string;
 }
 
 export class NotificationService {
@@ -87,7 +88,7 @@ export class NotificationService {
    * Sends a notification to a user, respecting their preferences.
    */
   static async send(options: SendNotificationOptions) {
-    const { userId, contractorId, title, message, type, link } = options;
+    const { userId, contractorId, title, message, type, link, html } = options;
 
     try {
       // 1. Fetch user preferences
@@ -125,7 +126,8 @@ export class NotificationService {
           await EmailService.send({
             to: user.email,
             subject: title,
-            html: `<p>${message}</p>`,
+            html: html || `<p>${message}</p>`,
+            text: message,
           });
         }
       }

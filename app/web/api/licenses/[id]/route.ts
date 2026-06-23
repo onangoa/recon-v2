@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { LicenseExpiryService } from '@/lib/license-expiry-service';
 
 export async function GET(
   request: Request,
@@ -73,6 +74,15 @@ export async function PATCH(
         targetId: license.id,
         details: { name: license.name, status: license.status }
       });
+    }
+
+    // Re-evaluate expiry alert after an update.
+    if (license.expiryDate) {
+      try {
+        await LicenseExpiryService.checkOne(license.id);
+      } catch (err) {
+        console.error('License expiry immediate-check failed (update):', err);
+      }
     }
 
     return NextResponse.json(license);

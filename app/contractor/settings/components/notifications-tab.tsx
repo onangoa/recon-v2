@@ -88,6 +88,7 @@ export default function NotificationsTab() {
     { key: 'safety', label: 'Safety Incidents', desc: 'Real-time alerts for reported safety concerns on site.' },
     { key: 'inventory', label: 'Inventory & Stock', desc: 'Alerts for low stock levels and material deliveries.' },
     { key: 'team', label: 'Team Management', desc: 'Updates on team member status and role changes.' },
+    { key: 'license', label: 'License Expiry Alerts', desc: 'Reminders for licenses that are about to expire or have expired.' },
   ];
 
   return (

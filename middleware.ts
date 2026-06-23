@@ -23,6 +23,7 @@ const AUTH_API_PATHS = [
   '/web/api/mpesa',
   '/web/api/callbacks',
   '/web/api/attendance/biometric',
+  '/web/api/licenses/check-expiry',
   '/api/config',
   '/api/users/authenticate',
   '/api/users/register',

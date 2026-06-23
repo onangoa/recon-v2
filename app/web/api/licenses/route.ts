@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { verifySiteOwnership } from '@/lib/contractor-isolation';
+import { LicenseExpiryService } from '@/lib/license-expiry-service';
 
 export async function GET(request: Request) {
   const permCheck = await requireContractorPermission(request as any, 'licenses:read');
@@ -109,6 +110,15 @@ export async function POST(request: Request) {
         targetId: license.id,
         details: { name: license.name, licenseNumber: license.licenseNumber, status: license.status }
       });
+    }
+
+    // If the new license is already expiring or expired, alert immediately.
+    if (license.expiryDate) {
+      try {
+        await LicenseExpiryService.checkOne(license.id);
+      } catch (err) {
+        console.error('License expiry immediate-check failed (create):', err);
+      }
     }
 
     return NextResponse.json(license);
