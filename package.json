@@ -43,7 +43,6 @@
     "autoprefixer": "^10.4.20",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
@@ -74,7 +73,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
     "@types/bcryptjs": "^3.0.0",
-    "@types/better-sqlite3": "^7.6.11",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22",
     "@types/nodemailer": "^8.0.1",
@@ -82,7 +80,6 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "prisma": "5.22.0",
-    "sqlite3": "5.1.7",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.22.4",
     "tw-animate-css": "1.3.3",

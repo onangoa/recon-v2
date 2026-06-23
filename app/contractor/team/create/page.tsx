@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Save, 
@@ -38,7 +38,7 @@ export default function CreateTeamMemberPage() {
   const [roles, setRoles] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     const fetchRoles = async () => {
       try {
         const response = await fetch('/web/api/roles');
@@ -51,7 +51,7 @@ export default function CreateTeamMemberPage() {
       }
     };
     fetchRoles();
-  });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
