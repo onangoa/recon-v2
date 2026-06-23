@@ -115,20 +115,24 @@ export async function PATCH(
 
       if (currentPO.status !== 'delivered' && updatedPO.status === 'delivered') {
         for (const item of updatedPO.items) {
+          const alreadyReceived = item.receivedQuantity || 0;
+          const remaining = Math.max(0, item.quantity - alreadyReceived);
+          if (remaining <= 0) continue;
+
           if (item.materialId) {
             const material = await tx.inventory.findUnique({
               where: { id: item.materialId }
             });
 
             if (material) {
-              const newQuantity = material.quantity + item.quantity;
+              const newQuantity = material.quantity + remaining;
               
               await tx.inventory.update({
                 where: { id: item.materialId },
                 data: {
                   quantity: newQuantity,
                   unitCost: item.unitPrice,
-                  status: 'in-stock',
+                  status: newQuantity > 0 ? 'in-stock' : 'out-of-stock',
                   updatedAt: new Date(),
                 }
               });
@@ -137,13 +141,18 @@ export async function PATCH(
                 data: {
                   inventoryId: item.materialId,
                   quantity: newQuantity,
-                  change: item.quantity,
+                  change: remaining,
                   type: 'in',
                   notes: `Received from PO: ${updatedPO.orderNumber}`,
                 }
               });
             }
           }
+
+          await tx.purchaseOrderItem.update({
+            where: { id: item.id },
+            data: { receivedQuantity: item.quantity },
+          });
         }
       }
 

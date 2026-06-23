@@ -16,7 +16,8 @@ import {
   User,
   Building2,
   FileText,
-  BadgeInfo
+  BadgeInfo,
+  PackagePlus
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -54,6 +55,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface PurchaseOrder {
   id: string;
@@ -75,8 +86,10 @@ interface PurchaseOrder {
     id: string;
     description: string;
     quantity: number;
+    receivedQuantity?: number;
     unitPrice: number;
     totalPrice: number;
+    materialId?: string;
   }>;
 }
 
@@ -92,6 +105,10 @@ export default function PurchaseOrderView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [isReceiving, setIsReceiving] = useState(false);
+  const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
+  const [receiveNote, setReceiveNote] = useState('');
 
   const fetchOrder = async () => {
     setIsLoading(true);
@@ -141,6 +158,58 @@ export default function PurchaseOrderView() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openReceiveDialog = () => {
+    if (!order) return;
+    const initial: Record<string, number> = {};
+    order.items.forEach((item) => {
+      initial[item.id] = item.receivedQuantity ?? 0;
+    });
+    setReceiveQuantities(initial);
+    setReceiveNote('');
+    setIsReceiveDialogOpen(true);
+  };
+
+  const submitReceive = async () => {
+    if (!order) return;
+    setIsReceiving(true);
+    try {
+      const payload = {
+        note: receiveNote,
+        items: order.items.map((item) => ({
+          id: item.id,
+          receivedQuantity: Number(receiveQuantities[item.id] ?? 0) || 0,
+        })),
+      };
+
+      const response = await fetch(`/web/api/purchase-orders/${id}/receive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Stock Recorded',
+          description: 'Received quantities saved and inventory updated.',
+          variant: 'success',
+        });
+        setIsReceiveDialogOpen(false);
+        fetchOrder();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to record stock received');
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReceiving(false);
     }
   };
 
@@ -251,6 +320,16 @@ export default function PurchaseOrderView() {
         <div className="flex gap-2">
           {order.status !== 'delivered' && (
             <Button 
+              onClick={openReceiveDialog} 
+              disabled={isSubmitting}
+              className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <PackagePlus className="w-4 h-4" />
+              <span>Record Stock Received</span>
+            </Button>
+          )}
+          {order.status !== 'delivered' && (
+            <Button 
               onClick={markAsDelivered} 
               disabled={isSubmitting}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -291,19 +370,30 @@ export default function PurchaseOrderView() {
                   <TableRow>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-center">Quantity</TableHead>
+                    <TableHead className="text-center">Received</TableHead>
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order.items.map((item) => (
+                  {order.items.map((item) => {
+                    const received = item.receivedQuantity ?? 0;
+                    const fullyReceived = received >= item.quantity;
+                    return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.description}</TableCell>
                       <TableCell className="text-center">{item.quantity}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${fullyReceived ? 'text-green-600' : received > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                          {fullyReceived && <CheckCircle2 className="w-3.5 h-3.5" />}
+                          {received} / {item.quantity}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right font-mono text-sm">KES {item.unitPrice.toLocaleString()}</TableCell>
                       <TableCell className="text-right font-mono font-bold text-sm text-primary">KES {item.totalPrice.toLocaleString()}</TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
               <div className="p-6 border-t space-y-2">
@@ -379,6 +469,7 @@ export default function PurchaseOrderView() {
                 <Badge variant="secondary" className={`
                   text-[10px] font-black uppercase px-2 py-0 border-none
                   ${order.status === 'delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 
+                    order.status === 'partially_received' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400' :
                     order.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' : 
                     order.status === 'processing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' :
                     order.status === 'cancelled' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
@@ -442,6 +533,85 @@ export default function PurchaseOrderView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Record Stock Received Dialog */}
+      <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackagePlus className="w-5 h-5 text-primary" /> Record Stock Received
+            </DialogTitle>
+            <DialogDescription>
+              Enter the quantity received for each item. Inventory linked to materials will be updated automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[55vh] overflow-y-auto -mx-2 px-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-center">Ordered</TableHead>
+                  <TableHead className="text-center w-32">Received</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {order.items.map((item) => {
+                  const received = Number(receiveQuantities[item.id] ?? 0);
+                  const fully = received >= item.quantity;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium align-middle">
+                        {item.description}
+                        {item.materialId ? (
+                          <span className="block text-[10px] text-muted-foreground uppercase">Linked to inventory</span>
+                        ) : (
+                          <span className="block text-[10px] text-muted-foreground uppercase">No inventory link</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center align-middle">{item.quantity}</TableCell>
+                      <TableCell className="text-center align-middle">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={receiveQuantities[item.id] ?? 0}
+                          onChange={(e) =>
+                            setReceiveQuantities({
+                              ...receiveQuantities,
+                              [item.id]: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className={`h-9 text-center ${fully ? 'border-green-500 text-green-700' : ''}`}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="receive-note" className="text-xs uppercase tracking-wider">Note (optional)</Label>
+            <Input
+              id="receive-note"
+              value={receiveNote}
+              onChange={(e) => setReceiveNote(e.target.value)}
+              placeholder="e.g. Delivery note / GRN reference"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReceiveDialogOpen(false)} disabled={isReceiving}>
+              Cancel
+            </Button>
+            <Button onClick={submitReceive} disabled={isReceiving} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              {isReceiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
+              Save Received Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

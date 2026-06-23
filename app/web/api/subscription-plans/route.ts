@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         price: body.price,
-        maxSites: body.maxSites,
+        maxSites: 1,
         maxTeamMembers: body.maxTeamMembers,
         features: body.features,
       },

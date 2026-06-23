@@ -11,12 +11,12 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, price, maxSites, maxTeamMembers, features, isActive } = body;
+    const { name, price, maxTeamMembers, features, isActive } = body;
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (price !== undefined) updateData.price = parseFloat(price);
-    if (maxSites !== undefined) updateData.maxSites = parseInt(maxSites);
+    updateData.maxSites = 1;
     if (maxTeamMembers !== undefined) updateData.maxTeamMembers = parseInt(maxTeamMembers);
     if (features !== undefined) updateData.features = JSON.stringify(features);
     if (isActive !== undefined) updateData.isActive = isActive;

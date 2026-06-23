@@ -74,7 +74,7 @@ async function main() {
       data: {
         name: 'Basic',
         price: 2999,
-        maxSites: 5,
+        maxSites: 1,
         maxTeamMembers: 3,
         features: JSON.stringify(['Up to 5 sites', 'Basic reporting', 'Email support']),
       },
@@ -84,7 +84,7 @@ async function main() {
       data: {
         name: 'Professional',
         price: 7999,
-        maxSites: 50,
+        maxSites: 1,
         maxTeamMembers: 15,
         features: JSON.stringify(['Unlimited sites', 'Advanced reporting', 'Priority support', 'Team management']),
       },
@@ -94,7 +94,7 @@ async function main() {
       data: {
         name: 'Enterprise',
         price: 19999,
-        maxSites: 999,
+        maxSites: 1,
         maxTeamMembers: 999,
         features: JSON.stringify(['Unlimited sites', 'Custom reporting', '24/7 support', 'Advanced features']),
       },

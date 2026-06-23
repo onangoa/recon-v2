@@ -292,15 +292,9 @@ export default function PlansPage() {
                 <Label htmlFor="name">Plan Name</Label>
                 <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Professional" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Monthly Price (KES)</Label>
-                  <Input id="price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxSites">Max Sites</Label>
-                  <Input id="maxSites" type="number" value={formData.maxSites} onChange={e => setFormData({...formData, maxSites: e.target.value})} placeholder="5" required />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Monthly Price (KES)</Label>
+                <Input id="price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="maxTeamMembers">Max Team Members per Site</Label>
@@ -387,7 +381,7 @@ export default function PlansPage() {
                         <Layout className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-bold uppercase tracking-wider">Max Sites</span>
                       </div>
-                      <span className="text-lg font-bold">{plan.maxSites}</span>
+                      <span className="text-lg font-bold">1</span>
                     </div>
                     <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                       <div className="flex items-center gap-2 text-primary mb-1">
@@ -430,15 +424,9 @@ export default function PlansPage() {
               <Label htmlFor="edit-name">Plan Name</Label>
               <Input id="edit-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-price">Monthly Price (KES)</Label>
-                <Input id="edit-price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-maxSites">Max Sites</Label>
-                <Input id="edit-maxSites" type="number" value={formData.maxSites} onChange={e => setFormData({...formData, maxSites: e.target.value})} required />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-price">Monthly Price (KES)</Label>
+              <Input id="edit-price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-maxTeamMembers">Max Team Members per Site</Label>

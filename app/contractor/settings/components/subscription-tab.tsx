@@ -116,7 +116,7 @@ export default function SubscriptionTab() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Plan Limit</p>
-              <p className="text-lg font-bold">{currentPlan?.maxSites} Sites / {currentPlan?.maxTeamMembers} Team Members</p>
+              <p className="text-lg font-bold">1 Site / {currentPlan?.maxTeamMembers} Team Members</p>
             </div>
           </div>
         </CardContent>
@@ -143,7 +143,7 @@ export default function SubscriptionTab() {
               <ul className="space-y-2.5">
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <span>Up to <span className="font-bold">{plan.maxSites} sites</span> management</span>
+                  <span>Up to <span className="font-bold">1 site</span> management</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />

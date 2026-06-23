@@ -27,13 +27,13 @@ export async function POST(request: Request) {
   if (!adminCheck.authorized) return adminCheck.error;
   try {
     const body = await request.json();
-    const { name, price, maxSites, maxTeamMembers, features, isActive } = body;
+    const { name, price, maxTeamMembers, features, isActive } = body;
 
     const plan = await prisma.subscriptionPlan.create({
       data: {
         name,
         price: parseFloat(price),
-        maxSites: parseInt(maxSites),
+        maxSites: 1,
         maxTeamMembers: parseInt(maxTeamMembers),
         features: JSON.stringify(features),
         isActive: isActive !== undefined ? isActive : true,

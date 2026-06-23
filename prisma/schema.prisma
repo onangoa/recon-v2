@@ -667,11 +667,12 @@ model PurchaseOrder {
 model PurchaseOrderItem {
   id              String        @id @default(cuid())
   purchaseOrderId String
-  description     String
-  quantity        Float
-  unitPrice       Float
-  totalPrice      Float
-  materialId      String?
+  description       String
+  quantity          Float
+  receivedQuantity  Float          @default(0)
+  unitPrice         Float
+  totalPrice        Float
+  materialId        String?
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@index([purchaseOrderId])

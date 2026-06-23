@@ -304,7 +304,7 @@ export function LandingPage() {
                 <div className="space-y-2 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-[#5D4037]">Max Sites</span>
-                    <span className="font-bold text-[#3E2723]">{plan.maxSites}</span>
+                    <span className="font-bold text-[#3E2723]">1</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#5D4037]">Max Team</span>
