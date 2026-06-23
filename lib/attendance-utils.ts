@@ -1,4 +1,16 @@
 import { differenceInMinutes } from 'date-fns';
+import type { Attendance } from '../prisma/generated/client';
+
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+export interface ShiftShape {
+  startTime: string;   // "HH:mm"
+  endTime: string;     // "HH:mm"
+  breakDuration: number; // minutes
+  allowOvertime: boolean;
+  /** Free-form working days, e.g. "Mon,Tue,Wed,Thu,Fri". Null/empty = every day. */
+  workingDays?: string | null;
+}
 
 export interface ShiftShape {
   startTime: string;   // "HH:mm"
@@ -101,4 +113,82 @@ export function shiftNetHours(shift: ShiftShape | null | undefined): number {
   let minutes = end - start;
   if (minutes < 0) minutes += 24 * 60;
   return Math.max(0, minutes - shift.breakDuration) / 60;
+}
+
+/** Parse a free-form working-days string ("Mon,Tue,...") into a set of 0-6 indexes. */
+export function parseWorkingDays(workingDays: string | null | undefined): Set<number> | null {
+  if (!workingDays) return null;
+  const tokens = workingDays
+    .split(/[,\s]+/)
+    .map(t => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  const set = new Set<number>();
+  for (const t of tokens) {
+    const idx = DAY_KEYS.indexOf(t.slice(0, 3) as any);
+    if (idx >= 0) set.add(idx);
+  }
+  return set.size > 0 ? set : null;
+}
+
+/** Count working days (by weekday name) falling within [start, end] inclusive. */
+export function countExpectedDays(
+  start: Date,
+  end: Date,
+  workingDays: string | null | undefined,
+): number {
+  const mask = parseWorkingDays(workingDays);
+  let count = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const stop = new Date(end);
+  stop.setHours(0, 0, 0, 0);
+  while (cur <= stop) {
+    if (!mask || mask.has(cur.getDay())) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+export interface AttendanceAggregate {
+  daysWorked: number;
+  attainedHours: number;
+  overtimeHours: number;
+  lateHours: number;
+  lateDays: number;
+  leaveDays: number;
+  leaveHours: number;
+}
+
+/**
+ * Aggregate a worker's attendance rows for a period into the figures the
+ * payroll calculator expects. A "day worked" is any attendance row that has
+ * a check-in recorded (status !== 'Absent'). Leave is not modelled yet, so
+ * leaveDays/leaveHours are left at 0.
+ */
+export function aggregateAttendance(records: Attendance[]): AttendanceAggregate {
+  let daysWorked = 0;
+  let attainedHours = 0;
+  let overtimeHours = 0;
+  let lateHours = 0;
+  let lateDays = 0;
+
+  for (const r of records) {
+    const present = r.status !== 'Absent' && r.checkIn != null;
+    if (present) daysWorked++;
+    attainedHours += r.totalHours || 0;
+    overtimeHours += r.overtimeHours || 0;
+    lateHours += r.lateHours || 0;
+    lateDays += r.lateDays || 0;
+  }
+
+  return {
+    daysWorked,
+    attainedHours,
+    overtimeHours,
+    lateHours,
+    lateDays,
+    leaveDays: 0,
+    leaveHours: 0,
+  };
 }

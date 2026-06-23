@@ -174,6 +174,7 @@ export function LoginForm() {
         </Card>
 
         {/* Demo credentials info */}
+        {process.env.NODE_ENV === 'development' && (
         <div className="rounded-xl border border-[#8B4513]/20 bg-[#8B4513]/5 p-4 space-y-3 backdrop-blur-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#8B4513] flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" /> Demo Credentials
@@ -190,6 +191,7 @@ export function LoginForm() {
             <div className="text-[9px] italic opacity-70">Password for all demo accounts: <span className="font-black text-[#3E2723]">12345678</span></div>
           </div>
         </div>
+        )}
 
         <p className="text-center text-[10px] text-[#5D4037] font-medium uppercase tracking-tighter">
           &copy; 2026 ReconSMI Systems. All rights reserved.

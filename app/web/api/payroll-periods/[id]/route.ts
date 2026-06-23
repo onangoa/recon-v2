@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { shiftNetHours, countExpectedDays, aggregateAttendance } from '@/lib/attendance-utils';
 
 export async function GET(
   request: NextRequest,
@@ -91,7 +92,7 @@ export async function PUT(
 
       const workers = await prisma.worker.findMany({
         where: workerWhere,
-        include: { designation: true }
+        include: { designation: true, shift: true }
       });
 
       // 3. Fetch active salary components
@@ -107,24 +108,75 @@ export async function PUT(
       for (const worker of workers) {
         if (!worker.designation) continue;
 
+        // Pull attendance for this worker across the period and aggregate it
+        // into the figures the calculator needs.
+        const attendanceRecords = await prisma.attendance.findMany({
+          where: {
+            workerId: worker.id,
+            date: { gte: period.startDate, lte: period.endDate },
+          },
+        });
+
+        const agg = aggregateAttendance(attendanceRecords);
+        const hoursPerDay = shiftNetHours(worker.shift);
+        const expectedDays = countExpectedDays(
+          period.startDate,
+          period.endDate,
+          worker.shift?.workingDays,
+        );
+        const daysInPeriod = Math.max(
+          1,
+          Math.round((period.endDate.getTime() - period.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        );
+        const expectedHours = expectedDays * hoursPerDay;
+
         // Calculate
         const calc = PayrollCalculator.calculate({
           basicSalary: worker.designation.salary || 0,
           components: components as unknown as SalaryComponentData[],
           includePersonalRelief: true,
+          attendance: {
+            overtimeHours: agg.overtimeHours,
+            lateHours: agg.lateHours,
+            lateDays: agg.lateDays,
+            daysWorked: agg.daysWorked,
+            workingDays: expectedDays,
+            attainedDays: agg.daysWorked,
+            workingHours: expectedHours,
+            attainedHours: agg.attainedHours,
+            leaveDays: agg.leaveDays,
+            leaveHours: agg.leaveHours,
+          },
+          rate: {
+            paymentFrequency: period.paymentFrequency || 'monthly',
+            hoursPerDay,
+            daysInPeriod,
+            expectedDaysInPeriod: expectedDays,
+          },
         });
 
         // Upsert Salary Slip (prevent duplicates for same period/worker)
         await prisma.salarySlip.upsert({
-          where: { 
-            // We need a unique constraint in schema for this to work perfectly, 
+          where: {
+            // We need a unique constraint in schema for this to work perfectly,
             // but for now we'll delete existing and create new
-            id: (await prisma.salarySlip.findFirst({ 
-              where: { payrollPeriodId: id, workerId: worker.id } 
+            id: (await prisma.salarySlip.findFirst({
+              where: { payrollPeriodId: id, workerId: worker.id }
             }))?.id || 'new-id'
           },
           update: {
-            basicSalary: calc.basicSalary,
+            basicSalary: calc.payableBasic,
+            overtimeHours: agg.overtimeHours,
+            overtimePay: calc.overtimePay,
+            daysWorked: agg.daysWorked,
+            workingDays: expectedDays,
+            attainedDays: agg.daysWorked,
+            workingHours: expectedHours,
+            attainedHours: agg.attainedHours,
+            lateDays: agg.lateDays,
+            lateHours: agg.lateHours,
+            leaveDays: agg.leaveDays,
+            leaveHours: agg.leaveHours,
             totalAllowance: calc.totalAllowance,
             totalDeductions: calc.totalDeductions,
             grossPay: calc.grossPay,
@@ -148,7 +200,18 @@ export async function PUT(
             payrollPeriodId: id,
             workerId: worker.id,
             designationId: worker.designationId,
-            basicSalary: calc.basicSalary,
+            basicSalary: calc.payableBasic,
+            overtimeHours: agg.overtimeHours,
+            overtimePay: calc.overtimePay,
+            daysWorked: agg.daysWorked,
+            workingDays: expectedDays,
+            attainedDays: agg.daysWorked,
+            workingHours: expectedHours,
+            attainedHours: agg.attainedHours,
+            lateDays: agg.lateDays,
+            lateHours: agg.lateHours,
+            leaveDays: agg.leaveDays,
+            leaveHours: agg.leaveHours,
             totalAllowance: calc.totalAllowance,
             totalDeductions: calc.totalDeductions,
             grossPay: calc.grossPay,

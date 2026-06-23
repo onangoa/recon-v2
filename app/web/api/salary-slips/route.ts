@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
+import { PayrollCalculator, SalaryComponentData, AttendancePayrollInput, RateConfig } from '@/lib/payroll-calculator';
+import { shiftNetHours, countExpectedDays } from '@/lib/attendance-utils';
 import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Fetch worker and designation
     const worker = await prisma.worker.findUnique({
       where: { id: workerId },
-      include: { designation: true }
+      include: { designation: true, shift: true }
     });
 
     if (!worker) {
@@ -81,11 +82,61 @@ export async function POST(request: NextRequest) {
       where: { contractorId, isActive: true }
     });
 
+    // Build attendance + rate inputs. When the caller supplies attendance
+    // figures (and a payroll period exists for expected days/hours), the
+    // calculator pro-rates basic pay, pays overtime at 1x and docks late
+    // hours. Otherwise it falls back to legacy full-salary behaviour.
+    let attendanceInput: AttendancePayrollInput | undefined;
+    let rateInput: RateConfig | undefined;
+
+    const attendanceProvided =
+      workingHours != null || attainedHours != null ||
+      workingDays != null || attainedDays != null ||
+      overtimeHours != null || lateHours != null;
+
+    if (attendanceProvided) {
+      const period = payrollPeriodId
+        ? await prisma.payrollPeriod.findFirst({ where: { id: payrollPeriodId, contractorId } })
+        : null;
+
+      const hoursPerDay = shiftNetHours(worker.shift);
+      const startDate = period?.startDate;
+      const endDate = period?.endDate;
+      const expectedDays = startDate && endDate
+        ? countExpectedDays(startDate, endDate, worker.shift?.workingDays)
+        : (workingDays || 0);
+      const daysInPeriod = startDate && endDate
+        ? Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+        : expectedDays;
+      const expectedHours = expectedDays * hoursPerDay;
+
+      attendanceInput = {
+        overtimeHours: overtimeHours || 0,
+        lateHours: lateHours || 0,
+        lateDays: lateDays || 0,
+        daysWorked: attainedDays || 0,
+        workingDays: workingDays || expectedDays,
+        attainedDays: attainedDays || 0,
+        workingHours: workingHours || expectedHours,
+        attainedHours: attainedHours || 0,
+        leaveDays: leaveDays || 0,
+        leaveHours: leaveHours || 0,
+      };
+      rateInput = {
+        paymentFrequency: period?.paymentFrequency || 'monthly',
+        hoursPerDay,
+        daysInPeriod,
+        expectedDaysInPeriod: expectedDays,
+      };
+    }
+
     // Calculate payroll
     const calculation = PayrollCalculator.calculate({
       basicSalary: designation.salary || 0,
       components: components as unknown as SalaryComponentData[],
       includePersonalRelief: true,
+      attendance: attendanceInput,
+      rate: rateInput,
     });
 
     // Create salary slip
@@ -95,16 +146,18 @@ export async function POST(request: NextRequest) {
         payrollPeriodId,
         workerId,
         designationId: designation.id,
-        workingHours: workingHours || 0,
-        attainedHours: attainedHours || 0,
-        workingDays: workingDays || 0,
-        attainedDays: attainedDays || 0,
-        overtimeHours: overtimeHours || 0,
-        lateHours: lateHours || 0,
-        lateDays: lateDays || 0,
-        leaveHours: leaveHours || 0,
-        leaveDays: leaveDays || 0,
-        basicSalary: calculation.basicSalary,
+        workingHours: attendanceInput?.workingHours ?? 0,
+        attainedHours: attendanceInput?.attainedHours ?? 0,
+        workingDays: attendanceInput?.workingDays ?? 0,
+        attainedDays: attendanceInput?.attainedDays ?? 0,
+        overtimeHours: attendanceInput?.overtimeHours ?? 0,
+        overtimePay: calculation.overtimePay,
+        lateHours: attendanceInput?.lateHours ?? 0,
+        lateDays: attendanceInput?.lateDays ?? 0,
+        leaveHours: attendanceInput?.leaveHours ?? 0,
+        leaveDays: attendanceInput?.leaveDays ?? 0,
+        daysWorked: attendanceInput?.daysWorked ?? 0,
+        basicSalary: calculation.payableBasic,
         totalAllowance: calculation.totalAllowance,
         totalDeductions: calculation.totalDeductions,
         grossPay: calculation.grossPay,
@@ -119,13 +172,10 @@ export async function POST(request: NextRequest) {
         phoneNumber: phoneNumber || worker.phone,
         details: {
           create: calculation.componentDetails.map(detail => ({
-            salaryComponentId: detail.salaryComponentId,
-            componentName: detail.componentName,
-            componentType: detail.componentType,
-            deductionType: detail.deductionType,
-            isStatutory: detail.isStatutory,
+            name: detail.componentName,
+            type: detail.componentType,
             amount: detail.amount,
-            percentage: detail.percentage,
+            isStatutory: detail.isStatutory,
           }))
         }
       },

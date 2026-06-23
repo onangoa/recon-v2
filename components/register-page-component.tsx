@@ -460,7 +460,7 @@ export function RegisterPageComponent() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="license">License No *</Label>
+                      <Label htmlFor="license">License No</Label>
                       <div className="relative">
                         <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
                         <Input 

@@ -69,8 +69,8 @@ import Link from 'next/link';
 
 interface SalarySlipDetail {
   id: string;
-  componentName: string;
-  componentType: string;
+  name: string;
+  type: string;
   amount: number;
   isStatutory: boolean;
 }
@@ -95,6 +95,18 @@ interface SalarySlip {
   payeTax: number;
   personalRelief: number;
   netPay: number;
+  // Attendance-derived fields
+  overtimeHours: number;
+  overtimePay: number;
+  daysWorked: number;
+  workingDays: number;
+  attainedDays: number;
+  workingHours: number;
+  attainedHours: number;
+  lateDays: number;
+  lateHours: number;
+  leaveDays: number;
+  leaveHours: number;
   status: string;
   details: SalarySlipDetail[];
 }
@@ -484,14 +496,14 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                     <span className="font-medium text-muted-foreground italic">Basic Salary</span>
                     <span className="font-mono">{viewingSlip.basicSalary.toLocaleString()}</span>
                   </div>
-                  
-                  {viewingSlip.details.filter(d => d.componentType === 'earning').map(d => (
+
+                  {viewingSlip.details.filter(d => d.type === 'earning').map(d => (
                     <div key={d.id} className="flex justify-between text-sm">
-                      <span className="font-medium text-muted-foreground italic">{d.componentName}</span>
+                      <span className="font-medium text-muted-foreground italic">{d.name}</span>
                       <span className="font-mono">{d.amount.toLocaleString()}</span>
                     </div>
                   ))}
-                  
+
                   <div className="pt-2 border-t flex justify-between font-bold text-sm">
                     <span>GROSS PAY</span>
                     <span className="font-mono">{viewingSlip.grossPay.toLocaleString()}</span>
@@ -507,9 +519,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                       <span className="font-medium italic">Less: Personal Relief</span>
                       <span className="font-mono">({viewingSlip.personalRelief.toLocaleString()})</span>
                     </div>
-                    {viewingSlip.details.filter(d => d.componentType === 'deduction').map(d => (
+                    {viewingSlip.details.filter(d => d.type === 'deduction').map(d => (
                       <div key={d.id} className="flex justify-between text-sm text-red-600">
-                        <span className="font-medium italic">{d.componentName}</span>
+                        <span className="font-medium italic">{d.name}</span>
                         <span className="font-mono">{d.amount.toLocaleString()}</span>
                       </div>
                     ))}
@@ -520,6 +532,46 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                     <span className="text-2xl font-black text-emerald-600 font-mono">
                       {formatCurrency(viewingSlip.netPay)}
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 p-3 border-b text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5" /> Attendance Summary
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Days Worked</span>
+                    <span className="font-mono">{viewingSlip.daysWorked} / {viewingSlip.workingDays || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Hours Worked</span>
+                    <span className="font-mono">{viewingSlip.attainedHours.toFixed(1)} / {viewingSlip.workingHours.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Overtime Hours</span>
+                    <span className="font-mono">{viewingSlip.overtimeHours.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Overtime Pay</span>
+                    <span className="font-mono text-emerald-600">{formatCurrency(viewingSlip.overtimePay)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Late Days</span>
+                    <span className="font-mono">{viewingSlip.lateDays}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Late Hours</span>
+                    <span className="font-mono">{viewingSlip.lateHours.toFixed(1)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Leave Days</span>
+                    <span className="font-mono">{viewingSlip.leaveDays}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Leave Hours</span>
+                    <span className="font-mono">{viewingSlip.leaveHours.toFixed(1)}</span>
                   </div>
                 </div>
               </div>

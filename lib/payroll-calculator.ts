@@ -24,10 +24,53 @@ export interface PayrollCalculationInput {
   basicSalary: number;
   components: SalaryComponentData[];
   includePersonalRelief: boolean;
+  /**
+   * Attendance-derived figures for the period. When omitted, the calculator
+   * pays the full basic salary with no overtime/late adjustment (legacy
+   * behaviour). When provided, the basic salary is pro-rated by days worked
+   * according to `rate.paymentFrequency`, overtime is paid at 1x the derived
+   * hourly rate, and late hours are deducted as an unpaid post-tax deduction.
+   */
+  attendance?: AttendancePayrollInput;
+  rate?: RateConfig;
+}
+
+export interface AttendancePayrollInput {
+  overtimeHours: number;
+  lateHours: number;
+  lateDays: number;
+  /** Days the worker was present (clocked in) during the period. */
+  daysWorked: number;
+  /** Expected working days in the period (from shift/period). */
+  workingDays: number;
+  /** Same as daysWorked unless the caller wants to distinguish. */
+  attainedDays: number;
+  /** Expected working hours across the whole period. */
+  workingHours: number;
+  /** Actual hours worked (sum of Attendance.totalHours). */
+  attainedHours: number;
+  leaveDays: number;
+  leaveHours: number;
+}
+
+export interface RateConfig {
+  paymentFrequency: string;
+  /** Net shift hours per day (duration minus break). */
+  hoursPerDay: number;
+  /** Calendar days spanned by the period (used to derive rates). */
+  daysInPeriod: number;
+  /** Expected working days in the period. */
+  expectedDaysInPeriod: number;
 }
 
 export interface PayrollCalculationResult {
   basicSalary: number;
+  /** Pro-rated basic salary actually payable for days worked. */
+  payableBasic: number;
+  hourlyRate: number;
+  dailyRate: number;
+  overtimePay: number;
+  lateDeduction: number;
   totalAllowance: number;
   totalDeductions: number;
   grossPay: number;
@@ -47,9 +90,11 @@ export interface PayrollCalculationResult {
   }[];
 }
 
+const OVERTIME_MULTIPLIER = 1; // 1x hourly rate per the chosen policy.
+
 export class PayrollCalculator {
   static calculate(input: PayrollCalculationInput): PayrollCalculationResult {
-    const { basicSalary, components, includePersonalRelief } = input;
+    const { basicSalary, components, includePersonalRelief, attendance, rate } = input;
 
     let totalAllowance = 0;
     let preTaxDeductions = 0;
@@ -88,12 +133,43 @@ export class PayrollCalculator {
       }
     });
 
-    const grossPay = basicSalary + totalAllowance;
+    // Derive rates and attendance-adjusted pay.
+    const { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction } =
+      this.deriveRatesAndPay(basicSalary, attendance, rate);
+
+    // Add overtime as an earning and lateness as a deduction so they appear
+    // as itemised lines on the payslip alongside configured components.
+    if (overtimePay > 0) {
+      totalAllowance += overtimePay;
+      componentDetails.push({
+        salaryComponentId: 'overtime',
+        componentName: 'Overtime Pay',
+        componentType: 'earning',
+        deductionType: null,
+        isStatutory: false,
+        amount: overtimePay,
+        percentage: null,
+      });
+    }
+    if (lateDeduction > 0) {
+      postTaxDeductions += lateDeduction;
+      componentDetails.push({
+        salaryComponentId: 'late-deduction',
+        componentName: 'Late Hours Deduction',
+        componentType: 'deduction',
+        deductionType: 'post_tax',
+        isStatutory: false,
+        amount: lateDeduction,
+        percentage: null,
+      });
+    }
+
+    const grossPay = payableBasic + totalAllowance;
     const chargeableIncome = Math.max(0, grossPay - preTaxDeductions);
-    
+
     let payeTax = this.calculatePAYE(chargeableIncome);
     const relief = includePersonalRelief ? PERSONAL_RELIEF : 0;
-    
+
     // PAYE cannot be negative
     payeTax = Math.max(0, payeTax - relief);
 
@@ -101,6 +177,11 @@ export class PayrollCalculator {
 
     return {
       basicSalary,
+      payableBasic,
+      hourlyRate,
+      dailyRate,
+      overtimePay,
+      lateDeduction,
       totalAllowance,
       totalDeductions: preTaxDeductions + postTaxDeductions,
       grossPay,
@@ -111,6 +192,59 @@ export class PayrollCalculator {
       employerCosts,
       componentDetails,
     };
+  }
+
+  /**
+   * Derive hourly/daily rates from the flat basic salary using the payment
+   * frequency and the period's day/hour expectations, then compute the
+   * pro-rated basic pay, overtime pay (1x hourly) and late-hour deduction.
+   */
+  private static deriveRatesAndPay(
+    basicSalary: number,
+    attendance: AttendancePayrollInput | undefined,
+    rate: RateConfig | undefined,
+  ) {
+    // Legacy path — no attendance integration. Pay full basic, no overtime/late.
+    if (!attendance || !rate) {
+      return {
+        hourlyRate: 0,
+        dailyRate: 0,
+        payableBasic: basicSalary,
+        overtimePay: 0,
+        lateDeduction: 0,
+      };
+    }
+
+    const frequency = (rate.paymentFrequency || 'monthly').toLowerCase();
+    const daysInPeriod = rate.daysInPeriod > 0 ? rate.daysInPeriod : 30;
+    const expectedDays = rate.expectedDaysInPeriod > 0 ? rate.expectedDaysInPeriod : daysInPeriod;
+    const hoursPerDay = rate.hoursPerDay > 0 ? rate.hoursPerDay : 8;
+
+    let dailyRate: number;
+    switch (frequency) {
+      case 'daily':
+        // The designation salary is the per-day rate.
+        dailyRate = basicSalary;
+        break;
+      case 'weekly':
+        dailyRate = basicSalary / (expectedDays || 7);
+        break;
+      case 'monthly':
+      case 'all':
+      default:
+        // Conventional monthly → divide by the calendar days in the period.
+        dailyRate = basicSalary / daysInPeriod;
+        break;
+    }
+
+    const hourlyRate = hoursPerDay > 0 ? dailyRate / hoursPerDay : dailyRate / 8;
+
+    const daysWorked = Math.max(0, attendance.daysWorked || 0);
+    const payableBasic = Math.max(0, dailyRate * daysWorked);
+    const overtimePay = Math.max(0, attendance.overtimeHours || 0) * hourlyRate * OVERTIME_MULTIPLIER;
+    const lateDeduction = Math.max(0, attendance.lateHours || 0) * hourlyRate;
+
+    return { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction };
   }
 
   private static calculatePAYE(taxableIncome: number): number {

@@ -35,6 +35,7 @@ export function AuthNavbar() {
           <Link href="/#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Features</Link>
           <Link href="/#mobile" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
           <Link href="/#pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Pricing</Link>
+          <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Login</Link>
           <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="px-8 py-3 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
             Get Started
           </Link>

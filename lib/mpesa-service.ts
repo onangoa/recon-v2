@@ -466,7 +466,7 @@ const processRegistration = async (formData: any, transactionId: string) => {
           companyName,
           location,
           phoneNumber,
-          licenseNo,
+          licenseNo: licenseNo || '',
           subscriptionPlanId: planId,
         },
       });
