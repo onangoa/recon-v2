@@ -797,8 +797,8 @@ model Transaction {
   transactionDesc           String?
   remarks                   String?
   phoneNumber               String?
-  rawCallbackData           String?
-  rawApiResponse            String?
+  rawCallbackData           String?  @db.Text
+  rawApiResponse            String?  @db.Text
   callbackReceivedAt        DateTime?
 
   @@index([walletId])

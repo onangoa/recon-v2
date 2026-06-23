@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import { hashPassword } from '@/lib/jwt';
 import { requireSuperadmin } from '@/lib/require-permission';
 
 export async function GET(request: Request) {
@@ -63,11 +64,12 @@ export async function POST(request: Request) {
     }
 
     // Create user first
+    const plainPassword = password || crypto.randomBytes(8).toString('hex');
     const user = await prisma.user.create({
       data: {
         email,
         name,
-        password: password || crypto.randomBytes(8).toString('hex'),
+        password: await hashPassword(plainPassword),
         role: 'contractor',
       },
     });

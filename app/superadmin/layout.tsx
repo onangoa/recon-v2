@@ -20,8 +20,7 @@ import {
   Plus,
   CheckCircle2,
   Construction,
-  MapPin,
-  LifeBuoy
+  MapPin
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -69,7 +68,6 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
-    { label: 'Support', href: '/superadmin/reports', icon: LifeBuoy },
     { label: 'Settings', href: '/superadmin/settings', icon: Settings },
   ];
 
