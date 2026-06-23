@@ -1,4 +1,5 @@
 import { PrismaClient } from './generated/client';
+import { hashPassword } from '../lib/jwt';
 
 const prisma = new PrismaClient();
 
@@ -38,9 +39,10 @@ async function main() {
       'WORKERS', 'ATTENDANCE', 'PAYROLL', 'PROJECTS', 'SITES', 'TASKS',
       'INVENTORY', 'EQUIPMENT', 'SAFETY', 'TEAM', 'WALLETS', 'REPORTS', 'SETTINGS',
       'PURCHASE_ORDERS', 'SUPPLIERS', 'MATERIALS', 'VISITORS', 'DESIGNATIONS',
-      'SHIFTS', 'SALARY_COMPONENTS', 'SALARY_SLIPS', 'DOCUMENTS', 'LICENSES', 'DASHBOARD'
+      'SHIFTS', 'SALARY_COMPONENTS', 'SALARY_SLIPS', 'DOCUMENTS', 'LICENSES', 'DASHBOARD',
+      'ACTIVITY_LOGS', 'NOTIFICATIONS', 'CONTRACTORS', 'ROLES', 'MPESA', 'APPROVALS'
     ];
-    const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
+    const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE', 'APPROVE'];
     
     const permissions = [];
     for (const module of modules) {
@@ -101,10 +103,11 @@ async function main() {
     console.log('Created subscription plans');
 
     // Create Superadmin user
+    const hashedDefaultPassword = await hashPassword('12345678');
     const superadminUser = await prisma.user.create({
       data: {
         email: 'admin@constructionhub.ke',
-        password: '12345678',
+        password: hashedDefaultPassword,
         role: 'superadmin',
         roleId: superadminRole.id,
         name: 'John Admin',
@@ -154,7 +157,7 @@ const adminRole = await prisma.role.create({
       const user = await prisma.user.create({
         data: {
           email: data.email,
-          password: '12345678',
+          password: hashedDefaultPassword,
           role: 'contractor',
           roleId: adminRole.id,
           name: data.name,
@@ -303,7 +306,7 @@ const adminRole = await prisma.role.create({
         const teamUser = await prisma.user.create({
           data: {
             email: data.email,
-            password: '12345678',
+            password: hashedDefaultPassword,
             role: 'team_member',
             roleId: managerRole.id,
             name: data.name,

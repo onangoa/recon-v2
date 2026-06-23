@@ -9,9 +9,33 @@ export interface PermissionCheckResult {
   contractorId?: string;
 }
 
+async function checkUserPermission(userId: string, permissionName: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      roleRelation: {
+        select: {
+          name: true,
+          permissions: { select: { name: true } }
+        }
+      }
+    }
+  });
+
+  if (!user) return false;
+  if (user.role === 'superadmin') return true;
+  if (!user.roleRelation) return false;
+
+  // Contractor Admin role gets all permissions
+  if (user.roleRelation.name === 'Contractor Admin') return true;
+
+  return user.roleRelation.permissions.some(p => p.name === permissionName);
+}
+
 export async function requirePermission(
   request: NextRequest,
-  _permission: string
+  permission: string
 ): Promise<PermissionCheckResult> {
   const auth = await verifyAuth(request);
 
@@ -22,16 +46,24 @@ export async function requirePermission(
     };
   }
 
+  const hasPermission = await checkUserPermission(auth.userId, permission);
+  if (!hasPermission) {
+    return {
+      authorized: false,
+      error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+    };
+  }
+
   return {
     authorized: true,
     userId: auth.userId,
-    contractorId: auth.contractorId,
+    contractorId: auth.contractorId || undefined,
   };
 }
 
 export async function requireContractorPermission(
   request: NextRequest,
-  _permission: string
+  permission: string
 ): Promise<PermissionCheckResult> {
   const auth = await verifyAuth(request);
 
@@ -46,6 +78,14 @@ export async function requireContractorPermission(
     return {
       authorized: false,
       error: NextResponse.json({ error: 'Contractor account required' }, { status: 403 }),
+    };
+  }
+
+  const hasPermission = await checkUserPermission(auth.userId, permission);
+  if (!hasPermission) {
+    return {
+      authorized: false,
+      error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
     };
   }
 
@@ -83,6 +123,6 @@ export async function requireSuperadmin(
   return {
     authorized: true,
     userId: auth.userId,
-    contractorId: auth.contractorId,
+    contractorId: auth.contractorId || undefined,
   };
 }

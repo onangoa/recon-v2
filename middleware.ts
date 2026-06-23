@@ -174,6 +174,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Role-based route protection
+  if (tokenPayload) {
+    if (pathname.startsWith('/superadmin') && tokenPayload.role !== 'superadmin') {
+      return NextResponse.redirect(new URL('/contractor', request.url));
+    }
+    if (pathname.startsWith('/contractor') && tokenPayload.role === 'superadmin') {
+      return NextResponse.redirect(new URL('/superadmin', request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 

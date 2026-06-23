@@ -187,6 +187,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user && contractor && needsOnboarding && user.role === 'contractor' && pathname.startsWith('/contractor') && !pathname.includes('/sites/create') && !pathname.includes('/sites/create?') && pathname !== '/contractor/sites/create') {
       router.push('/contractor/sites/create');
     }
+
+    // Role-based route protection
+    if (user && pathname.startsWith('/superadmin') && user.role !== 'superadmin') {
+      router.push('/contractor');
+    }
+    if (user && user.role === 'superadmin' && pathname.startsWith('/contractor')) {
+      router.push('/superadmin');
+    }
   }, [user, contractor, isLoading, needsOnboarding, pathname, router]);
 
   const logout = useCallback(async () => {

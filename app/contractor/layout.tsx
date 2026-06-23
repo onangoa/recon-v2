@@ -62,6 +62,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SiteProvider, useSite } from '@/hooks/use-site';
+import { useAuth } from '@/context/auth-context';
 
 import NotificationBell from '@/components/notification-bell';
 
@@ -69,6 +70,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { activeSite, sites, setActiveSite } = useSite();
+  const { hasPermission } = useAuth();
 
   const handleLogout = async () => {
     await fetch('/web/api/auth/logout', { method: 'POST' });
@@ -77,26 +79,28 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
 
-  const navItems = [
-    { label: 'Dashboard', href: '/contractor', icon: LayoutDashboard },
-    { label: 'Safety & Incidents', href: '/contractor/safety', icon: ShieldAlert },
-    { label: 'Inventory', href: '/contractor/inventory', icon: Package },
-    { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake },
-    { label: 'Wallets', href: '/contractor/wallets', icon: Wallet },
-    { label: 'Site Uploads', href: '/contractor/uploads', icon: Upload },
-    { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer },
-    { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList },
-    { label: 'Material Deliveries', href: '/contractor/materials', icon: Truck },
-    { label: 'Licenses', href: '/contractor/licenses', icon: FileText },
-    { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen },
-    { label: 'Payroll', href: '/contractor/payroll', icon: Coins },
-    { label: 'Team Members', href: '/contractor/team', icon: Briefcase },
-    { label: 'Workers', href: '/contractor/workers', icon: Users },
-    { label: 'Shifts', href: '/contractor/shifts', icon: Clock },
-    { label: 'Attendance', href: '/contractor/attendance', icon: Fingerprint },
-    { label: 'Reports', href: '/contractor/reports', icon: BarChart3 },
-    { label: 'Settings', href: '/contractor/settings', icon: Settings },
+  const navItems: { label: string; href: string; icon: typeof LayoutDashboard; permission?: string }[] = [
+    { label: 'Dashboard', href: '/contractor', icon: LayoutDashboard, permission: 'dashboard:read' },
+    { label: 'Safety & Incidents', href: '/contractor/safety', icon: ShieldAlert, permission: 'safety:read' },
+    { label: 'Inventory', href: '/contractor/inventory', icon: Package, permission: 'inventory:read' },
+    { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake, permission: 'suppliers:read' },
+    { label: 'Wallets', href: '/contractor/wallets', icon: Wallet, permission: 'wallets:read' },
+    { label: 'Site Uploads', href: '/contractor/uploads', icon: Upload, permission: 'documents:read' },
+    { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer, permission: 'equipment:read' },
+    { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList, permission: 'purchase_orders:read' },
+    { label: 'Material Deliveries', href: '/contractor/materials', icon: Truck, permission: 'materials:read' },
+    { label: 'Licenses', href: '/contractor/licenses', icon: FileText, permission: 'licenses:read' },
+    { label: 'Visitor Management', href: '/contractor/visitors', icon: DoorOpen, permission: 'visitors:read' },
+    { label: 'Payroll', href: '/contractor/payroll', icon: Coins, permission: 'payroll:read' },
+    { label: 'Team Members', href: '/contractor/team', icon: Briefcase, permission: 'team:read' },
+    { label: 'Workers', href: '/contractor/workers', icon: Users, permission: 'workers:read' },
+    { label: 'Shifts', href: '/contractor/shifts', icon: Clock, permission: 'shifts:read' },
+    { label: 'Attendance', href: '/contractor/attendance', icon: Fingerprint, permission: 'attendance:read' },
+    { label: 'Reports', href: '/contractor/reports', icon: BarChart3, permission: 'reports:read' },
+    { label: 'Settings', href: '/contractor/settings', icon: Settings, permission: 'settings:read' },
   ];
+
+  const visibleNavItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
 
   const isActive = (href: string) => {
     return pathname === href || (href !== '/contractor' && pathname.startsWith(href + '/'));
@@ -194,7 +198,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
             <SidebarGroupLabel className="px-2 mb-2">Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton 
                       asChild 
