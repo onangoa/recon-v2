@@ -29,6 +29,7 @@ const AUTH_API_PATHS = [
   '/api/users/register',
   '/api/users/forgot-password',
   '/api/subscriptions/plans',
+  '/v1/ext/ipn',
 ];
 
 async function verifyTokenEdge(token: string) {
