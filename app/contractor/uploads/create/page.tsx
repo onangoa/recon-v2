@@ -82,7 +82,7 @@ export default function CreateDocumentPage() {
       
       setDocuments(prev => prev.map(d => d.id === entry.id ? { 
         ...d, 
-        fileUrl: data.fileData, 
+         fileUrl: data.url, 
         isUploading: false, 
         isUploaded: true 
       } : d));

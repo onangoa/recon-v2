@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       url: `/uploads/${filename}`,
+      fileData: `/uploads/${filename}`,
       fileName: file.name,
       fileType: file.type,
     });
