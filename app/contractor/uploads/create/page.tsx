@@ -125,19 +125,30 @@ export default function CreateDocumentPage() {
       return;
     }
 
-    const pendingUploads = documents.filter(d => !d.isUploaded);
-    if (pendingUploads.length > 0) {
-      toast({
-        title: "Error",
-        description: "Please wait for all files to finish uploading.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
+      const pendingUploads = (documents as any[]).filter(d => !d.isUploaded && d.file);
+      for (const doc of pendingUploads) {
+        setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isUploading: true } : d));
+        try {
+          const formDataUpload = new FormData();
+          formDataUpload.append('file', doc.file);
+          const uploadResponse = await fetch('/web/api/upload', {
+            method: 'POST',
+            body: formDataUpload,
+          });
+          if (!uploadResponse.ok) throw new Error('Failed to upload file');
+          const data = await uploadResponse.json();
+          doc.fileUrl = data.url;
+          doc.isUploaded = true;
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, fileUrl: data.url, isUploading: false, isUploaded: true } : d));
+        } catch (error: any) {
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isUploading: false } : d));
+          throw new Error(`Failed to upload ${doc.name}: ${error.message}`);
+        }
+      }
+
       const response = await fetch('/web/api/documents', {
         method: 'POST',
         headers: {
@@ -318,7 +329,7 @@ export default function CreateDocumentPage() {
           <div className="flex gap-4 pt-4 border-t border-gray-100">
             <Button 
               type="submit" 
-              disabled={isSubmitting || documents.length === 0 || documents.some(d => !d.isUploaded)}
+              disabled={isSubmitting || documents.length === 0}
               className="gap-2 bg-primary hover:bg-primary/90 text-white px-6 min-w-[140px]"
             >
               {isSubmitting ? (

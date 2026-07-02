@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowLeft, 
-  PackageCheck, 
-  Download, 
-  Pencil, 
-  Trash2, 
-  Loader2, 
+import {
+  ArrowLeft,
+  PackageCheck,
+  Download,
+  Pencil,
+  Trash2,
+  Loader2,
   AlertCircle,
   CheckCircle2,
   Calendar,
@@ -17,7 +17,10 @@ import {
   Building2,
   FileText,
   BadgeInfo,
-  PackagePlus
+  PackagePlus,
+  AlertTriangle,
+  MinusCircle,
+  PlusCircle,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -109,6 +112,11 @@ export default function PurchaseOrderView() {
   const [isReceiving, setIsReceiving] = useState(false);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
   const [receiveNote, setReceiveNote] = useState('');
+  const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
+  const [isDelivering, setIsDelivering] = useState(false);
+  const [deliverQuantities, setDeliverQuantities] = useState<Record<string, number>>({});
+  const [deliverNote, setDeliverNote] = useState('');
+  const [itemStatuses, setItemStatuses] = useState<Record<string, 'not_delivered' | 'partial' | 'full' | 'excess'>>({});
 
   const fetchOrder = async () => {
     setIsLoading(true);
@@ -131,33 +139,84 @@ export default function PurchaseOrderView() {
 
   const markAsDelivered = async () => {
     if (!order) return;
-    setIsSubmitting(true);
+    // Pre-fill each item with the ordered quantity (assume full delivery by default).
+    // The user can adjust per item to record partial, excess, or not-delivered.
+    const initial: Record<string, number> = {};
+    order.items.forEach((item) => {
+      initial[item.id] = item.quantity;
+    });
+    setDeliverQuantities(initial);
+    setDeliverNote('');
+    const statuses: Record<string, 'not_delivered' | 'partial' | 'full' | 'excess'> = {};
+    order.items.forEach((item) => {
+      statuses[item.id] = 'full';
+    });
+    setItemStatuses(statuses);
+    setIsDeliverDialogOpen(true);
+  };
+
+  const computeItemStatus = (received: number, ordered: number): 'not_delivered' | 'partial' | 'full' | 'excess' => {
+    if (received <= 0) return 'not_delivered';
+    if (received < ordered) return 'partial';
+    if (received === ordered) return 'full';
+    return 'excess';
+  };
+
+  const updateDeliverQuantity = (itemId: string, ordered: number, value: number) => {
+    const qty = Math.max(0, value);
+    setDeliverQuantities((prev) => ({ ...prev, [itemId]: qty }));
+    setItemStatuses((prev) => ({ ...prev, [itemId]: computeItemStatus(qty, ordered) }));
+  };
+
+  const submitDelivery = async () => {
+    if (!order) return;
+    setIsDelivering(true);
     try {
-      const response = await fetch(`/web/api/purchase-orders/${id}`, {
-        method: 'PATCH',
+      const payload = {
+        note: deliverNote,
+        items: order.items.map((item) => ({
+          id: item.id,
+          receivedQuantity: Number(deliverQuantities[item.id] ?? 0) || 0,
+        })),
+      };
+
+      const response = await fetch(`/web/api/purchase-orders/${id}/receive`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'delivered' }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
+        const summary = order.items.reduce(
+          (acc, item) => {
+            const r = Number(deliverQuantities[item.id] ?? 0);
+            if (r <= 0) acc.notDelivered += 1;
+            else if (r < item.quantity) acc.partial += 1;
+            else if (r > item.quantity) acc.excess += 1;
+            else acc.full += 1;
+            return acc;
+          },
+          { notDelivered: 0, partial: 0, full: 0, excess: 0 }
+        );
         toast({
-          title: "Updated",
-          description: "Order marked as delivered and inventory updated",
-          variant: "success",
+          title: 'Delivery Recorded',
+          description: `Full: ${summary.full} · Partial: ${summary.partial} · Excess: ${summary.excess} · Not delivered: ${summary.notDelivered}`,
+          variant: 'success',
         });
+        setIsDeliverDialogOpen(false);
         fetchOrder();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update order');
+        throw new Error(errorData.error || 'Failed to record delivery');
       }
     } catch (err: any) {
       toast({
-        title: "Error",
+        title: 'Error',
         description: err.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsDelivering(false);
     }
   };
 
@@ -608,6 +667,130 @@ export default function PurchaseOrderView() {
             <Button onClick={submitReceive} disabled={isReceiving} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
               {isReceiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
               Save Received Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Mark as Delivered Dialog */}
+      <Dialog open={isDeliverDialogOpen} onOpenChange={setIsDeliverDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackageCheck className="w-5 h-5 text-emerald-600" /> Record Delivery
+            </DialogTitle>
+            <DialogDescription>
+              Enter the actual quantity received for each item. Record partial, full, excess, or not-delivered items. Status will update automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          {order.items.length > 0 && (() => {
+            const totals = order.items.reduce(
+              (acc, item) => {
+                const r = Number(deliverQuantities[item.id] ?? 0);
+                if (r <= 0) acc.notDelivered += 1;
+                else if (r < item.quantity) acc.partial += 1;
+                else if (r > item.quantity) acc.excess += 1;
+                else acc.full += 1;
+                return acc;
+              },
+              { notDelivered: 0, partial: 0, full: 0, excess: 0 }
+            );
+            return (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge className="bg-green-100 text-green-700 border-none">{totals.full} Full</Badge>
+                {totals.partial > 0 && <Badge className="bg-amber-100 text-amber-700 border-none">{totals.partial} Partial</Badge>}
+                {totals.excess > 0 && <Badge className="bg-purple-100 text-purple-700 border-none">{totals.excess} Excess</Badge>}
+                {totals.notDelivered > 0 && <Badge className="bg-red-100 text-red-700 border-none">{totals.notDelivered} Not Delivered</Badge>}
+              </div>
+            );
+          })()}
+
+          <div className="max-h-[50vh] overflow-y-auto -mx-2 px-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-center">Ordered</TableHead>
+                  <TableHead className="text-center w-32">Received</TableHead>
+                  <TableHead className="text-center w-32">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {order.items.map((item) => {
+                  const received = Number(deliverQuantities[item.id] ?? 0);
+                  const status = itemStatuses[item.id] || computeItemStatus(received, item.quantity);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium align-middle">
+                        {item.description}
+                        {item.materialId ? (
+                          <span className="block text-[10px] text-muted-foreground uppercase">Linked to inventory</span>
+                        ) : (
+                          <span className="block text-[10px] text-muted-foreground uppercase">No inventory link</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center align-middle">{item.quantity}</TableCell>
+                      <TableCell className="text-center align-middle">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={deliverQuantities[item.id] ?? 0}
+                          onChange={(e) => updateDeliverQuantity(item.id, item.quantity, parseFloat(e.target.value) || 0)}
+                          className={`h-9 text-center ${
+                            status === 'full' ? 'border-green-500' :
+                            status === 'partial' ? 'border-amber-500' :
+                            status === 'excess' ? 'border-purple-500' :
+                            'border-red-300'
+                          }`}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        {status === 'full' && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Full
+                          </span>
+                        )}
+                        {status === 'partial' && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Partial
+                          </span>
+                        )}
+                        {status === 'excess' && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600">
+                            <PlusCircle className="w-3.5 h-3.5" /> Excess
+                          </span>
+                        )}
+                        {status === 'not_delivered' && (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-500">
+                            <MinusCircle className="w-3.5 h-3.5" /> Not Delivered
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="deliver-note" className="text-xs uppercase tracking-wider">Delivery Note (optional)</Label>
+            <Input
+              id="deliver-note"
+              value={deliverNote}
+              onChange={(e) => setDeliverNote(e.target.value)}
+              placeholder="e.g. Delivery note #, driver name, GRN reference, discrepancies"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeliverDialogOpen(false)} disabled={isDelivering}>
+              Cancel
+            </Button>
+            <Button onClick={submitDelivery} disabled={isDelivering} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+              {isDelivering ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
+              Confirm Delivery
             </Button>
           </DialogFooter>
         </DialogContent>
