@@ -2,8 +2,7 @@ import { prisma } from './prisma';
 
 // ============ Co-op Bank OpenAPI Configuration ============
 const COOP_BASE_URL = process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opbank.co.ke';
-const CONSUMER_KEY = process.env.COOP_BANK_CONSUMER_KEY || '';
-const CONSUMER_SECRET = process.env.COOP_BANK_CONSUMER_SECRET || '';
+const AUTH_TOKEN = process.env.COOP_BANK_AUTH_TOKEN || '';
 const DEFAULT_USER_ID = process.env.COOP_BANK_USER_ID || 'RECON';
 const DEFAULT_SOURCE_ACCOUNT = process.env.COOP_BANK_SOURCE_ACCOUNT || '';
 const FUNDS_TRANSFER_CALLBACK = process.env.COOP_BANK_CALLBACK_URL || 'https://yourdomain.com/web/api/callbacks/bank/funds-transfer';
@@ -13,8 +12,7 @@ let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
 const basicAuthHeader = () => {
-  const credentials = `${CONSUMER_KEY}:${CONSUMER_SECRET}`;
-  return 'Basic ' + Buffer.from(credentials).toString('base64');
+  return 'Basic ' + AUTH_TOKEN; //Buffer.from(credentials).toString('base64');
 };
 
 // ============ 1. Generate Token (OAuth2 client_credentials) ============
@@ -24,8 +22,8 @@ export async function getBankToken(): Promise<string> {
     return cachedToken;
   }
 
-  if (!CONSUMER_KEY || !CONSUMER_SECRET) {
-    throw new Error('Co-op Bank credentials not configured (COOP_BANK_CONSUMER_KEY / COOP_BANK_CONSUMER_SECRET)');
+  if (!AUTH_TOKEN) {
+    throw new Error('Co-op Bank credentials not configured (COOP_BANK_AUTH_TOKEN)');
   }
 
   const response = await fetch(`${COOP_BASE_URL}/token`, {
