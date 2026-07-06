@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifyAccessToken } from './jwt';
 import { prisma } from './prisma';
 import { resolveContractorIdForUser } from './auth';
+import { hasPermission } from './rbac';
 
 export interface MobileAuthResult {
   authenticated: boolean;
@@ -106,4 +107,103 @@ export function mobileCountData(count: number, data: any[]) {
 
 export function mobileStatusSuccess(data: any) {
   return Response.json({ status: 'success', data }, { status: 200 });
+}
+
+// ---------------------------------------------------------------------------
+// Mobile permission guards
+// ---------------------------------------------------------------------------
+// These mirror lib/require-permission.ts but use the mobile auth context
+// (Authorization: Bearer header + company-id / site-id headers) and return
+// mobile-shaped error responses ({ message: 'Unauthenticated.' } on 401).
+// Permission checks reuse lib/rbac.ts so superadmin / "Contractor Admin"
+// bypass rules stay identical to the web API.
+// ---------------------------------------------------------------------------
+
+export interface MobilePermissionResult {
+  authorized: boolean;
+  error?: Response;
+  userId?: string;
+  contractorId?: string | null;
+  companyId?: string | null;
+  siteId?: string | null;
+  user?: MobileAuthResult['user'] | null;
+}
+
+export async function mobileRequirePermission(
+  request: NextRequest,
+  permission: string
+): Promise<MobilePermissionResult> {
+  const auth = await mobileAuth(request);
+  if (!auth.authenticated || !auth.userId) {
+    return { authorized: false, error: mobileError('Unauthenticated.', 401) as Response };
+  }
+  const ok = await hasPermission(auth.userId, permission);
+  if (!ok) {
+    return { authorized: false, error: mobileError('Forbidden. Missing permission: ' + permission, 403) as Response };
+  }
+  return {
+    authorized: true,
+    userId: auth.userId,
+    contractorId: auth.contractorId,
+    companyId: auth.companyId,
+    siteId: auth.siteId,
+    user: auth.user,
+  };
+}
+
+export async function mobileRequireContractorPermission(
+  request: NextRequest,
+  permission: string
+): Promise<MobilePermissionResult> {
+  const auth = await mobileAuth(request);
+  if (!auth.authenticated || !auth.userId) {
+    return { authorized: false, error: mobileError('Unauthenticated.', 401) as Response };
+  }
+  if (!auth.contractorId) {
+    return { authorized: false, error: mobileError('Contractor account required.', 403) as Response };
+  }
+  const ok = await hasPermission(auth.userId, permission);
+  if (!ok) {
+    return { authorized: false, error: mobileError('Forbidden. Missing permission: ' + permission, 403) as Response };
+  }
+  return {
+    authorized: true,
+    userId: auth.userId,
+    contractorId: auth.contractorId,
+    companyId: auth.companyId,
+    siteId: auth.siteId,
+    user: auth.user,
+  };
+}
+
+export async function mobileRequireSuperadmin(
+  request: NextRequest
+): Promise<MobilePermissionResult> {
+  const auth = await mobileAuth(request);
+  if (!auth.authenticated || !auth.userId) {
+    return { authorized: false, error: mobileError('Unauthenticated.', 401) as Response };
+  }
+  if (!auth.user || auth.user.role !== 'superadmin') {
+    return { authorized: false, error: mobileError('Superadmin access required.', 403) as Response };
+  }
+  return {
+    authorized: true,
+    userId: auth.userId,
+    contractorId: auth.contractorId,
+    companyId: auth.companyId,
+    siteId: auth.siteId,
+    user: auth.user,
+  };
+}
+
+// Convenience mobile response helpers for common shapes ----------------------
+
+export function mobileCreated(data: any, message?: string) {
+  return Response.json({ error: false, message: message || 'Created successfully', data }, { status: 201 });
+}
+
+export function mobileList(rows: any[], total: number, pagination?: { page: number; limit: number; pages: number }) {
+  const body: any = { rows, total };
+  if (pagination) body.pagination = pagination;
+  return Response.json({ error: false, message: 'Success', data: body }, { status: 200 });
 }

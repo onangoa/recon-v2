@@ -16,3 +16,6 @@ node_modules
 .DS_Store
 prisma/generated/
 zgame
+
+public/uploads
+mobileapp

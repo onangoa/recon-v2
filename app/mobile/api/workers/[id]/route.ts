@@ -1,0 +1,154 @@
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { ActivityLogger } from '@/lib/activity-logger';
+import {
+  mobileRequireContractorPermission,
+  mobileSuccess,
+  mobileError,
+} from '@/lib/mobile-auth';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const permCheck = await mobileRequireContractorPermission(request, 'workers:read');
+  if (!permCheck.authorized) return permCheck.error!;
+  try {
+    const contractorId = permCheck.contractorId!;
+    const { id } = await params;
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
+      include: {
+        designation: true,
+        shift: true,
+      },
+    });
+    if (!worker) {
+      return mobileError('Worker not found', 404);
+    }
+    return mobileSuccess(worker);
+  } catch (error) {
+    return mobileError('Failed to fetch worker', 500);
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const permCheck = await mobileRequireContractorPermission(request, 'workers:update');
+  if (!permCheck.authorized) return permCheck.error!;
+  const contractorId = permCheck.contractorId!;
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
+      select: { contractorId: true },
+    });
+
+    if (!worker) {
+      return mobileError('Worker not found', 404);
+    }
+
+    let designationId = body.designationId;
+    if (designationId === '' || designationId === 'null' || designationId === 'undefined') {
+      designationId = null;
+    }
+
+    let shiftId = body.shiftId;
+    if (shiftId === '' || shiftId === 'null' || shiftId === 'undefined') {
+      shiftId = null;
+    }
+
+    if (designationId) {
+      const designation = await prisma.designation.findFirst({
+        where: { id: designationId, contractorId: worker.contractorId },
+      });
+      if (!designation) {
+        return mobileError('Invalid designation ID', 400);
+      }
+    }
+
+    if (shiftId) {
+      const shift = await prisma.shift.findFirst({
+        where: { id: shiftId, contractorId: worker.contractorId },
+      });
+      if (!shift) {
+        return mobileError('Invalid shift ID', 400);
+      }
+    }
+
+    const updatedWorker = await prisma.worker.update({
+      where: { id },
+      data: {
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        nationalId: body.nationalId,
+        enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
+        designationId,
+        shiftId,
+        paymentMode: body.paymentMode,
+        paymentPhone: body.paymentPhone !== undefined ? body.paymentPhone : undefined,
+        paymentAccount: body.paymentAccount !== undefined ? body.paymentAccount : undefined,
+        status: body.status,
+        joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
+      },
+      include: {
+        designation: true,
+        shift: true,
+      },
+    });
+
+    await ActivityLogger.log({
+      userId: permCheck.userId || 'system',
+      contractorId,
+      action: 'UPDATE',
+      module: 'WORKERS',
+      description: `Updated worker details: ${updatedWorker.name}`,
+      targetId: updatedWorker.id,
+      details: { name: updatedWorker.name, status: updatedWorker.status },
+    });
+
+    return mobileSuccess(updatedWorker, 'Worker updated');
+  } catch (error) {
+    console.error('Mobile update worker error:', error);
+    return mobileError('Failed to update worker', 500);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const permCheck = await mobileRequireContractorPermission(request, 'workers:delete');
+  if (!permCheck.authorized) return permCheck.error!;
+  const contractorId = permCheck.contractorId!;
+  try {
+    const { id } = await params;
+    const worker = await prisma.worker.findFirst({
+      where: { id, contractorId },
+    });
+
+    if (!worker) {
+      return mobileError('Worker not found', 404);
+    }
+
+    await prisma.worker.delete({ where: { id } });
+
+    await ActivityLogger.log({
+      userId: permCheck.userId || 'system',
+      contractorId,
+      action: 'DELETE',
+      module: 'WORKERS',
+      description: `Deleted worker: ${worker.name}`,
+      targetId: worker.id,
+    });
+
+    return mobileSuccess(null, 'Worker deleted');
+  } catch (error) {
+    return mobileError('Failed to delete worker', 500);
+  }
+}
