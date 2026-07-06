@@ -30,6 +30,11 @@ const AUTH_API_PATHS = [
   '/api/users/forgot-password',
   '/api/subscriptions/plans',
   '/v1/ext/ipn',
+  '/mobile/api/auth/login',
+  '/mobile/api/auth/refresh',
+  '/mobile/api/auth/forgot-password',
+  '/mobile/api/auth/reset-password',
+  '/mobile/api/subscription-plans',
 ];
 
 async function verifyTokenEdge(token: string) {
@@ -138,6 +143,21 @@ export async function proxy(request: NextRequest) {
   }
 
   // Mobile API routes use Bearer token auth – check Authorization header
+  if (pathname.startsWith('/mobile/api/')) {
+    if (!isAuthApiPath(pathname)) {
+      const bearerToken = request.headers.get('authorization')?.replace('Bearer ', '');
+      if (!bearerToken) {
+        return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+      }
+      const payload = await verifyTokenEdge(bearerToken);
+      if (!payload) {
+        return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // Legacy API routes use Bearer token auth – check Authorization header
   if (pathname.startsWith('/api/')) {
     if (!isAuthApiPath(pathname)) {
       const bearerToken = request.headers.get('authorization')?.replace('Bearer ', '');

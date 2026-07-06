@@ -28,7 +28,9 @@ import {
   QrCode,
   User,
   ShoppingBag,
-  ChevronLeft
+  ChevronLeft,
+  Landmark,
+  Building2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -124,6 +126,22 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [paymentMemo, setPaymentMemo] = useState('');
   const [payoutType, setPayoutType] = useState('phone');
   const [isMakingPayment, setIsMakingPayment] = useState(false);
+
+  const [showBankDeposit, setShowBankDeposit] = useState(false);
+  const [bankDepositAmount, setBankDepositAmount] = useState('');
+  const [bankDepositAccount, setBankDepositAccount] = useState('');
+  const [bankDepositBankCode, setBankDepositBankCode] = useState('');
+  const [bankDepositMemo, setBankDepositMemo] = useState('');
+  const [isBankDepositing, setIsBankDepositing] = useState(false);
+
+  const [showBankPayout, setShowBankPayout] = useState(false);
+  const [bankPayoutChannel, setBankPayoutChannel] = useState('pesalink');
+  const [bankPayoutAmount, setBankPayoutAmount] = useState('');
+  const [bankPayoutAccount, setBankPayoutAccount] = useState('');
+  const [bankPayoutBankCode, setBankPayoutBankCode] = useState('');
+  const [bankPayoutMobile, setBankPayoutMobile] = useState('');
+  const [bankPayoutMemo, setBankPayoutMemo] = useState('');
+  const [isBankPaying, setIsBankPaying] = useState(false);
 
   // Transaction pagination states
   const [transactionsPage, setTransactionsPage] = useState(1);
@@ -295,11 +313,122 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+const handleBankDeposit = async () => {
+    if (!bankDepositAmount || !bankDepositAccount) {
+      toast({
+        title: "Validation Error",
+        description: "Amount and sender account number are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsBankDepositing(true);
+    try {
+      const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'credit',
+          method: 'bank',
+          amount: parseFloat(bankDepositAmount),
+          accountNumber: bankDepositAccount,
+          bankCode: bankDepositBankCode || undefined,
+          description: bankDepositMemo || `Bank top-up from ${bankDepositAccount}`,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to initiate bank top-up');
+
+      toast({
+        title: "Bank Top-up Initiated",
+        description: "Sender account validated. Top-up will be confirmed on receipt.",
+        variant: "success",
+      });
+
+      setBankDepositAmount('');
+      setBankDepositAccount('');
+      setBankDepositBankCode('');
+      setBankDepositMemo('');
+      setShowBankDeposit(false);
+      fetchTransactions();
+      fetchWalletData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsBankDepositing(false);
+    }
+  };
+
+  const handleBankPayout = async () => {
+    if (!bankPayoutAmount) {
+      toast({ title: "Validation Error", description: "Amount is required.", variant: "destructive" });
+      return;
+    }
+    if (bankPayoutChannel !== 'mpesa' && !bankPayoutAccount) {
+      toast({ title: "Validation Error", description: "Destination account number is required.", variant: "destructive" });
+      return;
+    }
+    if (bankPayoutChannel === 'mpesa' && !bankPayoutMobile) {
+      toast({ title: "Validation Error", description: "Recipient mobile number is required.", variant: "destructive" });
+      return;
+    }
+    if (wallet && parseFloat(bankPayoutAmount) > wallet.balance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsBankPaying(true);
+    try {
+      const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'debit',
+          method: 'bank',
+          payoutChannel: bankPayoutChannel,
+          amount: parseFloat(bankPayoutAmount),
+          destinationAccount: bankPayoutChannel === 'mpesa' ? undefined : bankPayoutAccount,
+          bankCode: bankPayoutChannel !== 'mpesa' ? (bankPayoutBankCode || undefined) : undefined,
+          mobileNumber: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : undefined,
+          description: bankPayoutMemo || `Bank payout (${bankPayoutChannel.toUpperCase()})`,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create bank payout');
+
+      toast({
+        title: "Bank Payout Created",
+        description: "The payout is pending approval before disbursement.",
+        variant: "success",
+      });
+
+      setBankPayoutAmount('');
+      setBankPayoutAccount('');
+      setBankPayoutBankCode('');
+      setBankPayoutMobile('');
+      setBankPayoutMemo('');
+      setShowBankPayout(false);
+      fetchTransactions();
+      fetchWalletData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsBankPaying(false);
+    }
+  };
+
   const totalCredits = transactions.filter(t => 
     (t.type === 'credit' || t.type === 'STK_PUSH') && 
     (t.status === 'completed' || t.status === 'SUCCESS')
   ).reduce((sum, t) => sum + t.amount, 0);
-  
+   
   const totalDebits = transactions.filter(t => 
     (t.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(t.type)) && 
     (t.status === 'completed' || t.status === 'SUCCESS')
@@ -627,6 +756,190 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
                       {isDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Push STK
                     </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showBankDeposit} onOpenChange={setShowBankDeposit}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5 gap-2 h-11 shadow-sm">
+                    <Landmark className="w-4 h-4" /> Deposit via Bank
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="text-emerald-700 flex items-center gap-2">
+                      <Landmark className="w-5 h-5" /> Add Funds (Bank Transfer)
+                    </DialogTitle>
+                    <DialogDescription>Top up your wallet from a bank account via Co-op Bank validation.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Amount ({wallet.currency}) *</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={bankDepositAmount}
+                        onChange={(e) => setBankDepositAmount(e.target.value)}
+                        className="bg-muted/30 border-none h-11 font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sender Account Number *</Label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. 01192588813000"
+                        value={bankDepositAccount}
+                        onChange={(e) => setBankDepositAccount(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sender Bank Code (Optional)</Label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. 0011"
+                        value={bankDepositBankCode}
+                        onChange={(e) => setBankDepositBankCode(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description (Optional)</Label>
+                      <Textarea
+                        placeholder="e.g. Bank wallet top-up"
+                        value={bankDepositMemo}
+                        onChange={(e) => setBankDepositMemo(e.target.value)}
+                        className="bg-muted/30 border-none"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowBankDeposit(false)}>Cancel</Button>
+                    <Button
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                      onClick={handleBankDeposit}
+                      disabled={isBankDepositing}
+                    >
+                      {isBankDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Validate & Top Up
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showBankPayout} onOpenChange={setShowBankPayout}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full border-blue-600/40 text-blue-700 hover:bg-blue-50 gap-2 h-11 shadow-sm">
+                    <Building2 className="w-4 h-4" /> Send Bank Payout
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-blue-700 flex items-center gap-2">
+                      <Building2 className="w-5 h-5" /> Outward Bank Payout
+                    </DialogTitle>
+                    <DialogDescription>Pay to a bank account or mobile wallet via Co-op Bank.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Payout Channel</Label>
+                      <Select value={bankPayoutChannel} onValueChange={setBankPayoutChannel}>
+                        <SelectTrigger className="bg-muted/30 border-none h-11">
+                          <SelectValue placeholder="Select channel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pesalink">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4" /> PesaLink (Any Bank)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="ift">
+                            <div className="flex items-center gap-2">
+                              <Landmark className="w-4 h-4" /> IFT (Co-op to Co-op)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="mpesa">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="w-4 h-4" /> Bank to M-Pesa
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Amount ({wallet.currency}) *</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={bankPayoutAmount}
+                        onChange={(e) => setBankPayoutAmount(e.target.value)}
+                        className="bg-muted/30 border-none h-11 font-mono font-bold"
+                      />
+                    </div>
+
+                    {bankPayoutChannel === 'mpesa' ? (
+                      <div className="space-y-2">
+                        <Label>Recipient Mobile No. *</Label>
+                        <Input
+                          type="tel"
+                          placeholder="2547XXXXXXXX"
+                          value={bankPayoutMobile}
+                          onChange={(e) => setBankPayoutMobile(e.target.value)}
+                          className="bg-muted/30 border-none h-11"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Destination Account Number *</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. 01102789645002"
+                            value={bankPayoutAccount}
+                            onChange={(e) => setBankPayoutAccount(e.target.value)}
+                            className="bg-muted/30 border-none h-11"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Destination Bank Code {bankPayoutChannel === 'pesalink' ? '*' : '(Optional)'}</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. 11"
+                            value={bankPayoutBankCode}
+                            onChange={(e) => setBankPayoutBankCode(e.target.value)}
+                            className="bg-muted/30 border-none h-11"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Description / Remarks</Label>
+                      <Textarea
+                        placeholder="Payment reason..."
+                        value={bankPayoutMemo}
+                        onChange={(e) => setBankPayoutMemo(e.target.value)}
+                        className="bg-muted/30 border-none"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="flex flex-col gap-2">
+                    {wallet.balance < parseFloat(bankPayoutAmount || '0') && (
+                      <p className="text-[10px] text-red-600 font-bold mb-2">Insufficient Balance!</p>
+                    )}
+                    <div className="flex justify-end gap-2 w-full">
+                      <Button variant="outline" onClick={() => setShowBankPayout(false)}>Cancel</Button>
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        onClick={handleBankPayout}
+                        disabled={isBankPaying || wallet.balance < parseFloat(bankPayoutAmount || '0')}
+                      >
+                        {isBankPaying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Create Bank Payout
+                      </Button>
+                    </div>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

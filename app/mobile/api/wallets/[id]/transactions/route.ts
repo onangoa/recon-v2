@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { initiateSTKPush } from '@/lib/mpesa';
+import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import {
   mobileRequireContractorPermission,
   mobileSuccess,
@@ -72,7 +73,7 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const body = await request.json();
-    const { type, amount, description, referenceNumber, method, payoutType, accountNumber, requiresApproval } = body;
+    const { type, amount, description, referenceNumber, method, payoutType, accountNumber, requiresApproval, bankCode, destinationAccount, mobileNumber, payoutChannel } = body;
 
     if (!type || !amount) {
       return mobileError('Type and amount are required', 400);
@@ -84,6 +85,51 @@ export async function POST(
 
     if (!wallet) {
       return mobileError('Wallet not found', 404);
+    }
+
+    // Co-op Bank integration: top-up via bank or payout via bank
+    if (method === 'bank') {
+      try {
+        if (type === 'credit') {
+          if (!accountNumber) {
+            return mobileError('Sender account number is required for bank top-up', 400);
+          }
+          const result = await initiateBankTopup({
+            walletId: resolvedParams.id,
+            amount,
+            accountNumber,
+            bankCode,
+            description: description || 'Bank top-up to wallet',
+            referenceNumber,
+          });
+          return mobileSuccess(result, 'Bank top-up initiated and pending confirmation');
+        } else {
+          if (wallet.balance < amount) {
+            return mobileError('Insufficient balance', 400);
+          }
+          const channel: 'pesalink' | 'ift' | 'mpesa' = (payoutChannel as any) || 'pesalink';
+          if (channel === 'mpesa' && !mobileNumber && !referenceNumber) {
+            return mobileError('Mobile number is required for bank-to-M-Pesa payout', 400);
+          }
+          if ((channel === 'pesalink' || channel === 'ift') && !destinationAccount && !accountNumber) {
+            return mobileError('Destination account number is required for bank payout', 400);
+          }
+          const result = await createBankPayout({
+            walletId: resolvedParams.id,
+            amount,
+            destinationAccount: destinationAccount || accountNumber,
+            bankCode,
+            mobileNumber: mobileNumber || referenceNumber,
+            payoutChannel: channel,
+            description: description || `Bank payout to ${destinationAccount || accountNumber || mobileNumber || referenceNumber}`,
+            referenceNumber,
+          });
+          return mobileSuccess(result, 'Bank payout created and pending approval');
+        }
+      } catch (error: any) {
+        console.error('Mobile bank wallet transaction error:', error);
+        return mobileError(error.message || 'Failed to process bank transaction', 500);
+      }
     }
 
     if (method !== 'mpesa') {

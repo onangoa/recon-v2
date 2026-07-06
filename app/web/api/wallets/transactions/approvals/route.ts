@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { initiateB2C, initiateB2B, initiateB2Pochi, TransactionStatus } from '@/lib/mpesa';
+import { executeBankPayout } from '@/lib/bank-service';
 import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
@@ -100,7 +101,11 @@ export async function POST(request: NextRequest) {
         let payoutResponse;
         const payoutType = transaction.remarks || 'phone';
 
-        if (payoutType === 'phone') {
+        // Bank payouts (Co-op Bank OpenAPI)
+        const bankChannels = ['pesalink', 'ift', 'mpesa'];
+        if (bankChannels.includes(payoutType)) {
+          payoutResponse = await executeBankPayout(transactionId);
+        } else if (payoutType === 'phone') {
           payoutResponse = await initiateB2C(
             transaction.phoneNumber || transaction.accountReference || '',
             transaction.amount,
