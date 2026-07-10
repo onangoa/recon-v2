@@ -51,14 +51,14 @@ const BASE_URL = (process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opbank.c
 // Default credentials extracted from the Postman collection Basic auth header.
 // Override these with your own via env vars before going live.
 
-const AUTH_KEY = process.env.COOP_BANK_AUTH_KEY || "MFZPeWMwWFpFdFdncTFRaFQyanBVWUZhQ0cwYTpBTlhmMklXSFk2Ym9idURXYWZGdHl2ZGJHd0Fh";
-const USER_ID = process.env.COOP_BANK_USER_ID || 'RECON';
-const SOURCE_ACCOUNT = process.env.COOP_BANK_SOURCE_ACCOUNT || '01192588813000';
-let CALLBACK_URL = process.env.COOP_BANK_CALLBACK_URL || 'https://yourdomain.com/web/api/callbacks/bank/funds-transfer';
-let TEST_DEST_ACCOUNT = process.env.COOP_BANK_TEST_ACCOUNT || '01102789645002';
-let TEST_BANK_CODE = process.env.COOP_BANK_TEST_BANK_CODE || '11';
-let TEST_MOBILE = process.env.COOP_BANK_TEST_MOBILE || '254707919065';
-let AMOUNT = Number(process.env.COOP_BANK_TEST_AMOUNT) || 100;
+const AUTH_KEY = "MFZPeWMwWFpFdFdncTFRaFQyanBVWUZhQ0cwYTpBTlhmMklXSFk2Ym9idURXYWZGdHl2ZGJHd0Fh";
+const USER_ID = 'RECON';
+const SOURCE_ACCOUNT = '01192588813000';
+let CALLBACK_URL = 'https://reconsmi.com/v1/ext/ipn';
+let TEST_DEST_ACCOUNT = '01100006870001';
+let TEST_BANK_CODE = '11';
+let TEST_MOBILE = '254796504484';
+let AMOUNT = 50;
 
 // CLI flags
 const args = process.argv.slice(2);
