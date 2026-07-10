@@ -91,6 +91,7 @@ model Contractor {
   salarySlips             SalarySlip[]
   shifts                  Shift[]
   sites                   Site[]
+  suppliers               Supplier[]
   team                    TeamMember[]
   wallets                 Wallet[]
   workers                 Worker[]
@@ -332,6 +333,7 @@ model Site {
   location        String
   coordinates     String?
   description     String?
+  category        String?
   status          String           @default("Active")
   isPrimary       Boolean          @default(false)
   createdAt       DateTime         @default(now())
@@ -633,6 +635,7 @@ model Metric {
 
 model Supplier {
   id             String          @id @default(cuid())
+  contractorId   String?
   name           String
   contactPerson  String?
   email          String?
@@ -640,7 +643,10 @@ model Supplier {
   address        String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  contractor     Contractor?     @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   purchaseOrders PurchaseOrder[]
+
+  @@index([contractorId])
 }
 
 model PurchaseOrder {

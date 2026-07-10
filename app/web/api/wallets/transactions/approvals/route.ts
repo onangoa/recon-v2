@@ -7,7 +7,7 @@ import { requirePermission } from '@/lib/require-permission';
 export async function GET(
   request: NextRequest
 ) {
-  const permCheck = await requirePermission(request, 'wallets:read');
+  const permCheck = await requirePermission(request, 'approve');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const { searchParams } = new URL(request.url);
@@ -53,7 +53,7 @@ export async function GET(
 }
 
 export async function POST(request: NextRequest) {
-  const permCheck = await requirePermission(request, 'wallets:manage');
+  const permCheck = await requirePermission(request, 'approve');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();

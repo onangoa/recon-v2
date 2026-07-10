@@ -42,7 +42,7 @@ async function main() {
       'SHIFTS', 'SALARY_COMPONENTS', 'SALARY_SLIPS', 'DOCUMENTS', 'LICENSES', 'DASHBOARD',
       'ACTIVITY_LOGS', 'NOTIFICATIONS', 'CONTRACTORS', 'ROLES', 'MPESA', 'APPROVALS'
     ];
-    const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE', 'APPROVE'];
+    const actions = ['READ', 'CREATE', 'UPDATE', 'DELETE', 'MANAGE'];
     
     const permissions = [];
     for (const module of modules) {
@@ -58,6 +58,31 @@ async function main() {
         permissions.push(permission);
       }
     }
+
+    // Independent permission used to approve (or reject) pending wallet
+    // transactions. It is module-agnostic (not generated per-module) so that
+    // it can be granted on its own without implying approval rights on other
+    // resources.
+    const approvePermission = await prisma.permission.create({
+      data: {
+        name: 'approve',
+        module: 'WALLETS',
+        action: 'APPROVE',
+        description: 'Can approve pending wallet transactions',
+      },
+    });
+    permissions.push(approvePermission);
+
+    // Clean up any legacy per-module :approve permission rows from previous
+    // seed runs so there is a single source of truth for approval rights.
+    await prisma.permission.deleteMany({
+      where: {
+        AND: [
+          { action: 'APPROVE' },
+          { name: { not: 'approve' } },
+        ],
+      },
+    });
     console.log('Created permissions');
 
     // Create system roles

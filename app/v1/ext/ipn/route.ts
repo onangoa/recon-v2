@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BANK_IPN_WEBHOOK_URL =
   process.env.BANK_IPN_WEBHOOK_URL ||
-  'https://webhook.site/726a1ee2-7300-46e6-bad5-145b6c6138d8';
+  'https://webhook.site/461d7b55-3ddc-4111-8e0b-70ec98a16eab';
 
 export async function POST(req: NextRequest) {
   try {

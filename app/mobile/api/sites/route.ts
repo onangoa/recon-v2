@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
           location: body.location,
           contractorId: contractorId,
           description: body.description,
+          category: body.category,
           isPrimary: body.isPrimary || false,
         },
       });

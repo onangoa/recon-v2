@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Save, 
-  X, 
+import {
+  ArrowLeft,
+  Save,
+  X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -20,10 +21,15 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSite } from '@/hooks/use-site';
+import { useAuth } from '@/context/auth-context';
 
 export default function CreateSitePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { sites, isLoading, setActiveSite } = useSite();
+  const { setSelectedSite, refreshSession } = useAuth();
+  const isOnboarding = !isLoading && sites.length === 0;
   
   const [formData, setFormData] = useState({
     name: '',
@@ -67,6 +73,7 @@ export default function CreateSitePage() {
           name: formData.name,
           location: formData.location,
           description: formData.description,
+          category: formData.category,
           isPrimary: formData.isPrimary,
         }),
       });
@@ -84,8 +91,24 @@ export default function CreateSitePage() {
             </div>
           ),
         });
-        router.push('/contractor/sites');
-        router.refresh();
+
+        if (isOnboarding) {
+          const newSite = {
+            id: result.id,
+            name: result.name,
+            location: result.location,
+            contractorId: result.contractorId,
+            isPrimary: result.isPrimary,
+          };
+          setActiveSite(newSite);
+          await setSelectedSite(newSite.id);
+          await refreshSession();
+          router.push('/contractor');
+          router.refresh();
+        } else {
+          router.push('/contractor/sites');
+          router.refresh();
+        }
       } else {
         throw new Error(result.error || 'Failed to create site');
       }
@@ -107,36 +130,61 @@ export default function CreateSitePage() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/contractor/sites">Sites</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Create Site</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      {isOnboarding ? (
+        // Onboarding layout: welcome banner, no back button or breadcrumb
+        <div className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-transparent p-6 sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Building2 className="size-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                  Welcome
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Let’s set up your first site</h1>
+              <p className="text-sm text-gray-500 max-w-xl">
+                Create your first site to get started. Once you add a site, you’ll be able to access
+                your dashboard and start managing your operations.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Breadcrumb */}
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/contractor">Home</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/contractor/sites">Sites</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Create Site</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Site</h1>
-          <p className="text-sm text-gray-500">Add a new site to your portfolio.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-        </div>
-      </div>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Create Site</h1>
+              <p className="text-sm text-gray-500">Add a new site to your portfolio.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => router.back()} className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Simplified Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-8">
@@ -232,16 +280,18 @@ export default function CreateSitePage() {
                 </>
               )}
             </Button>
-            <Button 
-              variant="outline" 
-              type="button" 
-              onClick={() => router.back()} 
-              disabled={isSubmitting}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </Button>
+            {!isOnboarding && (
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => router.back()}
+                disabled={isSubmitting}
+                className="gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+            )}
           </div>
         </form>
       </div>

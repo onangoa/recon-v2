@@ -18,13 +18,26 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
-        { name: { contains: search } },
-        { contactPerson: { contains: search } },
-        { email: { contains: search } },
-      ],
-    } : {};
+    const where: any = {};
+
+    if (permCheck.contractorId) {
+      where.OR = [
+        { contractorId: permCheck.contractorId },
+        { contractorId: null },
+      ];
+    }
+
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: search } },
+            { contactPerson: { contains: search } },
+            { email: { contains: search } },
+          ],
+        },
+      ];
+    }
 
     const [suppliers, total] = await Promise.all([
       prisma.supplier.findMany({
@@ -67,6 +80,7 @@ export async function POST(request: NextRequest) {
         email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,
+        contractorId: permCheck.contractorId || null,
       },
     });
 

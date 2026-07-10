@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "test:bank": "tsx scripts/test-bank-api.ts",
+    "test:bank:live": "tsx scripts/test-bank-api.ts --live"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

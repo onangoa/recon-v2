@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
 
+    const allPermissions = await prisma.permission.findMany({ select: { id: true } });
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -61,6 +63,27 @@ export async function POST(request: NextRequest) {
           licenseNo: licenseNo || '',
           subscriptionPlanId: planId,
         },
+      });
+
+      // Grant the new owner full access within their own contractor account
+      // by creating a "Contractor Admin" role scoped to this contractor and
+      // attaching it to the user. Without this, requirePermission() denies
+      // every action (including sites:create during onboarding).
+      const adminRole = await tx.role.create({
+        data: {
+          name: 'Contractor Admin',
+          description: 'Full access to contractor dashboard',
+          scope: 'contractor',
+          contractorId: contractor.id,
+          permissions: {
+            connect: allPermissions.map((p) => ({ id: p.id })),
+          },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { roleId: adminRole.id },
       });
 
       return { user, contractor };

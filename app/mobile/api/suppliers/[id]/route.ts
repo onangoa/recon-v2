@@ -14,9 +14,12 @@ export async function GET(
   if (!permCheck.authorized) return permCheck.error!;
   try {
     const { id } = await params;
-    const supplier = await prisma.supplier.findUnique({
-      where: { id }
-    });
+    // Restrict to suppliers owned by this contractor (or shared globals).
+    const where: any = { id };
+    if (permCheck.contractorId) {
+      where.OR = [{ contractorId: permCheck.contractorId }, { contractorId: null }];
+    }
+    const supplier = await prisma.supplier.findFirst({ where });
 
     if (!supplier) {
       return mobileError('Supplier not found', 404);
@@ -41,6 +44,16 @@ export async function PATCH(
 
     if (!body.name) {
       return mobileError('Name is required', 400);
+    }
+
+    // Restrict updates to suppliers owned by this contractor. Shared suppliers
+    // (contractorId = null) are read-only for individual contractors.
+    const existing = permCheck.contractorId
+      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      : await prisma.supplier.findUnique({ where: { id } });
+
+    if (!existing) {
+      return mobileError('Supplier not found', 404);
     }
 
     const supplier = await prisma.supplier.update({
@@ -69,6 +82,16 @@ export async function DELETE(
   if (!permCheck.authorized) return permCheck.error!;
   try {
     const { id } = await params;
+
+    // Restrict deletes to suppliers owned by this contractor.
+    const existing = permCheck.contractorId
+      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      : await prisma.supplier.findUnique({ where: { id } });
+
+    if (!existing) {
+      return mobileError('Supplier not found', 404);
+    }
+
     await prisma.supplier.delete({
       where: { id }
     });

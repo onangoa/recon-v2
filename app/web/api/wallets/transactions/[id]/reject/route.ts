@@ -6,7 +6,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const permCheck = await requirePermission(request, 'wallets:manage');
+  const permCheck = await requirePermission(request, 'approve');
   if (!permCheck.authorized) return permCheck.error;
   try {
     const resolvedParams = await params;

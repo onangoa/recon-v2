@@ -65,25 +65,49 @@ export async function POST(request: Request) {
 
     // Create user first
     const plainPassword = password || crypto.randomBytes(8).toString('hex');
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: await hashPassword(plainPassword),
-        role: 'contractor',
-      },
-    });
+    const hashedPassword = await hashPassword(plainPassword);
 
-    // Create contractor
-    const contractor = await prisma.contractor.create({
-      data: {
-        userId: user.id,
-        companyName,
-        location,
-        phoneNumber,
-        licenseNo,
-        subscriptionPlanId,
-      },
+    const allPermissions = await prisma.permission.findMany({ select: { id: true } });
+
+    const contractor = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          name,
+          password: hashedPassword,
+          role: 'contractor',
+        },
+      });
+
+      const newContractor = await tx.contractor.create({
+        data: {
+          userId: user.id,
+          companyName,
+          location,
+          phoneNumber,
+          licenseNo,
+          subscriptionPlanId,
+        },
+      });
+
+      const adminRole = await tx.role.create({
+        data: {
+          name: 'Contractor Admin',
+          description: 'Full access to contractor dashboard',
+          scope: 'contractor',
+          contractorId: newContractor.id,
+          permissions: {
+            connect: allPermissions.map((p) => ({ id: p.id })),
+          },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { roleId: adminRole.id },
+      });
+
+      return newContractor;
     });
 
     return NextResponse.json(contractor);

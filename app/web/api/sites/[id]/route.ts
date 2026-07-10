@@ -62,6 +62,7 @@ export async function PUT(
           name: body.name,
           location: body.location,
           description: body.description,
+          category: body.category,
           isPrimary: body.isPrimary,
         },
       });

@@ -26,6 +26,7 @@ interface Site {
   name: string;
   location: string;
   description: string | null;
+  category: string | null;
   isPrimary: boolean;
 }
 
@@ -55,7 +56,7 @@ export default function EditSitePage() {
             name: site.name,
             location: site.location,
             description: site.description || '',
-            category: '', // Category not currently in DB
+            category: site.category || '',
             isPrimary: site.isPrimary || false,
           });
         } else {
@@ -116,6 +117,7 @@ export default function EditSitePage() {
           name: formData.name,
           location: formData.location,
           description: formData.description,
+          category: formData.category,
           isPrimary: formData.isPrimary,
         }),
       });

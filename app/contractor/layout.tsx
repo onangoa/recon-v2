@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { 
+import {
   LayoutDashboard, 
   Package, 
   Handshake, 
@@ -30,6 +30,7 @@ import {
   MapPin,
   Briefcase,
   ShieldAlert,
+  ShieldCheck,
   Clock,
   Fingerprint
 } from 'lucide-react';
@@ -69,18 +70,13 @@ import NotificationBell from '@/components/notification-bell';
 function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { activeSite, sites, setActiveSite } = useSite();
+  const { activeSite, sites, setActiveSite, isLoading: sitesLoading } = useSite();
   const { hasPermission, user } = useAuth();
 
-  const displayName = user?.name || 'User';
-  const displayEmail = user?.email || '';
-  const initials = displayName
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'U';
-  const avatarUrl = user?.avatar || undefined;
+  // Onboarding state: no sites yet and user is on the create page.
+  // Show a minimal layout without the sidebar / active-site chrome.
+  const isOnboarding =
+    !sitesLoading && sites.length === 0 && pathname.startsWith('/contractor/sites/create');
 
   const handleLogout = async () => {
     await fetch('/web/api/auth/logout', { method: 'POST' });
@@ -89,12 +85,78 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
 
+  const displayName = user?.name || 'User';
+  const displayEmail = user?.email || '';
+  const initials =
+    displayName
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U';
+  const avatarUrl = user?.avatar || undefined;
+
+  if (isOnboarding) {
+    return (
+      <div className="flex min-h-screen w-full flex-col bg-muted/5">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
+          <Link href="/contractor" className="flex items-center gap-2">
+            <img src="/default_full_logo.png" alt="ReconSMI" className="h-9 w-auto" />
+          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2 px-2">
+                <Avatar className="h-7 w-7 rounded-lg">
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-bold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-semibold hidden sm:inline">{displayName}</span>
+                <ChevronsUpDown className="size-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-56 rounded-lg"
+              side="bottom"
+              align="end"
+              sideOffset={4}
+            >
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                    <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{displayName}</span>
+                    <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2 text-destructive" onClick={handleLogout}>
+                <LogOut className="size-4" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+        <main className="flex-1 overflow-auto p-4 lg:p-8">
+          <div className="mx-auto max-w-3xl">{children}</div>
+        </main>
+      </div>
+    );
+  }
+
   const navItems: { label: string; href: string; icon: typeof LayoutDashboard; permission?: string }[] = [
     { label: 'Dashboard', href: '/contractor', icon: LayoutDashboard, permission: 'dashboard:read' },
     { label: 'Safety & Incidents', href: '/contractor/safety', icon: ShieldAlert, permission: 'safety:read' },
     { label: 'Inventory', href: '/contractor/inventory', icon: Package, permission: 'inventory:read' },
     { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake, permission: 'suppliers:read' },
     { label: 'Wallets', href: '/contractor/wallets', icon: Wallet, permission: 'wallets:read' },
+    { label: 'Wallet Approvals', href: '/contractor/wallets/approvals', icon: ShieldCheck, permission: 'approve' },
     { label: 'Site Uploads', href: '/contractor/uploads', icon: Upload, permission: 'documents:read' },
     { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer, permission: 'equipment:read' },
     { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList, permission: 'purchase_orders:read' },

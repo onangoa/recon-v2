@@ -10,8 +10,13 @@ export async function GET(
   if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
-    const category = await prisma.inventoryCategory.findUnique({
-      where: { id },
+    // Restrict to categories owned by this contractor (or shared globals).
+    const where: any = { id };
+    if (permCheck.contractorId) {
+      where.OR = [{ contractorId: permCheck.contractorId }, { contractorId: null }];
+    }
+    const category = await prisma.inventoryCategory.findFirst({
+      where,
       include: {
         parent: true,
         subCategories: true,
@@ -41,9 +46,19 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
     if (!body.name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    // Restrict updates to categories owned by this contractor. Shared global
+    // categories (contractorId = null) are read-only for individual contractors.
+    const existing = permCheck.contractorId
+      ? await prisma.inventoryCategory.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      : await prisma.inventoryCategory.findUnique({ where: { id } });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
     const category = await prisma.inventoryCategory.update({
@@ -77,9 +92,15 @@ export async function DELETE(
   if (!permCheck.authorized) return permCheck.error;
   try {
     const { id } = await params;
-    // Check if category has materials
-    const categoryWithMaterials = await prisma.inventoryCategory.findUnique({
-      where: { id },
+
+    // Restrict deletes to categories owned by this contractor.
+    const owningWhere: any = { id };
+    if (permCheck.contractorId) {
+      owningWhere.contractorId = permCheck.contractorId;
+    }
+
+    const categoryWithMaterials = await prisma.inventoryCategory.findFirst({
+      where: owningWhere,
       include: {
         _count: {
           select: { inventory: true }

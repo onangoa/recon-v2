@@ -60,8 +60,15 @@ export async function POST(request: NextRequest) {
     const contractorId = permCheck.contractorId!;
     
     const site = await prisma.$transaction(async (tx) => {
+      // A contractor's first site is always their primary site so that
+      // /auth/me and SiteProvider can derive a default selectedSiteId. Without
+      // a primary, needsOnboarding keeps redirecting the user back to the
+      // create form even after they have created a site.
+      const existingSiteCount = await tx.site.count({ where: { contractorId } });
+      const shouldBePrimary = body.isPrimary || existingSiteCount === 0;
+
       // If this site is being set as primary, unset any other primary sites for this contractor
-      if (body.isPrimary) {
+      if (shouldBePrimary) {
         await tx.site.updateMany({
           where: { contractorId: contractorId, isPrimary: true },
           data: { isPrimary: false },
@@ -74,7 +81,8 @@ export async function POST(request: NextRequest) {
           location: body.location,
           contractorId: contractorId,
           description: body.description,
-          isPrimary: body.isPrimary || false,
+          category: body.category,
+          isPrimary: shouldBePrimary,
         },
       });
     });

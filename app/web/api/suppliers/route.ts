@@ -12,13 +12,25 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const where = search ? {
+    // Scope by contractor: each contractor sees their own suppliers plus any
+    // shared (contractorId = null) suppliers. Suppliers owned by another
+    // contractor are never returned.
+    const contractorFilter = permCheck.contractorId
+      ? { OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] }
+      : {};
+
+    const searchFilter = search ? {
       OR: [
         { name: { contains: search } },
         { contactPerson: { contains: search } },
         { email: { contains: search } },
       ],
     } : {};
+
+    const where = {
+      ...contractorFilter,
+      ...searchFilter,
+    };
 
     const [suppliers, total] = await Promise.all([
       prisma.supplier.findMany({
@@ -52,7 +64,7 @@ export async function POST(request: Request) {
   if (!permCheck.authorized) return permCheck.error;
   try {
     const body = await request.json();
-    
+
     if (!body.name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -64,6 +76,7 @@ export async function POST(request: Request) {
         email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,
+        contractorId: permCheck.contractorId || null,
       },
     });
 

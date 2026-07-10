@@ -1,0 +1,402 @@
+{
+  "info": {
+    "_postman_id": "78b3b2ee-17be-48a2-8418-6f2a2d438947",
+    "name": "RECON ENGINEERING",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "42676020"
+  },
+  "item": [
+    {
+      "name": "Generate Token",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Basic MFZPeWMwWFpFdFdncTFRaFQyanBVWUZhQ0cwYTpBTlhmMklXSFk2Ym9idURXYWZGdHl2ZGJHd0Fh",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "grant_type=client_credentials",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/token",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "token"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Account Validation",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJSRUNPTkBjYXJib24uc3VwZXIiLCJhdWQiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwibmJmIjoxNzgyODg5MjE1LCJhenAiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwic2NvcGUiOiJhbV9hcHBsaWNhdGlvbl9zY29wZSBkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cLzE5Mi4xNjguNC4xNzI6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTc4Mjg5MjgxNSwiaWF0IjoxNzgyODg5MjE1LCJqdGkiOiI5MzdiOTVjOS03MDBhLTQ3MGItOWU3NS03YmEzMDQ2MGQ4ZTUifQ.qT6U07dHxuYvCrlMKckdXRrzPFMEMBoY37DkkOs7nlGCXn3a4wXwpirHLLSuWqreO2d1COi8iWiarxEa82PyQ7eukqEQPDMJczjDo9o_7djRoShtYJgVjm1HFsVKLP9j9Gu9vauCeucxJVggri4G3z3DgIyK7CeufJ3zQ3W7n5j-mYOxT4AiDJQVszvbeFmpngf5ZHGsu3mgh4YUmvwGW2vjpdMTkEt2FF2Z11zOacA4NptatvSc0ilELmZ4J-KalBUyeAvjqzhqDXYQbBDuOTiTr0sPfjFrHiwg0qaqnez1b2I7cLtGJBPbUyxY4_PhxD8Zqoabx9VaXQKT1-tBBQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"4c8-21197c7ded\",\r\n  \"UserId\": \"RECON\",\r\n  \"AccountNumber\": \"01192588813000\",\r\n  \"RecipientBankIdentifier\": \"0011\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/Enquiry/Validation/IPSL/1.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "Enquiry",
+            "Validation",
+            "IPSL",
+            "1.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pesalink Send to Account",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJGVVRVUklaQUNAY2FyYm9uLnN1cGVyIiwiYXVkIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsIm5iZiI6MTc3NDQyMzUzMiwiYXpwIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsInNjb3BlIjoiYW1fYXBwbGljYXRpb25fc2NvcGUgZGVmYXVsdCIsImlzcyI6Imh0dHBzOlwvXC8xOTIuMTY4LjQuMTcyOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE3NzQ0MjcxMzIsImlhdCI6MTc3NDQyMzUzMiwianRpIjoiMzY2ZTI2NTQtNjViNy00NWE0LTliZTgtZDY3Yjg4ODZjYWY2In0.SYztaed9rYjIF3eaa1SOLeqIwFs6lxQqtOJsR6dvdTQbF23aDVy7PVf_R2Lz1pdRBzPy8x_FHdO1ZCt24aAiCAti-NMgHn1mcuOlVxiO0KDS7F_SDrpj7LSPZs3KV4RydFF3RopMhzWsM8YT-v4hHdCNh-OT5mRzZ5woqpMQVA4RC4YBB3i7nmNz3Fh6eSqGHfFySYCPe-MiprGDYJEA9LpSjkzq8iAeaAf86YYc-V06ldH-1Iv8st_iiEqeqxWF1oD3RfghvleCFIHd1ldGiy-C99ZrRWTtwd-xpzJ9T-lY1G_6lm3Sin2a74C7g159_jQxdgzp22btrxHIbkuH2g",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"ccc4cfeb38e\",\r\n  \"UserId\": \"FUTURIZAC\",\r\n  \"CallBackUrl\": \"https://yourdomain.com/ft-callback\",\r\n  \"ISO2CountryCode\": \"KE\",\r\n  \"Source\": {\r\n    \"AccountNumber\": \"01102789645002\",\r\n    \"Amount\": 100,\r\n    \"TransactionCurrency\": \"KES\",\r\n    \"Narration\": \"FUTURIZAC LTD TEST\"\r\n  },\r\n  \"Destinations\": [\r\n    {\r\n      \"ReferenceNumber\": \"ccc4cfeb38e_1\",\r\n      \"AccountNumber\": \"01102789645002\",\r\n      \"BankCode\": \"11\",\r\n      \"Amount\": \"100\",\r\n      \"TransactionCurrency\": \"KES\",\r\n      \"Narration\": \"FUTURIZAC LTD TEST\"\r\n    }\r\n  ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "FundsTransfer",
+            "External",
+            "PesaLinkBulk_v1",
+            "1.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "IFT Send to Account",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJGVVRVUklaQUNAY2FyYm9uLnN1cGVyIiwiYXVkIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsIm5iZiI6MTc3NDQyMzUzMiwiYXpwIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsInNjb3BlIjoiYW1fYXBwbGljYXRpb25fc2NvcGUgZGVmYXVsdCIsImlzcyI6Imh0dHBzOlwvXC8xOTIuMTY4LjQuMTcyOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE3NzQ0MjcxMzIsImlhdCI6MTc3NDQyMzUzMiwianRpIjoiMzY2ZTI2NTQtNjViNy00NWE0LTliZTgtZDY3Yjg4ODZjYWY2In0.SYztaed9rYjIF3eaa1SOLeqIwFs6lxQqtOJsR6dvdTQbF23aDVy7PVf_R2Lz1pdRBzPy8x_FHdO1ZCt24aAiCAti-NMgHn1mcuOlVxiO0KDS7F_SDrpj7LSPZs3KV4RydFF3RopMhzWsM8YT-v4hHdCNh-OT5mRzZ5woqpMQVA4RC4YBB3i7nmNz3Fh6eSqGHfFySYCPe-MiprGDYJEA9LpSjkzq8iAeaAf86YYc-V06ldH-1Iv8st_iiEqeqxWF1oD3RfghvleCFIHd1ldGiy-C99ZrRWTtwd-xpzJ9T-lY1G_6lm3Sin2a74C7g159_jQxdgzp22btrxHIbkuH2g",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"c2c736281a5b\",\r\n  \"UserId\": \"RECON\",\r\n  \"ISO2CountryCode\": \"KE\",\r\n  \"CallBackUrl\": \"https://yourdomain.com/ftresponse\",\r\n  \"Source\": {\r\n    \"AccountNumber\": \"01192588813000\",\r\n    \"Amount\": 100,\r\n    \"TransactionCurrency\": \"KES\",\r\n    \"Narration\": \"Test\"\r\n  },\r\n  \"Destinations\": [\r\n    {\r\n      \"ReferenceNumber\": \"c2c736281a5b_1\",\r\n      \"AccountNumber\": \"01192588813000\",\r\n      \"Amount\": 100,\r\n      \"TransactionCurrency\": \"KES\",\r\n      \"Narration\": \"Test\"\r\n    }\r\n  ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/FundsTransfer/Internal/A2A_v3/3.0.0",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "FundsTransfer",
+            "Internal",
+            "A2A_v3",
+            "3.0.0"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "B2C MPESA",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJGVVRVUklaQUNAY2FyYm9uLnN1cGVyIiwiYXVkIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsIm5iZiI6MTc3NDQyMzUzMiwiYXpwIjoiRnZaN0FVaGJFalZOZTR0eFFWb1pzN0RRVzNFYSIsInNjb3BlIjoiYW1fYXBwbGljYXRpb25fc2NvcGUgZGVmYXVsdCIsImlzcyI6Imh0dHBzOlwvXC8xOTIuMTY4LjQuMTcyOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE3NzQ0MjcxMzIsImlhdCI6MTc3NDQyMzUzMiwianRpIjoiMzY2ZTI2NTQtNjViNy00NWE0LTliZTgtZDY3Yjg4ODZjYWY2In0.SYztaed9rYjIF3eaa1SOLeqIwFs6lxQqtOJsR6dvdTQbF23aDVy7PVf_R2Lz1pdRBzPy8x_FHdO1ZCt24aAiCAti-NMgHn1mcuOlVxiO0KDS7F_SDrpj7LSPZs3KV4RydFF3RopMhzWsM8YT-v4hHdCNh-OT5mRzZ5woqpMQVA4RC4YBB3i7nmNz3Fh6eSqGHfFySYCPe-MiprGDYJEA9LpSjkzq8iAeaAf86YYc-V06ldH-1Iv8st_iiEqeqxWF1oD3RfghvleCFIHd1ldGiy-C99ZrRWTtwd-xpzJ9T-lY1G_6lm3Sin2a74C7g159_jQxdgzp22btrxHIbkuH2g",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"54ef0a6c7e6e\",\r\n  \"UserId\": \"RECON\",\r\n  \"ISO2CountryCode\": \"KE\",\r\n  \"CallBackUrl\": \"https://yourdomain.com/ftresponse\",\r\n  \"Source\": {\r\n    \"AccountNumber\": \"01192588813000\",\r\n    \"Amount\": \"100\",\r\n    \"TransactionCurrency\": \"KES\",\r\n    \"Narration\": \"Tests\"\r\n  },\r\n  \"Destinations\": [\r\n    {\r\n      \"ReferenceNumber\": \"54ef0a6c7e6e_1\",\r\n      \"MobileNumber\": \"254707919065\",\r\n      \"Amount\": \"100\",\r\n      \"Narration\": \"Tests\"\r\n    }\r\n  ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/FundsTransfer/External/A2M/Mpesa_v2/2.0.0",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "FundsTransfer",
+            "External",
+            "A2M",
+            "Mpesa_v2",
+            "2.0.0"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Transaction Status Check",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJSRUNPTkBjYXJib24uc3VwZXIiLCJhdWQiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwibmJmIjoxNzgyODg5MjE1LCJhenAiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwic2NvcGUiOiJhbV9hcHBsaWNhdGlvbl9zY29wZSBkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cLzE5Mi4xNjguNC4xNzI6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTc4Mjg5MjgxNSwiaWF0IjoxNzgyODg5MjE1LCJqdGkiOiI5MzdiOTVjOS03MDBhLTQ3MGItOWU3NS03YmEzMDQ2MGQ4ZTUifQ.qT6U07dHxuYvCrlMKckdXRrzPFMEMBoY37DkkOs7nlGCXn3a4wXwpirHLLSuWqreO2d1COi8iWiarxEa82PyQ7eukqEQPDMJczjDo9o_7djRoShtYJgVjm1HFsVKLP9j9Gu9vauCeucxJVggri4G3z3DgIyK7CeufJ3zQ3W7n5j-mYOxT4AiDJQVszvbeFmpngf5ZHGsu3mgh4YUmvwGW2vjpdMTkEt2FF2Z11zOacA4NptatvSc0ilELmZ4J-KalBUyeAvjqzhqDXYQbBDuOTiTr0sPfjFrHiwg0qaqnez1b2I7cLtGJBPbUyxY4_PhxD8Zqoabx9VaXQKT1-tBBQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"ccc44cfeb38e\",\r\n  \"UserId\": \"RECON\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/Enquiry/TransactionStatus_V3/3.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "Enquiry",
+            "TransactionStatus_V3",
+            "3.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Account Balance",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJSRUNPTkBjYXJib24uc3VwZXIiLCJhdWQiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwibmJmIjoxNzgyODg5MjE1LCJhenAiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwic2NvcGUiOiJhbV9hcHBsaWNhdGlvbl9zY29wZSBkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cLzE5Mi4xNjguNC4xNzI6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTc4Mjg5MjgxNSwiaWF0IjoxNzgyODg5MjE1LCJqdGkiOiI5MzdiOTVjOS03MDBhLTQ3MGItOWU3NS03YmEzMDQ2MGQ4ZTUifQ.qT6U07dHxuYvCrlMKckdXRrzPFMEMBoY37DkkOs7nlGCXn3a4wXwpirHLLSuWqreO2d1COi8iWiarxEa82PyQ7eukqEQPDMJczjDo9o_7djRoShtYJgVjm1HFsVKLP9j9Gu9vauCeucxJVggri4G3z3DgIyK7CeufJ3zQ3W7n5j-mYOxT4AiDJQVszvbeFmpngf5ZHGsu3mgh4YUmvwGW2vjpdMTkEt2FF2Z11zOacA4NptatvSc0ilELmZ4J-KalBUyeAvjqzhqDXYQbBDuOTiTr0sPfjFrHiwg0qaqnez1b2I7cLtGJBPbUyxY4_PhxD8Zqoabx9VaXQKT1-tBBQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"54ef0a66e-428a-bcc6-c2c736281a5b\",\r\n  \"UserId\": \"RECON\",\r\n  \"AccountNumber\": \"01192588813000\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/Enquiry/AccountBalance_v2/2.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "Enquiry",
+            "AccountBalance_v2",
+            "2.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Account Mini-statement",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJSRUNPTkBjYXJib24uc3VwZXIiLCJhdWQiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwibmJmIjoxNzgyODg5MjE1LCJhenAiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwic2NvcGUiOiJhbV9hcHBsaWNhdGlvbl9zY29wZSBkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cLzE5Mi4xNjguNC4xNzI6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTc4Mjg5MjgxNSwiaWF0IjoxNzgyODg5MjE1LCJqdGkiOiI5MzdiOTVjOS03MDBhLTQ3MGItOWU3NS03YmEzMDQ2MGQ4ZTUifQ.qT6U07dHxuYvCrlMKckdXRrzPFMEMBoY37DkkOs7nlGCXn3a4wXwpirHLLSuWqreO2d1COi8iWiarxEa82PyQ7eukqEQPDMJczjDo9o_7djRoShtYJgVjm1HFsVKLP9j9Gu9vauCeucxJVggri4G3z3DgIyK7CeufJ3zQ3W7n5j-mYOxT4AiDJQVszvbeFmpngf5ZHGsu3mgh4YUmvwGW2vjpdMTkEt2FF2Z11zOacA4NptatvSc0ilELmZ4J-KalBUyeAvjqzhqDXYQbBDuOTiTr0sPfjFrHiwg0qaqnez1b2I7cLtGJBPbUyxY4_PhxD8Zqoabx9VaXQKT1-tBBQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"768d7-9904349-97229f697b33e\",\r\n  \"AccountNumber\": \"01192588813000\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/Enquiry/MiniStatement/Account_v2/2.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "Enquiry",
+            "MiniStatement",
+            "Account_v2",
+            "2.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Account Statement",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJ4NXQiOiJOekUxTUdaaVpHTTVaRGd4TURWbE1qRmtObVZoT0dVMU9XVXpZVEJrWlRrMk5UWXpOVFEwT1RNME5EaGlNREU0WkRrM1lUaGhZekl4WmpnNVptUTNPUSIsImtpZCI6Ik56RTFNR1ppWkdNNVpEZ3hNRFZsTWpGa05tVmhPR1UxT1dVellUQmtaVGsyTlRZek5UUTBPVE0wTkRoaU1ERTRaRGszWVRoaFl6SXhaamc1Wm1RM09RX1JTMjU2IiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJSRUNPTkBjYXJib24uc3VwZXIiLCJhdWQiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwibmJmIjoxNzgyODg5MjE1LCJhenAiOiIwVk95YzBYWkV0V2dxMVFoVDJqcFVZRmFDRzBhIiwic2NvcGUiOiJhbV9hcHBsaWNhdGlvbl9zY29wZSBkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cLzE5Mi4xNjguNC4xNzI6OTQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MTc4Mjg5MjgxNSwiaWF0IjoxNzgyODg5MjE1LCJqdGkiOiI5MzdiOTVjOS03MDBhLTQ3MGItOWU3NS03YmEzMDQ2MGQ4ZTUifQ.qT6U07dHxuYvCrlMKckdXRrzPFMEMBoY37DkkOs7nlGCXn3a4wXwpirHLLSuWqreO2d1COi8iWiarxEa82PyQ7eukqEQPDMJczjDo9o_7djRoShtYJgVjm1HFsVKLP9j9Gu9vauCeucxJVggri4G3z3DgIyK7CeufJ3zQ3W7n5j-mYOxT4AiDJQVszvbeFmpngf5ZHGsu3mgh4YUmvwGW2vjpdMTkEt2FF2Z11zOacA4NptatvSc0ilELmZ4J-KalBUyeAvjqzhqDXYQbBDuOTiTr0sPfjFrHiwg0qaqnez1b2I7cLtGJBPbUyxY4_PhxD8Zqoabx9VaXQKT1-tBBQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"MessageReference\": \"1b010eec-410817-00f13be27f49\",\r\n  \"UserId\": \"RECON\",\r\n  \"ISO2CountryCode\": \"KE\",\r\n  \"AccountNumber\": \"01192588813000\",\r\n  \"StartDate\": \"2026-06-20\",\r\n  \"EndDate\": \"2026-06-30\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://openapi.co-opbank.co.ke/Enquiry/AccountFullStatementPaginated/1.0.0/",
+          "protocol": "https",
+          "host": [
+            "openapi",
+            "co-opbank",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "Enquiry",
+            "AccountFullStatementPaginated",
+            "1.0.0",
+            ""
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
