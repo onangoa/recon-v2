@@ -4,7 +4,7 @@
  * Tests every endpoint defined in RECON ENGINEERING.postman_collection.json:
  *   1. Generate Token            POST /token
  *   2. Account Validation        POST /Enquiry/Validation/IPSL/1.0.0/
- *   3. PesaLink Send to Account  POST /FundsTransfer/External/PesaLinkBulk_v1/1.0.0/
+ *   3. PesaLink Send to Account  POST /FundsTransfer/External/A2A/PesaLink_v2/2.0.0/
  *   4. IFT Send to Account       POST /FundsTransfer/Internal/A2A_v3/3.0.0
  *   5. B2C M-Pesa                POST /FundsTransfer/External/A2M/Mpesa_v2/2.0.0
  *   6. Transaction Status Check  POST /Enquiry/TransactionStatus_V3/3.0.0/
@@ -361,14 +361,14 @@ async function testAccountValidation(): Promise<void> {
 
 // 3. PesaLink Send to Account
 async function testPesalinkSend(): Promise<string | null> {
-  sep('3. PesaLink Send to Account  —  POST /FundsTransfer/External/PesaLinkBulk_v1/1.0.0/');
+  sep('3. PesaLink Send to Account  —  POST /FundsTransfer/External/A2A/PesaLink_v2/2.0.0/');
   const key = 'transfer.pesalink';
-  if (!shouldRun(key)) { log('WARN', 'Skipped by filter'); record({ name: 'PesaLink Send', endpoint: '/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/', method: 'POST', status: 'skip' }); return null; }
+  if (!shouldRun(key)) { log('WARN', 'Skipped by filter'); record({ name: 'PesaLink Send', endpoint: '/FundsTransfer/External/A2A/PesaLink_v2/2.0.0/', method: 'POST', status: 'skip' }); return null; }
   if (!requireToken()) return null;
 
   if (!LIVE_MODE) {
     log('WARN', 'DRY RUN — pass --live to execute a real PesaLink transfer. Skipping actual submission.');
-    record({ name: 'PesaLink Send', endpoint: '/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/', method: 'POST', status: 'skip', error: 'dry-run' });
+    record({ name: 'PesaLink Send', endpoint: '/FundsTransfer/External/A2A/PesaLink_v2/2.0.0/', method: 'POST', status: 'skip', error: 'dry-run' });
     return null;
   }
 
@@ -398,8 +398,8 @@ async function testPesalinkSend(): Promise<string | null> {
   };
 
   log('WARN', `Submitting REAL transfer: KES ${amount} from ${ACCOUNT} to ${TEST_DEST_ACCOUNT} (bank ${TEST_BANK_CODE})`);
-  const out = await callBank({ method: 'POST', path: '/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/', auth: 'bearer', body, label: 'PesaLink Send', key });
-  recordResult('PesaLink Send', '/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/', out, messageReference);
+  const out = await callBank({ method: 'POST', path: '/FundsTransfer/External/A2A/PesaLink_v2/2.0.0/', auth: 'bearer', body, label: 'PesaLink Send', key });
+  recordResult('PesaLink Send', '/FundsTransfer/External/A2A/PesaLink_v2/2.0.0/', out, messageReference);
   return messageReference;
 }
 
