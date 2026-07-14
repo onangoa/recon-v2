@@ -142,7 +142,7 @@ export async function sendPesalink(data: {
     })),
   };
 
-  const result = await bankPost('/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/', payload);
+  const result = await bankPost('/FundsTransfer/External/A2A/PesaLink_v2/2.0.0/', payload);
   return { messageReference, result };
 };
 
