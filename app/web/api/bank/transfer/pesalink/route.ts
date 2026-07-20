@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sourceAccountNumber, destinations, userId, callBackUrl, iso2CountryCode, amount, narration } = body;
+    const { sourceAccountNumber, destinations, userId, callBackUrl, iso2CountryCode, amount } = body;
 
     if (!destinations || !Array.isArray(destinations) || destinations.length === 0) {
       return NextResponse.json({ error: 'destinations array is required' }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       callBackUrl,
       iso2CountryCode,
       amount,
-      narration,
+      narration: body.narration || 'Wallet Payout',
     });
 
     return NextResponse.json(result, { status: 201 });

@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { appendFile, mkdir } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 
-const BANK_IPN_WEBHOOK_URL =
-  process.env.BANK_IPN_WEBHOOK_URL ||
-  'https://jade-river-30.webhook.cool';
+export const runtime = 'nodejs';
+
+const BANK_IPN_LOG_DIR =
+  process.env.BANK_IPN_LOG_DIR || resolve(process.cwd(), 'logs');
+
+function dailyLogFile(receivedAt: Date): string {
+  const y = receivedAt.getUTCFullYear();
+  const m = String(receivedAt.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(receivedAt.getUTCDate()).padStart(2, '0');
+  return resolve(BANK_IPN_LOG_DIR, `ipn-${y}-${m}-${d}.log`);
+}
+
+function detectSource(req: NextRequest): string {
+  const url = new URL(req.url);
+  return (
+    url.searchParams.get('source') ||
+    req.headers.get('x-ipn-source') ||
+    req.headers.get('x-source') ||
+    'unknown'
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,36 +40,32 @@ export async function POST(req: NextRequest) {
       parsedBody = rawBody;
     }
 
+    const receivedAt = new Date();
+    const source = detectSource(req);
+
     const ipnPayload = {
       headers: Object.fromEntries(req.headers.entries()),
       method: req.method,
       contentType,
       body: parsedBody,
-      receivedAt: new Date().toISOString(),
+      receivedAt: receivedAt.toISOString(),
+      source,
     };
 
-    console.log(
-      'Bank payment IPN received:',
-      JSON.stringify(ipnPayload, null, 2)
-    );
+    const header =
+      `==== ${receivedAt.toISOString()} | source=${source} ====\n`;
+    const logLine =
+      header + JSON.stringify(ipnPayload, null, 2) + '\n\n';
 
     try {
-      const forwardResponse = await fetch(BANK_IPN_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ipnPayload),
-      });
-
-      if (!forwardResponse.ok) {
-        console.error(
-          'Bank payment IPN webhook forward failed:',
-          forwardResponse.status,
-          forwardResponse.statusText
-        );
-      }
-    } catch (forwardError) {
-      console.error('Bank payment IPN webhook forward error:', forwardError);
+      const logFile = dailyLogFile(receivedAt);
+      await mkdir(dirname(logFile), { recursive: true });
+      await appendFile(logFile, logLine, 'utf8');
+    } catch (logError) {
+      console.error('Bank payment IPN log write error:', logError);
     }
+
+    console.log('Bank payment IPN received and logged to file');
 
     return NextResponse.json({
       status: 'received',
