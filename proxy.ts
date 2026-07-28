@@ -69,6 +69,7 @@ function isStaticOrPublic(pathname: string): boolean {
     pathname.includes('.svg') ||
     pathname.includes('.ico') ||
     pathname.includes('.jpg') ||
+    pathname.includes('.jpeg') ||
     pathname.includes('.webp');
 }
 

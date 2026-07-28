@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BannerSlider } from '@/components/banner-slider';
 
 export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,6 +77,9 @@ export function LandingPage() {
           </Link>
         </div>
       </div>
+
+      {/* Banner Slider */}
+      <BannerSlider />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-20 px-6">
