@@ -1,18 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  Settings, 
-  Shield, 
-  CreditCard, 
-  Bell, 
-  Globe, 
+import {
+  Settings,
+  Shield,
+  CreditCard,
+  Bell,
+  Globe,
   Save,
   Lock,
   Mail,
   Smartphone,
-  Eye,
-  EyeOff
 } from 'lucide-react';
 import { 
   Card, 
@@ -32,7 +30,6 @@ import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
 
   const handleSave = async (section: string) => {
     setLoading(true);
@@ -51,10 +48,9 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px] mb-8">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[500px] mb-8">
           <TabsTrigger value="general" className="gap-2"><Settings className="w-4 h-4" /> General</TabsTrigger>
           <TabsTrigger value="security" className="gap-2"><Shield className="w-4 h-4" /> Security</TabsTrigger>
-          <TabsTrigger value="mpesa" className="gap-2"><Smartphone className="w-4 h-4" /> M-Pesa</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2"><Bell className="w-4 h-4" /> Alerts</TabsTrigger>
         </TabsList>
 
@@ -142,55 +138,6 @@ export default function SettingsPage() {
               <Button onClick={() => handleSave('Security')} disabled={loading} className="gap-2">
                 <Save className="w-4 h-4" /> Update Policies
               </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="mpesa" className="space-y-6">
-          <Card className="border-none shadow-md">
-            <CardHeader>
-              <CardTitle>Safaricom Daraja API</CardTitle>
-              <CardDescription>Configure credentials for M-Pesa STK Push and C2B payments.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="shortcode">Business Shortcode</Label>
-                  <Input id="shortcode" defaultValue="174379" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="passkey">LNM Passkey</Label>
-                  <div className="relative">
-                    <Input id="passkey" type={showApiKey ? "text" : "password"} defaultValue="bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919" />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-0 top-0 h-full px-3" 
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="consumer-key">Consumer Key</Label>
-                <Input id="consumer-key" defaultValue="h9v8u7...3b2a1" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="consumer-secret">Consumer Secret</Label>
-                <Input id="consumer-secret" type="password" defaultValue="secret_key_here" />
-              </div>
-            </CardContent>
-            <CardFooter className="border-t border-border pt-4">
-              <div className="flex gap-3">
-                <Button onClick={() => handleSave('M-Pesa')} disabled={loading} className="gap-2">
-                  <Save className="w-4 h-4" /> Save Credentials
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  Test Connection
-                </Button>
-              </div>
             </CardFooter>
           </Card>
         </TabsContent>

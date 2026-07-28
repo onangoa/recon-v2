@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/auth-context"
 import './globals.css'
 
@@ -49,6 +50,7 @@ export default function RootLayout({
           {children}
         </AuthProvider>
         <Toaster />
+        <SonnerToaster richColors position="top-right" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

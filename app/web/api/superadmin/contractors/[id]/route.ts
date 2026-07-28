@@ -26,9 +26,7 @@ export async function GET(
             price: true,
           },
         },
-        employees: true,
         projects: true,
-        invoices: true,
         wallets: true,
       },
     });

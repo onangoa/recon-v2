@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Mail, 
-  User, 
+import {
+  ShieldCheck,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Mail,
+  User,
   ShieldAlert,
   MoreVertical,
-  Key
+  Key,
+  RefreshCw
 } from 'lucide-react';
 import { 
   Card, 
@@ -65,6 +66,7 @@ export default function AdminsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
 
@@ -97,6 +99,7 @@ export default function AdminsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreating(true);
     try {
       const res = await fetch('/web/api/superadmin/admins', {
         method: 'POST',
@@ -126,6 +129,8 @@ export default function AdminsPage() {
         description: "An error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -241,8 +246,17 @@ export default function AdminsPage() {
                 <Input id="password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Leave blank for random" />
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                <Button type="submit">Create Admin</Button>
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>Cancel</Button>
+                <Button type="submit" disabled={isCreating}>
+                  {isCreating ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Admin'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

@@ -20,7 +20,8 @@ import {
   Plus,
   CheckCircle2,
   Construction,
-  MapPin
+  MapPin,
+  UserCircle
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -68,6 +69,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
+    { label: 'Profile', href: '/superadmin/profile', icon: UserCircle },
     { label: 'Settings', href: '/superadmin/settings', icon: Settings },
   ];
 
@@ -156,6 +158,11 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2" asChild>
+                    <Link href="/superadmin/profile">
+                      <UserCircle className="size-4" /> Profile
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2" asChild>
                     <Link href="/superadmin/settings">
                       <Settings className="size-4" /> Settings
