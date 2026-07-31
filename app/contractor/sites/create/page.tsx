@@ -121,7 +121,7 @@ export default function CreateSitePage() {
           description: error.message || "You've used all your subscription site slots. Subscribe again to add another site.",
           variant: "destructive",
           action: (
-            <Button size="sm" variant="outline" onClick={() => router.push('/contractor/settings')}>
+            <Button size="sm" variant="outline" onClick={() => router.push('/contractor/settings?tab=subscription')}>
               Subscribe Again
             </Button>
           ),

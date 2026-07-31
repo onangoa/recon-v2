@@ -371,8 +371,12 @@ export const handleSTKPushCallback = async (callbackData: any) => {
               console.log('Processing automatic registration after payment success');
               await processRegistration(metadata.formData, transaction.id);
             }
+            if (metadata.isSubscription && metadata.contractorId) {
+              console.log('Processing automatic subscription after payment success');
+              await processSubscription(metadata.contractorId, metadata.planId, metadata.subscribeAgain, transaction.id);
+            }
           } catch (error) {
-            console.error('Failed to parse transaction metadata for registration:', error);
+            console.error('Failed to parse transaction metadata for registration/subscription:', error);
           }
         }
       } else {
@@ -529,6 +533,78 @@ const processRegistration = async (formData: any, transactionId: string) => {
     }
     
     // Don't throw error here to avoid breaking the callback
+  }
+};
+
+// Process subscription update after successful payment
+const processSubscription = async (
+  contractorId: string,
+  planId: string | undefined,
+  subscribeAgain: boolean | undefined,
+  transactionId: string
+) => {
+  try {
+    console.log('Starting subscription process for contractor:', contractorId);
+
+    const updateData: any = {
+      subscriptionStatus: 'active',
+      subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    };
+
+    if (planId) updateData.subscriptionPlanId = planId;
+
+    if (subscribeAgain) {
+      const current = await prisma.contractor.findUnique({
+        where: { id: contractorId },
+        select: { purchasedSiteSlots: true },
+      });
+      updateData.purchasedSiteSlots = (current?.purchasedSiteSlots ?? 1) + 1;
+    }
+
+    await prisma.contractor.update({
+      where: { id: contractorId },
+      data: updateData,
+    });
+
+    console.log('Subscription updated successfully for contractor:', contractorId);
+
+    // Reflect completion in transaction metadata so the frontend poll can detect it
+    const currentTransaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+    const existingMetadata = currentTransaction?.metadata ? JSON.parse(currentTransaction.metadata) : {};
+
+    await updateTransaction(transactionId, {
+      metadata: JSON.stringify({
+        ...existingMetadata,
+        isSubscription: true,
+        subscriptionStatus: 'completed',
+        contractorId,
+        planId,
+        subscribeAgain: Boolean(subscribeAgain),
+      }),
+    });
+  } catch (error) {
+    console.error('Automatic subscription error:', error);
+
+    try {
+      const currentTransaction = await prisma.transaction.findUnique({ where: { id: transactionId } });
+      const existingMetadata = currentTransaction?.metadata ? JSON.parse(currentTransaction.metadata) : {};
+
+      await updateTransaction(transactionId, {
+        metadata: JSON.stringify({
+          ...existingMetadata,
+          isSubscription: true,
+          subscriptionStatus: 'failed',
+          subscriptionError: (error as Error).message,
+          contractorId,
+          planId,
+          subscribeAgain: Boolean(subscribeAgain),
+        }),
+      });
+    } catch (metadataError) {
+      console.error('Failed to update transaction metadata for subscription:', metadataError);
+    }
+
+    // Don't throw to avoid breaking the callback
   }
 };
 

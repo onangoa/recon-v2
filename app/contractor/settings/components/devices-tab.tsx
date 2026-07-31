@@ -59,7 +59,6 @@ export default function DevicesTab() {
   const [formData, setFormData] = useState({
     name: '',
     sn: '',
-    location: '',
     isActive: true,
   });
 
@@ -101,14 +100,14 @@ export default function DevicesTab() {
   }, []);
 
   const resetForm = () => {
-    setFormData({ name: '', sn: '', location: '', isActive: true });
+setFormData({ name: '', sn: '', isActive: true });
     setEditingId(null);
     setShowForm(false);
   };
 
   const startEdit = (d: Device) => {
     setEditingId(d.id);
-    setFormData({ name: d.name, sn: d.sn, location: d.location || '', isActive: d.isActive });
+    setFormData({ name: d.name, sn: d.sn, isActive: d.isActive });
     setShowForm(true);
   };
 
@@ -181,7 +180,7 @@ export default function DevicesTab() {
             Check Status
           </Button>
           {!showForm ? (
-            <Button size="sm" className="gap-2" onClick={() => { setEditingId(null); setFormData({ name: '', sn: '', location: '', isActive: true }); setShowForm(true); }}>
+            <Button size="sm" className="gap-2" onClick={() => { setEditingId(null); setFormData({ name: '', sn: '', isActive: true }); setShowForm(true); }}>
               <Plus className="w-4 h-4" /> Add Device
             </Button>
           ) : (
@@ -204,7 +203,7 @@ export default function DevicesTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">Device Name *</label>
                 <Input
@@ -224,16 +223,7 @@ export default function DevicesTab() {
                   className="font-mono"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">Location</label>
-                <Input
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g. Site A – Entrance"
-                  disabled={isSaving}
-                />
-              </div>
-              <div className="md:col-span-3 flex items-center gap-2">
+              <div className="md:col-span-2 flex items-center gap-2">
                 <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                   <input
                     type="checkbox"
@@ -245,7 +235,7 @@ export default function DevicesTab() {
                   Active (available for enrollment & attendance)
                 </label>
               </div>
-              <div className="md:col-span-3 flex gap-2 pt-2">
+              <div className="md:col-span-2 flex gap-2 pt-2">
                 <Button type="submit" disabled={isSaving} className="gap-2">
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {editingId ? 'Update Device' : 'Save Device'}
@@ -272,7 +262,6 @@ export default function DevicesTab() {
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase">Device</TableHead>
                   <TableHead className="font-bold text-xs uppercase">Serial Number</TableHead>
-                  <TableHead className="font-bold text-xs uppercase">Location</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-center">Connection</TableHead>
                   <TableHead className="text-right font-bold text-xs uppercase">Actions</TableHead>
@@ -283,7 +272,6 @@ export default function DevicesTab() {
                   <TableRow key={d.id}>
                     <TableCell className="font-medium text-sm">{d.name}</TableCell>
                     <TableCell className="font-mono text-xs">{d.sn}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{d.location || '—'}</TableCell>
                     <TableCell className="text-center">
                       <Badge className={`text-[10px] font-bold ${d.isActive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-gray-300/30 text-gray-500'}`}>
                         {d.isActive ? 'Active' : 'Inactive'}
@@ -330,8 +318,7 @@ export default function DevicesTab() {
       <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 text-xs text-muted-foreground">
         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
         <p>
-          Only devices shown as <strong>Online</strong> can be selected when enrolling a worker. The biometric API base URL
-          (<code className="font-mono">BIOMETRIC_API_BASE_URL</code>) must be set in the server environment for the connection check to work.
+          Only devices shown as <strong>Online</strong> can be selected when enrolling a worker.
         </p>
       </div>
     </div>

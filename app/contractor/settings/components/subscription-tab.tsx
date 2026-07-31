@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { CreditCard, Loader2, CheckCircle2, Star, Zap, Shield, Building2, Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CreditCard, Loader2, CheckCircle2, Star, Zap, Shield, Building2, Plus, Phone, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Card, 
   CardContent, 
@@ -15,13 +16,24 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 
+type PayAction =
+  | { kind: 'subscribeAgain' }
+  | { kind: 'upgrade'; planId: string; planName: string };
+
 export default function SubscriptionTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isSubscribingAgain, setIsSubscribingAgain] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [contractorId, setContractorId] = useState<string | null>(null);
+  const [mpesaNumber, setMpesaNumber] = useState('');
+
+  // Payment state
+  const [isPaying, setIsPaying] = useState(false);
+  const [payAction, setPayAction] = useState<PayAction | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchSubscription = async () => {
     setIsLoading(true);
@@ -32,6 +44,7 @@ export default function SubscriptionTab() {
       
       if (contractor) {
         setContractorId(contractor.id);
+        if (contractor.phoneNumber) setMpesaNumber(contractor.phoneNumber);
         const subResp = await fetch(`/web/api/contractors/${contractor.id}/subscription`);
         const subData = await subResp.json();
         setSubscriptionData(subData);
@@ -45,27 +58,131 @@ export default function SubscriptionTab() {
 
   useEffect(() => {
     fetchSubscription();
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
-  const handleUpdatePlan = async (planId: string) => {
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  const pollPaymentStatus = (crid: string, onDone: () => void) => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`/web/api/payments/status?checkoutRequestId=${crid}`);
+        if (!response.ok) return;
+        const data = await response.json();
+
+        setPaymentStatus(data.status);
+
+        const isPaymentSuccess =
+          data.status === 'completed' || data.status === 'SUCCESS' || data.status === 'PENDING';
+        const isSubscriptionComplete = data.subscriptionStatus === 'completed';
+        const isSubscriptionFailed = data.subscriptionStatus === 'failed';
+
+        if (isPaymentSuccess && isSubscriptionComplete) {
+          stopPolling();
+          setIsPaying(false);
+          setPayAction(null);
+          setPaymentStatus(null);
+          setCheckoutRequestId(null);
+          toast({
+            title: 'Subscription Updated',
+            description: 'Your payment was successful and your subscription is now active.',
+            variant: 'success',
+          });
+          fetchSubscription();
+          onDone();
+        } else if (
+          data.status === 'failed' ||
+          data.status === 'FAILED' ||
+          data.status === 'CANCELLED' ||
+          data.status === 'TIMEOUT'
+        ) {
+          stopPolling();
+          setIsPaying(false);
+          setPayAction(null);
+          toast({
+            title: 'Payment Not Completed',
+            description:
+              data.status === 'CANCELLED'
+                ? 'You cancelled the M-Pesa prompt.'
+                : data.status === 'TIMEOUT'
+                ? 'The M-Pesa prompt timed out.'
+                : 'Payment failed. Please try again.',
+            variant: 'destructive',
+          });
+        } else if (isPaymentSuccess && isSubscriptionFailed) {
+          stopPolling();
+          setIsPaying(false);
+          setPayAction(null);
+          toast({
+            title: 'Subscription Update Failed',
+            description: 'Payment succeeded but the subscription could not be updated. Please contact support.',
+            variant: 'destructive',
+          });
+        }
+      } catch (err) {
+        console.error('Polling error', err);
+      }
+    }, 3000);
+
+    timeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setIsPaying(false);
+      setPayAction(null);
+      toast({
+        title: 'Timeout',
+        description: 'Payment confirmation is taking longer than expected. Please check back shortly.',
+        variant: 'destructive',
+      });
+    }, 180000);
+  };
+
+  const initiatePayment = async (action: PayAction) => {
     if (!contractorId) return;
-    
-    setIsUpdating(true);
+    if (!mpesaNumber.trim()) {
+      toast({ title: 'M-Pesa Number Required', description: 'Please enter the M-Pesa number to charge.', variant: 'destructive' });
+      return;
+    }
+
+    setIsPaying(true);
+    setPayAction(action);
+    setPaymentStatus(null);
+    setCheckoutRequestId(null);
+
     try {
-      const response = await fetch(`/web/api/contractors/${contractorId}/subscription`, {
-        method: 'PUT',
+      const response = await fetch('/web/api/payments/initiate-subscription', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({
+          phoneNumber: mpesaNumber,
+          planId: action.kind === 'upgrade' ? action.planId : undefined,
+          subscribeAgain: action.kind === 'subscribeAgain',
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to update plan');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Failed to initiate payment');
+      if (!data.checkoutRequestId) throw new Error('Checkout request ID not received from M-Pesa');
 
-      toast({ title: "Success", description: "Subscription updated successfully" });
-      fetchSubscription();
+      setCheckoutRequestId(data.checkoutRequestId);
+      toast({ title: 'Payment Initiated', description: 'Please check your phone for the M-Pesa prompt.' });
+
+      pollPaymentStatus(data.checkoutRequestId, () => {});
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    } finally {
-      setIsUpdating(false);
+      setIsPaying(false);
+      setPayAction(null);
+      toast({ title: 'Payment Error', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -92,6 +209,8 @@ export default function SubscriptionTab() {
       default: return <CreditCard className="w-5 h-5 text-primary" />;
     }
   };
+
+  const isBusy = isPaying;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -129,6 +248,46 @@ export default function SubscriptionTab() {
         </CardContent>
       </Card>
 
+      {/* M-Pesa payment panel */}
+      <Card className="border-none shadow-md">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Phone className="size-5" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <h3 className="font-bold text-sm">Pay via M-Pesa</h3>
+              <p className="text-xs text-muted-foreground">
+                Enter the M-Pesa number to charge. You'll receive an STK push prompt to authorize the payment.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Input
+              value={mpesaNumber}
+              onChange={(e) => setMpesaNumber(e.target.value)}
+              placeholder="e.g. 0712345678"
+              disabled={isBusy}
+              className="font-mono sm:max-w-xs"
+            />
+            {isBusy && (
+              <Badge variant="outline" className="self-start gap-1.5 py-1.5 px-3 text-xs">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {paymentStatus ? `Status: ${paymentStatus}` : 'Awaiting confirmation...'}
+              </Badge>
+            )}
+          </div>
+          {isBusy && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 text-xs text-muted-foreground">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>
+                Check your phone for the M-Pesa prompt. This page will update automatically once payment is confirmed.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Site Slots Usage & Subscribe Again */}
       <Card className="border-none shadow-md">
         <CardContent className="p-6 space-y-4">
@@ -152,80 +311,71 @@ export default function SubscriptionTab() {
           </div>
           <Button
             className="gap-2 w-full sm:w-auto"
-            onClick={async () => {
-              if (!contractorId) return;
-              setIsSubscribingAgain(true);
-              try {
-                const response = await fetch(`/web/api/contractors/${contractorId}/subscription`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ subscribeAgain: true }),
-                });
-                if (!response.ok) throw new Error('Failed to add site slot');
-                toast({ title: 'Success', description: 'New site slot added. You can now create another site.' });
-                fetchSubscription();
-              } catch (err: any) {
-                toast({ title: 'Error', description: err.message, variant: 'destructive' });
-              } finally {
-                setIsSubscribingAgain(false);
-              }
-            }}
-            disabled={isSubscribingAgain}
+            onClick={() => initiatePayment({ kind: 'subscribeAgain' })}
+            disabled={isBusy}
           >
-            {isSubscribingAgain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {isBusy && payAction?.kind === 'subscribeAgain' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
             Subscribe Again (Add Site Slot)
           </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {availablePlans.map((plan: any) => (
-          <Card key={plan.id} className={`border-none shadow-md flex flex-col ${plan.id === currentPlan?.id ? 'ring-2 ring-primary' : ''}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between mb-2">
-                {getPlanIcon(plan.name)}
-                {plan.id === currentPlan?.id && (
-                  <Badge variant="outline" className="text-[9px] font-bold uppercase text-primary border-primary/20">Active Plan</Badge>
-                )}
-              </div>
-              <CardTitle>{plan.name}</CardTitle>
-              <div className="mt-2">
-                <span className="text-3xl font-black tracking-tighter">KES {plan.price.toLocaleString()}</span>
-                <span className="text-muted-foreground text-xs ml-1">/mo</span>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-              <Separator />
-              <ul className="space-y-2.5">
-                <li className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <span>Up to <span className="font-bold">1 site</span> management</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <span>Up to <span className="font-bold">{plan.maxTeamMembers} team members</span></span>
-                </li>
-                {JSON.parse(plan.features).map((feature: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
+        {availablePlans.map((plan: any) => {
+          const isCurrent = plan.id === currentPlan?.id;
+          const isThisBusy = isBusy && payAction?.kind === 'upgrade' && payAction?.planId === plan.id;
+          return (
+            <Card key={plan.id} className={`border-none shadow-md flex flex-col ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center justify-between mb-2">
+                  {getPlanIcon(plan.name)}
+                  {isCurrent && (
+                    <Badge variant="outline" className="text-[9px] font-bold uppercase text-primary border-primary/20">Active Plan</Badge>
+                  )}
+                </div>
+                <CardTitle>{plan.name}</CardTitle>
+                <div className="mt-2">
+                  <span className="text-3xl font-black tracking-tighter">KES {plan.price.toLocaleString()}</span>
+                  <span className="text-muted-foreground text-xs ml-1">/mo</span>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-4">
+                <Separator />
+                <ul className="space-y-2.5">
+                  <li className="flex items-start gap-2 text-sm">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span>{feature}</span>
+                    <span>Up to <span className="font-bold">1 site</span> management</span>
                   </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter className="pt-6">
-              <Button 
-                className="w-full h-11 font-bold"
-                variant={plan.id === currentPlan?.id ? "outline" : "default"}
-                disabled={plan.id === currentPlan?.id || isUpdating}
-                onClick={() => handleUpdatePlan(plan.id)}
-              >
-                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {plan.id === currentPlan?.id ? 'Your Current Plan' : `Upgrade to ${plan.name}`}
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+                  <li className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                    <span>Up to <span className="font-bold">{plan.maxTeamMembers} team members</span></span>
+                  </li>
+                  {JSON.parse(plan.features).map((feature: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter className="pt-6">
+                <Button 
+                  className="w-full h-11 font-bold"
+                  variant={isCurrent ? "outline" : "default"}
+                  disabled={isCurrent || isBusy}
+                  onClick={() => initiatePayment({ kind: 'upgrade', planId: plan.id, planName: plan.name })}
+                >
+                  {isThisBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {isCurrent ? 'Your Current Plan' : `Upgrade to ${plan.name}`}
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

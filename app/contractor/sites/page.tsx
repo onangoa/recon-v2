@@ -205,13 +205,15 @@ export default function SitesManagementPage() {
             </p>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
-            <Link href="/contractor/sites/create">
-              <Plus className="size-4" /> Add New Site
-            </Link>
-          </Button>
-        </div>
+        {purchasedSiteSlots === null || totalSitesCount < purchasedSiteSlots ? (
+          <div className="flex flex-col items-end gap-2">
+            <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
+              <Link href="/contractor/sites/create">
+                <Plus className="size-4" /> Add New Site
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {purchasedSiteSlots !== null && totalSitesCount >= purchasedSiteSlots && (
@@ -226,7 +228,7 @@ export default function SitesManagementPage() {
             </div>
           </div>
           <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
-            <Link href="/contractor/settings">Subscribe Again</Link>
+            <Link href="/contractor/settings?tab=subscription">Subscribe Again</Link>
           </Button>
         </div>
       )}

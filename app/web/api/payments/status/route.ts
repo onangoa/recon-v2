@@ -23,12 +23,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: 'not_found', registrationStatus: null });
     }
 
-    // Parse metadata for registration status
+    // Parse metadata for registration/subscription status
     let registrationStatus = null;
+    let subscriptionStatus = null;
     if (transaction.metadata) {
       try {
         const metadata = JSON.parse(transaction.metadata);
         registrationStatus = metadata.registrationStatus || null;
+        subscriptionStatus = metadata.subscriptionStatus || null;
       } catch (error) {
         console.error('Failed to parse transaction metadata:', error);
       }
@@ -37,7 +39,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ 
       status: transaction.status,
       transactionId: transaction.id,
-      registrationStatus
+      registrationStatus,
+      subscriptionStatus
     });
   } catch (error: any) {
     console.error('Payment Status Check Error:', error.message);
