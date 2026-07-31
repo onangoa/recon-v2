@@ -21,53 +21,70 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
     // ---- Biometric API source (preferred) ----
     // Attendance logs are pulled live from the device API (/api/getRecords)
     // and transformed into the same session shape the front-end expects.
-    // If the biometric API is not configured we fall back to the database so
-    // existing functionality keeps working.
+    // Records are fetched from every device the contractor has configured
+    // (Settings → Devices). If no devices are configured (or the biometric
+    // API base URL is unset), we fall back to the database.
     if (process.env.BIOMETRIC_API_BASE_URL) {
-      const workers = await prisma.worker.findMany({
-        where: { contractorId },
-        select: {
-          id: true,
-          name: true,
-          enrollId: true,
-          designation: { select: { title: true } },
-          shift: true,
-        },
+      const devices = await prisma.biometricDevice.findMany({
+        where: { contractorId, isActive: true },
+        select: { sn: true, name: true },
       });
 
-      // Pull a generous window of records newest-first; date filtering happens
-      // after transformation (the /api/getRecords endpoint has no date filter).
-      const pageSize = 500;
-      let pn = 1;
-      const collected: Awaited<ReturnType<typeof getRecords>>['records'] = [];
-      // Fetch up to a few pages to cover recent history, then stop early.
-      for (let i = 0; i < 5; i++) {
-        const page = await getRecords(null, { pn, pageSize });
-        if (!page.records || page.records.length === 0) break;
-        collected.push(...page.records);
-        if (page.records.length < pageSize || collected.length >= page.total) break;
-        pn++;
-      }
-
-      let attendances = transformRecordsToAttendance(collected, workers);
-
-      // Apply the same filters the DB query used to.
-      if (workerId) attendances = attendances.filter((a) => a.worker.id === workerId);
-      if (date) {
-        const day = new Date(date);
-        const lo = startOfDay(day);
-        const hi = endOfDay(day);
-        attendances = attendances.filter((a) => {
-          const d = new Date(a.date);
-          return d >= lo && d <= hi;
+      if (devices.length > 0) {
+        const workers = await prisma.worker.findMany({
+          where: { contractorId },
+          select: {
+            id: true,
+            name: true,
+            enrollId: true,
+            designation: { select: { title: true } },
+            shift: true,
+          },
         });
-      } else if (startDate && endDate) {
-        const lo = new Date(startDate);
-        const hi = new Date(endDate);
-        attendances = attendances.filter((a) => isWithinInterval(new Date(a.date), { start: lo, end: hi }));
-      }
 
-      return NextResponse.json(attendances);
+        // Pull a generous window of records newest-first from each configured
+        // device; date filtering happens after transformation (the
+        // /api/getRecords endpoint has no date filter).
+        const pageSize = 500;
+        const collected: Awaited<ReturnType<typeof getRecords>>['records'] = [];
+
+        for (const device of devices) {
+          let pn = 1;
+          for (let i = 0; i < 5; i++) {
+            try {
+              const page = await getRecords(device.sn, { pn, pageSize });
+              if (!page.records || page.records.length === 0) break;
+              collected.push(...page.records);
+              if (page.records.length < pageSize || collected.length >= page.total) break;
+              pn++;
+            } catch (err) {
+              // A single offline device shouldn't blank the whole list.
+              console.error(`Failed to fetch records from device ${device.sn}:`, err);
+              break;
+            }
+          }
+        }
+
+        let attendances = transformRecordsToAttendance(collected, workers);
+
+        // Apply the same filters the DB query used to.
+        if (workerId) attendances = attendances.filter((a) => a.worker.id === workerId);
+        if (date) {
+          const day = new Date(date);
+          const lo = startOfDay(day);
+          const hi = endOfDay(day);
+          attendances = attendances.filter((a) => {
+            const d = new Date(a.date);
+            return d >= lo && d <= hi;
+          });
+        } else if (startDate && endDate) {
+          const lo = new Date(startDate);
+          const hi = new Date(endDate);
+          attendances = attendances.filter((a) => isWithinInterval(new Date(a.date), { start: lo, end: hi }));
+        }
+
+        return NextResponse.json(attendances);
+      }
     }
 
     // ---- Database fallback ----

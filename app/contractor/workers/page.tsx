@@ -110,6 +110,15 @@ interface BiometricWorkerRow {
   enrolled: boolean;
 }
 
+interface DeviceConfig {
+  id: string;
+  name: string;
+  sn: string;
+  location: string | null;
+  isActive: boolean;
+  online?: boolean;
+}
+
 export default function WorkersPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -136,6 +145,8 @@ export default function WorkersPage() {
   const [biometricRows, setBiometricRows] = useState<BiometricWorkerRow[]>([]);
   const [enrollingIds, setEnrollingIds] = useState<string[]>([]);
   const [enrollAllRunning, setEnrollAllRunning] = useState(false);
+  const [devices, setDevices] = useState<DeviceConfig[]>([]);
+  const [selectedDeviceSn, setSelectedDeviceSn] = useState<string>('');
 
   const fetchWorkers = async () => {
     setIsLoading(true);
@@ -171,10 +182,29 @@ export default function WorkersPage() {
   }, [currentPage]);
 
   // ---- Biometric device enrollment helpers ----
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch('/web/api/biometric/devices?status=1');
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: DeviceConfig[] = data.devices || [];
+      setDevices(list);
+      // Keep a valid selection (prefer the previously selected, else first online).
+      const stillExists = list.some((d) => d.sn === selectedDeviceSn);
+      if (!stillExists) {
+        const firstOnline = list.find((d) => d.isActive && d.online);
+        setSelectedDeviceSn(firstOnline?.sn || (list.find((d) => d.isActive)?.sn || ''));
+      }
+    } catch {
+      /* silent */
+    }
+  };
+
   const fetchBiometricUsers = async () => {
     setBiometricLoading(true);
     try {
-      const res = await fetch('/web/api/biometric/users');
+      const snParam = selectedDeviceSn ? `?deviceSn=${encodeURIComponent(selectedDeviceSn)}` : '';
+      const res = await fetch(`/web/api/biometric/users${snParam}`);
       if (!res.ok) throw new Error('Failed to fetch biometric users');
       const data = await res.json();
       setEnrolledEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
@@ -194,12 +224,16 @@ export default function WorkersPage() {
   };
 
   const enrollWorkerToDevice = async (workerId: string): Promise<boolean> => {
+    if (!selectedDeviceSn) {
+      toast({ title: 'No device selected', description: 'Pick a device first.', variant: 'destructive' });
+      return false;
+    }
     setEnrollingIds((prev) => [...prev, workerId]);
     try {
       const res = await fetch('/web/api/biometric/enroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workerId }),
+        body: JSON.stringify({ workerId, deviceSn: selectedDeviceSn }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to enroll');
@@ -239,14 +273,26 @@ export default function WorkersPage() {
 
   const openBiometric = async () => {
     setIsBiometricOpen(true);
+    await fetchDevices();
     await fetchBiometricUsers();
   };
 
-  // Preload device enrollment status so the table column can render.
+  // Preload device list + enrollment status so the table column can render.
   useEffect(() => {
-    fetchBiometricUsers();
+    (async () => {
+      await fetchDevices();
+      await fetchBiometricUsers();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When the selected device changes inside the dialog, refresh the user list.
+  useEffect(() => {
+    if (isBiometricOpen && selectedDeviceSn) {
+      fetchBiometricUsers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeviceSn, isBiometricOpen]);
 
   const handleDelete = async () => {
     if (!workerToDelete) return;
@@ -599,10 +645,32 @@ export default function WorkersPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-1.5">Select Device</label>
+              {devices.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  No devices configured. Add one under Settings → Devices.
+                </p>
+              ) : (
+                <select
+                  value={selectedDeviceSn}
+                  onChange={(e) => setSelectedDeviceSn(e.target.value)}
+                  disabled={biometricLoading}
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {devices.map((d) => (
+                    <option key={d.id} value={d.sn}>
+                      {d.name} — {d.sn}{d.online ? ' (online)' : (d.isActive ? ' (offline)' : ' (inactive)')}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             {deviceAvailable === false && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium">
                 <AlertCircle className="size-4 shrink-0" />
-                Device could not be reached. Check that BIOMETRIC_API_BASE_URL and BIOMETRIC_DEVICE_SN are configured and the device is online.
+                Device could not be reached. Check that BIOMETRIC_API_BASE_URL is set and the selected device is online.
               </div>
             )}
 

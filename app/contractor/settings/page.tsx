@@ -6,6 +6,7 @@ import {
   User, 
   CreditCard, 
   Lock,
+  Fingerprint,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -23,6 +24,7 @@ import NotificationsTab from './components/notifications-tab';
 import SecurityTab from './components/security-tab';
 import SubscriptionTab from './components/subscription-tab';
 import RolesTab from './components/roles-tab';
+import DevicesTab from './components/devices-tab';
 
 export default function ContractorSettingsPage() {
   return (
@@ -76,6 +78,9 @@ function ContractorSettingsContent() {
           <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <ShieldCheck className="w-4 h-4" /> Roles & Permissions
           </TabsTrigger>
+          <TabsTrigger value="devices" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
+            <Fingerprint className="w-4 h-4" /> Devices
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -96,6 +101,10 @@ function ContractorSettingsContent() {
 
         <TabsContent value="roles" className="space-y-6">
           <RolesTab />
+        </TabsContent>
+
+        <TabsContent value="devices" className="space-y-6">
+          <DevicesTab />
         </TabsContent>
       </Tabs>
     </div>

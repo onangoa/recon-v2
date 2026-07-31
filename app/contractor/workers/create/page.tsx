@@ -35,6 +35,15 @@ interface Shift {
   name: string;
 }
 
+interface Device {
+  id: string;
+  name: string;
+  sn: string;
+  location: string | null;
+  isActive: boolean;
+  online?: boolean;
+}
+
 export default function CreateWorkerPage() {
   const { toast } = useToast();
   const { activeSite } = useSite();
@@ -45,6 +54,11 @@ export default function CreateWorkerPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [takenEnrollIds, setTakenEnrollIds] = useState<number[]>([]);
   const [enrollIdAvailable, setEnrollIdAvailable] = useState<boolean | null>(null);
+  const [enrollIdConflictSource, setEnrollIdConflictSource] = useState<'device' | 'database' | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDeviceSn, setSelectedDeviceSn] = useState<string>('');
+
+  const onlineDevices = devices.filter((d) => d.isActive && d.online);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -64,10 +78,10 @@ export default function CreateWorkerPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [desigRes, shiftRes, bioRes] = await Promise.all([
+        const [desigRes, shiftRes, devRes] = await Promise.all([
           fetch('/web/api/designations'),
           fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`),
-          fetch('/web/api/biometric/users'),
+          fetch('/web/api/biometric/devices?status=1'),
         ]);
         
         if (desigRes.ok) {
@@ -78,9 +92,13 @@ export default function CreateWorkerPage() {
           const shiftData = await shiftRes.json();
           setShifts(Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []));
         }
-        if (bioRes.ok) {
-          const bioData = await bioRes.json();
-          setTakenEnrollIds(Array.isArray(bioData.enrolledEnrollIds) ? bioData.enrolledEnrollIds : []);
+        if (devRes.ok) {
+          const devData = await devRes.json();
+          const list: Device[] = devData.devices || [];
+          setDevices(list);
+          // Pre-select the first online device if none chosen yet.
+          const firstOnline = list.find((d) => d.isActive && d.online);
+          if (firstOnline) setSelectedDeviceSn((prev) => prev || firstOnline.sn);
         }
       } catch (error) {
         console.error('Failed to fetch data');
@@ -89,20 +107,63 @@ export default function CreateWorkerPage() {
     fetchData();
   }, [activeSite?.contractorId]);
 
-  // Validate the typed enroll ID against the device's enrolled IDs.
+  // Fetch the selected device's enrolled IDs (from device + database) for
+  // validating the Enroll ID the user types in.
+  const [deviceEnrollIds, setDeviceEnrollIds] = useState<number[]>([]);
+  const [dbEnrollIdsOnly, setDbEnrollIdsOnly] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!selectedDeviceSn) {
+      // Even without a device, still check the database for uniqueness.
+      const controller = new AbortController();
+      fetch('/web/api/biometric/users', { signal: controller.signal })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setTakenEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
+            setDbEnrollIdsOnly(Array.isArray(data.dbEnrollIds) ? data.dbEnrollIds : []);
+            setDeviceEnrollIds(Array.isArray(data.deviceEnrollIds) ? data.deviceEnrollIds : []);
+          }
+        })
+        .catch(() => {});
+      return () => controller.abort();
+    }
+    const controller = new AbortController();
+    fetch(`/web/api/biometric/users?deviceSn=${encodeURIComponent(selectedDeviceSn)}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setTakenEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
+          setDbEnrollIdsOnly(Array.isArray(data.dbEnrollIds) ? data.dbEnrollIds : []);
+          setDeviceEnrollIds(Array.isArray(data.deviceEnrollIds) ? data.deviceEnrollIds : []);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [selectedDeviceSn]);
+
+  // Validate the typed enroll ID against both the device and the database.
   useEffect(() => {
     const value = formData.enrollId.trim();
     if (!value) {
       setEnrollIdAvailable(null);
+      setEnrollIdConflictSource(null);
       return;
     }
     const num = Number(value);
     if (!Number.isFinite(num)) {
       setEnrollIdAvailable(false);
+      setEnrollIdConflictSource(null);
       return;
     }
-    setEnrollIdAvailable(!takenEnrollIds.includes(num));
-  }, [formData.enrollId, takenEnrollIds]);
+    if (takenEnrollIds.includes(num)) {
+      setEnrollIdAvailable(false);
+      setEnrollIdConflictSource(deviceEnrollIds.includes(num) ? 'device' : 'database');
+    } else {
+      setEnrollIdAvailable(true);
+      setEnrollIdConflictSource(null);
+    }
+  }, [formData.enrollId, takenEnrollIds, deviceEnrollIds]);
 
   const handleSubmit = async (e: React.FormEvent, enrollDevice = false) => {
     e.preventDefault();
@@ -121,6 +182,16 @@ export default function CreateWorkerPage() {
       toast({
         title: "Enroll ID required",
         description: "Enter a Biometric Enroll ID to enroll to the device.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Enrolling requires a selected, online device.
+    if (enrollDevice && !onlineDevices.some((d) => d.sn === selectedDeviceSn)) {
+      toast({
+        title: "No online device selected",
+        description: "Pick an online device to enroll to (add one under Settings → Devices).",
         variant: "destructive",
       });
       return;
@@ -159,7 +230,7 @@ export default function CreateWorkerPage() {
           const enrollRes = await fetch('/web/api/biometric/enroll', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workerId: created.id }),
+            body: JSON.stringify({ workerId: created.id, deviceSn: selectedDeviceSn }),
           });
           const enrollData = await enrollRes.json();
           if (!enrollRes.ok || !enrollData?.ok) {
@@ -167,7 +238,7 @@ export default function CreateWorkerPage() {
           }
           toast({
             title: "Saved & Enrolled!",
-            description: `"${formData.name}" was registered and enrolled to the device (enrollId ${created.enrollId}).`,
+            description: `"${formData.name}" was registered and enrolled to the device (enrollId ${created.enrollId}, sn ${selectedDeviceSn}).`,
             variant: "success",
             action: (
               <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
@@ -273,10 +344,39 @@ export default function CreateWorkerPage() {
                 {formData.enrollId.trim() && (
                   <p className={`mt-1 text-xs font-medium flex items-center gap-1 ${enrollIdAvailable ? 'text-emerald-600' : 'text-destructive'}`}>
                     {enrollIdAvailable ? (
-                      <><CheckCircle2 className="w-3 h-3" /> Available on device</>
+                      <><CheckCircle2 className="w-3 h-3" /> Available</>
+                    ) : enrollIdConflictSource === 'device' ? (
+                      <><AlertCircle className="w-3 h-3" /> Already enrolled on selected device — pick a unique ID</>
                     ) : (
-                      <><AlertCircle className="w-3 h-3" /> Already enrolled on device — pick a unique ID</>
+                      <><AlertCircle className="w-3 h-3" /> Already used by another worker — pick a unique ID</>
                     )}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Enroll to Device</label>
+                {devices.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic flex items-center gap-1 h-[42px]">
+                    <AlertCircle className="w-3 h-3" /> No devices configured. Add one in Settings → Devices.
+                  </p>
+                ) : (
+                  <select
+                    value={selectedDeviceSn}
+                    onChange={(e) => setSelectedDeviceSn(e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  >
+                    <option value="">Select device…</option>
+                    {devices.map((d) => (
+                      <option key={d.id} value={d.sn} disabled={!d.isActive || !d.online}>
+                        {d.name} — {d.sn}{d.online ? '' : (d.isActive ? ' (offline)' : ' (inactive)')}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {selectedDeviceSn && !onlineDevices.some((d) => d.sn === selectedDeviceSn) && (
+                  <p className="mt-1 text-xs font-medium text-destructive flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Selected device is offline — enroll will be blocked.
                   </p>
                 )}
               </div>
@@ -433,7 +533,8 @@ export default function CreateWorkerPage() {
             <Button 
               type="button"
               onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
-              disabled={isSubmitting || isEnrolling}
+              disabled={isSubmitting || isEnrolling || onlineDevices.length === 0}
+              title={onlineDevices.length === 0 ? 'No online devices configured' : ''}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-11 min-w-[200px]"
             >
               {isEnrolling ? (

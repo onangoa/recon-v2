@@ -13,7 +13,6 @@
  */
 
 const BIOMETRIC_API_BASE_URL = process.env.BIOMETRIC_API_BASE_URL || '';
-const DEFAULT_DEVICE_SN = process.env.BIOMETRIC_DEVICE_SN || '';
 
 export interface BiometricRecord {
   id: number;
@@ -108,12 +107,14 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Resolve the serial number to use, falling back to the env default. */
+/** Resolve the serial number to use. A device SN must be provided explicitly
+ *  (devices are now configured per contractor in the database, see the
+ *  BiometricDevice model). Throws if none is supplied. */
 export function resolveDeviceSn(sn?: string | null): string {
-  const resolved = (sn || DEFAULT_DEVICE_SN || '').trim();
+  const resolved = (sn || '').trim();
   if (!resolved) {
     throw new Error(
-      'No device serial number provided and BIOMETRIC_DEVICE_SN is not set.'
+      'No device serial number provided. Add a biometric device under Settings → Devices.'
     );
   }
   return resolved;
@@ -167,4 +168,74 @@ export async function getEnrolledEnrollIds(sn?: string | null): Promise<number[]
   const list = await getUserList(sn);
   if (!list?.record) return [];
   return list.record.map((r) => r.enrollid);
+}
+
+export interface DeviceInfo {
+  sn: string;
+  result: boolean;
+  ret: string;
+  [key: string]: unknown;
+}
+
+/** Fetch device info via /api/getDevInfo (used as the online health check). */
+export async function getDevInfo(sn?: string | null): Promise<DeviceInfo> {
+  const deviceSn = resolveDeviceSn(sn);
+  return postJson<DeviceInfo>('/api/getDevInfo', { deviceSn });
+}
+
+export interface DeviceStatus {
+  sn: string;
+  online: boolean;
+  /** Enrolled user count, when available from a parallel getUserList probe. */
+  userCount?: number;
+  error?: string;
+}
+
+/**
+ * Determine whether a device is online by calling /api/getDevInfo.
+ * A device is online only if the API responds with `result: true`; a timeout
+ * or any error/missing result means the device is offline. Never throws —
+ * returns an offline status on failure.
+ */
+export async function checkDeviceStatus(sn: string): Promise<DeviceStatus> {
+  try {
+    const info = await getDevInfoWithTimeout(sn, 5000);
+    const online = !!info?.result;
+    let userCount: number | undefined;
+    if (online) {
+      // Best-effort: also fetch the user count for the UI badge. Non-fatal.
+      try {
+        const list = await getUserList(sn);
+        userCount = list?.count;
+      } catch {
+        /* online but getUserList failed — keep online, no count */
+      }
+    }
+    return { sn, online, userCount };
+  } catch (err: any) {
+    return { sn, online: false, error: err?.message || 'unreachable' };
+  }
+}
+
+/** getDevInfo with an explicit timeout so offline devices fail fast. */
+async function getDevInfoWithTimeout(sn: string, ms: number): Promise<DeviceInfo> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const deviceSn = resolveDeviceSn(sn);
+    const res = await fetch(`${BIOMETRIC_API_BASE_URL}/api/getDevInfo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceSn }),
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`getDevInfo failed (${res.status}): ${text || res.statusText}`);
+    }
+    return (await res.json()) as DeviceInfo;
+  } finally {
+    clearTimeout(timer);
+  }
 }

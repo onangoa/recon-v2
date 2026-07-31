@@ -91,6 +91,7 @@ model Contractor {
   salaryComponents        SalaryComponent[]
   salarySlips             SalarySlip[]
   shifts                  Shift[]
+  biometricDevices       BiometricDevice[]
   sites                   Site[]
   suppliers               Supplier[]
   team                    TeamMember[]
@@ -98,6 +99,25 @@ model Contractor {
   workers                 Worker[]
 
   @@index([subscriptionPlanId])
+}
+
+/// A biometric attendance device configured by a contractor.
+/// The serial number (`sn`) is the identifier used in the device-facing API
+/// (see docs/device_api.postman_collection.json). Enrollment/records are
+/// scoped per device, so the worker form lets the user pick one of these.
+model BiometricDevice {
+  id            String     @id @default(cuid())
+  contractorId  String
+  name          String
+  sn            String
+  location      String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([contractorId, sn])
+  @@index([contractorId])
 }
 
 model Worker {
