@@ -7,7 +7,9 @@ import {
   Save,
   X,
   UserPlus,
-  CheckCircle2
+  CheckCircle2,
+  ScanLine,
+  AlertCircle
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -38,8 +40,11 @@ export default function CreateWorkerPage() {
   const { activeSite } = useSite();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [takenEnrollIds, setTakenEnrollIds] = useState<number[]>([]);
+  const [enrollIdAvailable, setEnrollIdAvailable] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -59,9 +64,10 @@ export default function CreateWorkerPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [desigRes, shiftRes] = await Promise.all([
+        const [desigRes, shiftRes, bioRes] = await Promise.all([
           fetch('/web/api/designations'),
-          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`)
+          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`),
+          fetch('/web/api/biometric/users'),
         ]);
         
         if (desigRes.ok) {
@@ -72,6 +78,10 @@ export default function CreateWorkerPage() {
           const shiftData = await shiftRes.json();
           setShifts(Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []));
         }
+        if (bioRes.ok) {
+          const bioData = await bioRes.json();
+          setTakenEnrollIds(Array.isArray(bioData.enrolledEnrollIds) ? bioData.enrolledEnrollIds : []);
+        }
       } catch (error) {
         console.error('Failed to fetch data');
       }
@@ -79,7 +89,22 @@ export default function CreateWorkerPage() {
     fetchData();
   }, [activeSite?.contractorId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Validate the typed enroll ID against the device's enrolled IDs.
+  useEffect(() => {
+    const value = formData.enrollId.trim();
+    if (!value) {
+      setEnrollIdAvailable(null);
+      return;
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      setEnrollIdAvailable(false);
+      return;
+    }
+    setEnrollIdAvailable(!takenEnrollIds.includes(num));
+  }, [formData.enrollId, takenEnrollIds]);
+
+  const handleSubmit = async (e: React.FormEvent, enrollDevice = false) => {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.designationId) {
@@ -89,6 +114,29 @@ export default function CreateWorkerPage() {
         variant: "destructive",
       });
       return;
+    }
+
+    // A unique enroll ID is required when enrolling to the device.
+    if (enrollDevice && !formData.enrollId.trim()) {
+      toast({
+        title: "Enroll ID required",
+        description: "Enter a Biometric Enroll ID to enroll to the device.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Reject enroll IDs already taken on the device.
+    if (formData.enrollId.trim()) {
+      const num = Number(formData.enrollId.trim());
+      if (Number.isFinite(num) && takenEnrollIds.includes(num)) {
+        toast({
+          title: "Enroll ID already in use",
+          description: `Enroll ID ${num} already exists on the device. Choose a unique ID.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -103,17 +151,51 @@ export default function CreateWorkerPage() {
       });
 
       if (!response.ok) throw new Error('Failed to create worker');
+      const created = await response.json();
 
-      toast({
-        title: "Success!",
-        description: `Worker "${formData.name}" has been registered.`,
-        variant: "success",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <CheckCircle2 className="h-5 w-5 text-white" />
-          </div>
-        ),
-      });
+      if (enrollDevice && created?.id) {
+        setIsEnrolling(true);
+        try {
+          const enrollRes = await fetch('/web/api/biometric/enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workerId: created.id }),
+          });
+          const enrollData = await enrollRes.json();
+          if (!enrollRes.ok || !enrollData?.ok) {
+            throw new Error(enrollData?.error || 'Device enrollment failed');
+          }
+          toast({
+            title: "Saved & Enrolled!",
+            description: `"${formData.name}" was registered and enrolled to the device (enrollId ${created.enrollId}).`,
+            variant: "success",
+            action: (
+              <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+                <CheckCircle2 className="h-5 w-5 text-white" />
+              </div>
+            ),
+          });
+        } catch (err: any) {
+          toast({
+            title: "Saved, but enrollment failed",
+            description: `Worker saved, but device enrollment failed: ${err.message}`,
+            variant: "destructive",
+          });
+        } finally {
+          setIsEnrolling(false);
+        }
+      } else {
+        toast({
+          title: "Success!",
+          description: `Worker "${formData.name}" has been registered.`,
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+      }
       router.push('/contractor/workers');
     } catch (err: any) {
       toast({
@@ -188,6 +270,15 @@ export default function CreateWorkerPage() {
                   disabled={isSubmitting}
                   className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
+                {formData.enrollId.trim() && (
+                  <p className={`mt-1 text-xs font-medium flex items-center gap-1 ${enrollIdAvailable ? 'text-emerald-600' : 'text-destructive'}`}>
+                    {enrollIdAvailable ? (
+                      <><CheckCircle2 className="w-3 h-3" /> Available on device</>
+                    ) : (
+                      <><AlertCircle className="w-3 h-3" /> Already enrolled on device — pick a unique ID</>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -321,7 +412,7 @@ export default function CreateWorkerPage() {
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6 border-t border-gray-100">
+          <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-100">
             <Button 
               type="submit" 
               disabled={isSubmitting}
@@ -336,6 +427,24 @@ export default function CreateWorkerPage() {
                 <>
                   <Save className="w-4 h-4" />
                   Save Worker
+                </>
+              )}
+            </Button>
+            <Button 
+              type="button"
+              onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
+              disabled={isSubmitting || isEnrolling}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-11 min-w-[200px]"
+            >
+              {isEnrolling ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Enrolling to Device...
+                </>
+              ) : (
+                <>
+                  <ScanLine className="w-4 h-4" />
+                  Save & Enroll to Device
                 </>
               )}
             </Button>

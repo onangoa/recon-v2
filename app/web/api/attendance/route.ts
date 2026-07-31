@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { computeWorkedHours } from '@/lib/attendance-utils';
+import { getRecords } from '@/lib/biometric-service';
+import { transformRecordsToAttendance } from '@/lib/biometric-attendance';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +18,59 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // ---- Biometric API source (preferred) ----
+    // Attendance logs are pulled live from the device API (/api/getRecords)
+    // and transformed into the same session shape the front-end expects.
+    // If the biometric API is not configured we fall back to the database so
+    // existing functionality keeps working.
+    if (process.env.BIOMETRIC_API_BASE_URL) {
+      const workers = await prisma.worker.findMany({
+        where: { contractorId },
+        select: {
+          id: true,
+          name: true,
+          enrollId: true,
+          designation: { select: { title: true } },
+          shift: true,
+        },
+      });
+
+      // Pull a generous window of records newest-first; date filtering happens
+      // after transformation (the /api/getRecords endpoint has no date filter).
+      const pageSize = 500;
+      let pn = 1;
+      const collected: Awaited<ReturnType<typeof getRecords>>['records'] = [];
+      // Fetch up to a few pages to cover recent history, then stop early.
+      for (let i = 0; i < 5; i++) {
+        const page = await getRecords(null, { pn, pageSize });
+        if (!page.records || page.records.length === 0) break;
+        collected.push(...page.records);
+        if (page.records.length < pageSize || collected.length >= page.total) break;
+        pn++;
+      }
+
+      let attendances = transformRecordsToAttendance(collected, workers);
+
+      // Apply the same filters the DB query used to.
+      if (workerId) attendances = attendances.filter((a) => a.worker.id === workerId);
+      if (date) {
+        const day = new Date(date);
+        const lo = startOfDay(day);
+        const hi = endOfDay(day);
+        attendances = attendances.filter((a) => {
+          const d = new Date(a.date);
+          return d >= lo && d <= hi;
+        });
+      } else if (startDate && endDate) {
+        const lo = new Date(startDate);
+        const hi = new Date(endDate);
+        attendances = attendances.filter((a) => isWithinInterval(new Date(a.date), { start: lo, end: hi }));
+      }
+
+      return NextResponse.json(attendances);
+    }
+
+    // ---- Database fallback ----
     const where: any = { contractorId };
     if (workerId) where.workerId = workerId;
     if (date) {

@@ -6,7 +6,9 @@ import {
   ArrowLeft,
   Save,
   X,
-  CheckCircle2
+  CheckCircle2,
+  ScanLine,
+  AlertCircle
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -40,8 +42,12 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [takenEnrollIds, setTakenEnrollIds] = useState<number[]>([]);
+  const [enrollIdAvailable, setEnrollIdAvailable] = useState<boolean | null>(null);
+  const [originalEnrollId, setOriginalEnrollId] = useState<string>('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -62,10 +68,11 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [workerRes, designRes, shiftRes] = await Promise.all([
+        const [workerRes, designRes, shiftRes, bioRes] = await Promise.all([
           fetch(`/web/api/workers/${id}`),
           fetch('/web/api/designations'),
-          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`)
+          fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`),
+          fetch('/web/api/biometric/users'),
         ]);
 
         if (!workerRes.ok) throw new Error('Failed to fetch worker');
@@ -78,9 +85,14 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           const shiftData = await shiftRes.json();
           shiftList = Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []);
         }
+        if (bioRes.ok) {
+          const bioData = await bioRes.json();
+          setTakenEnrollIds(Array.isArray(bioData.enrolledEnrollIds) ? bioData.enrolledEnrollIds : []);
+        }
 
         setDesignations(designs.designations || designs);
         setShifts(shiftList);
+        setOriginalEnrollId(worker.enrollId || '');
         setFormData({
           name: worker.name,
           email: worker.email || '',
@@ -105,8 +117,40 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     fetchData();
   }, [id, toast, activeSite?.contractorId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Validate typed enroll ID against the device's enrolled IDs,
+  // excluding the worker's own current enroll ID (it can keep its own).
+  useEffect(() => {
+    const value = formData.enrollId.trim();
+    if (!value) {
+      setEnrollIdAvailable(null);
+      return;
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      setEnrollIdAvailable(false);
+      return;
+    }
+    // The worker may keep its own current enroll ID.
+    const isOwn = originalEnrollId.trim() !== '' && Number(originalEnrollId) === num;
+    setEnrollIdAvailable(isOwn || !takenEnrollIds.includes(num));
+  }, [formData.enrollId, takenEnrollIds, originalEnrollId]);
+
+  const handleSubmit = async (e: React.FormEvent, enrollDevice = false) => {
     e.preventDefault();
+
+    if (formData.enrollId.trim()) {
+      const num = Number(formData.enrollId.trim());
+      const isOwn = originalEnrollId.trim() !== '' && Number(originalEnrollId) === num;
+      if (Number.isFinite(num) && !isOwn && takenEnrollIds.includes(num)) {
+        toast({
+          title: "Enroll ID already in use",
+          description: `Enroll ID ${num} already exists on the device. Choose a unique ID.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch(`/web/api/workers/${id}`, {
@@ -117,16 +161,49 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
 
       if (!response.ok) throw new Error('Failed to update worker');
 
-      toast({
-        title: "Success!",
-        description: "Worker profile updated successfully.",
-        variant: "success",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <CheckCircle2 className="h-5 w-5 text-white" />
-          </div>
-        ),
-      });
+      if (enrollDevice && formData.enrollId.trim()) {
+        setIsEnrolling(true);
+        try {
+          const enrollRes = await fetch('/web/api/biometric/enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workerId: id }),
+          });
+          const enrollData = await enrollRes.json();
+          if (!enrollRes.ok || !enrollData?.ok) {
+            throw new Error(enrollData?.error || 'Device enrollment failed');
+          }
+          toast({
+            title: "Updated & Enrolled!",
+            description: `Profile updated and enrolled to the device (enrollId ${formData.enrollId}).`,
+            variant: "success",
+            action: (
+              <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+                <CheckCircle2 className="h-5 w-5 text-white" />
+              </div>
+            ),
+          });
+        } catch (err: any) {
+          toast({
+            title: "Updated, but enrollment failed",
+            description: `Profile saved, but device enrollment failed: ${err.message}`,
+            variant: "destructive",
+          });
+        } finally {
+          setIsEnrolling(false);
+        }
+      } else {
+        toast({
+          title: "Success!",
+          description: "Worker profile updated successfully.",
+          variant: "success",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <CheckCircle2 className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+      }
       router.push('/contractor/workers');
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -203,6 +280,15 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                   disabled={isSubmitting}
                   className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
+                {formData.enrollId.trim() && (
+                  <p className={`mt-1 text-xs font-medium flex items-center gap-1 ${enrollIdAvailable ? 'text-emerald-600' : 'text-destructive'}`}>
+                    {enrollIdAvailable ? (
+                      <><CheckCircle2 className="w-3 h-3" /> Available on device</>
+                    ) : (
+                      <><AlertCircle className="w-3 h-3" /> Already enrolled on device — pick a unique ID</>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -347,7 +433,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6 border-t border-gray-100">
+          <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-100">
             <Button 
               type="submit" 
               disabled={isSubmitting}
@@ -365,6 +451,26 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 </>
               )}
             </Button>
+            {formData.enrollId.trim() && (
+              <Button 
+                type="button"
+                onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
+                disabled={isSubmitting || isEnrolling}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-11 min-w-[200px]"
+              >
+                {isEnrolling ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enrolling to Device...
+                  </>
+                ) : (
+                  <>
+                    <ScanLine className="w-4 h-4" />
+                    Update & Enroll to Device
+                  </>
+                )}
+              </Button>
+            )}
             <Button 
               variant="outline" 
               type="button" 

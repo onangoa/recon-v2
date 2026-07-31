@@ -24,7 +24,9 @@ import {
   ChevronRight,
   CheckCircle2,
   CreditCard,
-  Briefcase
+  Briefcase,
+  Fingerprint,
+  ScanLine
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -69,6 +71,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -89,6 +99,15 @@ interface Worker {
     endTime: string;
   } | null;
   joinedAt: string;
+  paymentMode?: string;
+}
+
+interface BiometricWorkerRow {
+  id: string;
+  name: string;
+  enrollId: string | null;
+  designation: string | null;
+  enrolled: boolean;
 }
 
 export default function WorkersPage() {
@@ -108,6 +127,15 @@ export default function WorkersPage() {
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ---- Biometric device enrollment state ----
+  const [enrolledEnrollIds, setEnrolledEnrollIds] = useState<number[]>([]);
+  const [deviceAvailable, setDeviceAvailable] = useState<boolean | null>(null);
+  const [isBiometricOpen, setIsBiometricOpen] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricRows, setBiometricRows] = useState<BiometricWorkerRow[]>([]);
+  const [enrollingIds, setEnrollingIds] = useState<string[]>([]);
+  const [enrollAllRunning, setEnrollAllRunning] = useState(false);
 
   const fetchWorkers = async () => {
     setIsLoading(true);
@@ -141,6 +169,84 @@ export default function WorkersPage() {
   useEffect(() => {
     fetchWorkers();
   }, [currentPage]);
+
+  // ---- Biometric device enrollment helpers ----
+  const fetchBiometricUsers = async () => {
+    setBiometricLoading(true);
+    try {
+      const res = await fetch('/web/api/biometric/users');
+      if (!res.ok) throw new Error('Failed to fetch biometric users');
+      const data = await res.json();
+      setEnrolledEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
+      setDeviceAvailable(data.device?.available ?? false);
+      setBiometricRows(Array.isArray(data.workers) ? data.workers : []);
+    } catch (err: any) {
+      toast({
+        title: 'Biometric Error',
+        description: err.message || 'Could not reach the biometric device',
+        variant: 'destructive',
+      });
+      setDeviceAvailable(false);
+      setBiometricRows([]);
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const enrollWorkerToDevice = async (workerId: string): Promise<boolean> => {
+    setEnrollingIds((prev) => [...prev, workerId]);
+    try {
+      const res = await fetch('/web/api/biometric/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workerId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to enroll');
+      return true;
+    } catch (err: any) {
+      toast({
+        title: 'Enrollment Failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setEnrollingIds((prev) => prev.filter((id) => id !== workerId));
+    }
+  };
+
+  const enrollAllUnenrolled = async () => {
+    const unenrolled = biometricRows.filter((w) => !w.enrolled && w.enrollId);
+    if (unenrolled.length === 0) {
+      toast({ title: 'Nothing to enroll', description: 'All workers are already enrolled to the device.' });
+      return;
+    }
+    setEnrollAllRunning(true);
+    let ok = 0;
+    for (const w of unenrolled) {
+      const success = await enrollWorkerToDevice(w.id);
+      if (success) ok++;
+    }
+    setEnrollAllRunning(false);
+    toast({
+      title: 'Enrollment complete',
+      description: `${ok} of ${unenrolled.length} worker(s) enrolled to the device.`,
+      variant: ok === unenrolled.length ? 'success' : 'destructive',
+    });
+    await fetchBiometricUsers();
+  };
+
+  const openBiometric = async () => {
+    setIsBiometricOpen(true);
+    await fetchBiometricUsers();
+  };
+
+  // Preload device enrollment status so the table column can render.
+  useEffect(() => {
+    fetchBiometricUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDelete = async () => {
     if (!workerToDelete) return;
@@ -202,6 +308,10 @@ export default function WorkersPage() {
           <p className="text-muted-foreground mt-1 text-sm">Manage your site workers, designations and payroll status.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={openBiometric}>
+            <Fingerprint className="w-4 h-4" />
+            <span>Biometric</span>
+          </Button>
           <Button asChild variant="outline" className="gap-2">
             <Link href="/contractor/workers/designations">
               <Briefcase className="w-4 h-4" />
@@ -308,6 +418,7 @@ export default function WorkersPage() {
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Shift</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">ID / Phone</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Enrolled to Device</TableHead>
                   <TableHead className="text-right font-bold text-xs uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -364,6 +475,17 @@ export default function WorkersPage() {
                       <Badge className={`text-[10px] uppercase font-bold ${worker.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
                         {worker.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {worker.enrollId && enrolledEnrollIds.includes(Number(worker.enrollId)) ? (
+                        <Badge className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600">
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Enrolled
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] font-bold text-muted-foreground">
+                          <ScanLine className="w-3 h-3 mr-1" /> Not Enrolled
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -463,6 +585,99 @@ export default function WorkersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isBiometricOpen} onOpenChange={setIsBiometricOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Fingerprint className="size-5 text-primary" />
+              Biometric Device Enrollment
+            </DialogTitle>
+            <DialogDescription>
+              Workers enrolled on the connected device. Enroll any that are missing from the device — the device requires a unique enroll ID.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            {deviceAvailable === false && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium">
+                <AlertCircle className="size-4 shrink-0" />
+                Device could not be reached. Check that BIOMETRIC_API_BASE_URL and BIOMETRIC_DEVICE_SN are configured and the device is online.
+              </div>
+            )}
+
+            {biometricLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground">Checking device enrollment…</p>
+              </div>
+            ) : biometricRows.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground italic py-10">No workers to compare.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    <strong className="text-foreground">{biometricRows.filter(w => w.enrolled).length}</strong> / {biometricRows.length} enrolled to device
+                  </span>
+                  <span>{biometricRows.filter(w => !w.enrolled && w.enrollId).length} can be enrolled</span>
+                </div>
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="text-[10px] font-bold uppercase">Worker</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase">Enroll ID</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase text-center">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {biometricRows.map((w) => (
+                      <TableRow key={w.id}>
+                        <TableCell className="text-xs font-medium">{w.name}</TableCell>
+                        <TableCell className="text-xs font-mono">{w.enrollId || '—'}</TableCell>
+                        <TableCell className="text-center">
+                          {w.enrolled ? (
+                            <Badge className="text-[9px] font-bold bg-emerald-500/10 text-emerald-600">
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Enrolled
+                            </Badge>
+                          ) : w.enrollId ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 text-[10px] gap-1"
+                              disabled={enrollingIds.includes(w.id) || enrollAllRunning}
+                              onClick={() => enrollWorkerToDevice(w.id).then(() => fetchBiometricUsers())}
+                            >
+                              {enrollingIds.includes(w.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanLine className="w-3 h-3" />}
+                              Enroll
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground">No ID</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="default"
+              className="gap-2"
+              disabled={biometricLoading || enrollAllRunning || biometricRows.filter(w => !w.enrolled && w.enrollId).length === 0}
+              onClick={enrollAllUnenrolled}
+            >
+              {enrollAllRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+              Enroll All Unenrolled
+            </Button>
+            <Button variant="outline" size="sm" disabled={biometricLoading} onClick={fetchBiometricUsers}>
+              <RotateCcw className="w-4 h-4" /> Refresh
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
