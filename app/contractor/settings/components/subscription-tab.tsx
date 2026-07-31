@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreditCard, Loader2, CheckCircle2, Star, Zap, Shield } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle2, Star, Zap, Shield, Building2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Card, 
@@ -19,6 +19,7 @@ export default function SubscriptionTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSubscribingAgain, setIsSubscribingAgain] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [contractorId, setContractorId] = useState<string | null>(null);
 
@@ -79,7 +80,9 @@ export default function SubscriptionTab() {
     );
   }
 
-  const { currentPlan, availablePlans, status, endDate } = subscriptionData;
+  const { currentPlan, availablePlans, status, endDate, purchasedSiteSlots, usedSiteSlots } = subscriptionData;
+  const slots = purchasedSiteSlots ?? 1;
+  const used = usedSiteSlots ?? 0;
 
   const getPlanIcon = (name: string) => {
     switch (name.toLowerCase()) {
@@ -115,10 +118,63 @@ export default function SubscriptionTab() {
               <p className="text-lg font-bold">{endDate ? new Date(endDate).toLocaleDateString() : 'Active'}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Plan Limit</p>
-              <p className="text-lg font-bold">1 Site / {currentPlan?.maxTeamMembers} Team Members</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Team Members</p>
+              <p className="text-lg font-bold">{currentPlan?.maxTeamMembers}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Site Slots</p>
+              <p className="text-lg font-bold">{used} / {slots} used</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Site Slots Usage & Subscribe Again */}
+      <Card className="border-none shadow-md">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Building2 className="size-5" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-sm">Site Slots</h3>
+              <p className="text-xs text-muted-foreground">
+                Each subscription grants one site. You have created <span className="font-bold text-foreground">{used}</span> of <span className="font-bold text-foreground">{slots}</span> site{slots > 1 ? 's' : ''}.
+                {used < slots ? ' You can add more sites without subscribing again.' : ' Subscribe again to add another site.'}
+              </p>
+            </div>
+          </div>
+          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${used >= slots ? 'bg-destructive' : 'bg-primary'}`}
+              style={{ width: `${Math.min(100, (used / Math.max(1, slots)) * 100)}%` }}
+            />
+          </div>
+          <Button
+            className="gap-2 w-full sm:w-auto"
+            onClick={async () => {
+              if (!contractorId) return;
+              setIsSubscribingAgain(true);
+              try {
+                const response = await fetch(`/web/api/contractors/${contractorId}/subscription`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ subscribeAgain: true }),
+                });
+                if (!response.ok) throw new Error('Failed to add site slot');
+                toast({ title: 'Success', description: 'New site slot added. You can now create another site.' });
+                fetchSubscription();
+              } catch (err: any) {
+                toast({ title: 'Error', description: err.message, variant: 'destructive' });
+              } finally {
+                setIsSubscribingAgain(false);
+              }
+            }}
+            disabled={isSubscribingAgain}
+          >
+            {isSubscribingAgain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Subscribe Again (Add Site Slot)
+          </Button>
         </CardContent>
       </Card>
 

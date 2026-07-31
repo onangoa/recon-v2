@@ -69,8 +69,23 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const contractor = await prisma.contractor.findUnique({
+      where: { id: contractorId },
+      select: { purchasedSiteSlots: true },
+    });
+    const maxSlots = contractor?.purchasedSiteSlots ?? 1;
+    const existingSiteCount = await prisma.site.count({ where: { contractorId } });
+
+    if (existingSiteCount >= maxSlots) {
+      return mobileError(
+        `Site limit reached. You have used all ${maxSlots} site slot${maxSlots > 1 ? 's' : ''} in your subscription. Subscribe again to add another site.`,
+        402
+      );
+    }
+
     const site = await prisma.$transaction(async (tx) => {
-      if (body.isPrimary) {
+      const shouldBePrimary = body.isPrimary || existingSiteCount === 0;
+      if (shouldBePrimary) {
         await tx.site.updateMany({
           where: { contractorId: contractorId, isPrimary: true },
           data: { isPrimary: false },
@@ -84,7 +99,7 @@ export async function POST(request: NextRequest) {
           contractorId: contractorId,
           description: body.description,
           category: body.category,
-          isPrimary: body.isPrimary || false,
+          isPrimary: shouldBePrimary,
         },
       });
     });

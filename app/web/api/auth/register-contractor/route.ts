@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
           phoneNumber,
           licenseNo: licenseNo || '',
           subscriptionPlanId: planId,
+          purchasedSiteSlots: 1,
         },
       });
 

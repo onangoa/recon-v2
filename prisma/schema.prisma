@@ -74,6 +74,7 @@ model Contractor {
   subscriptionPlanId      String
   subscriptionStatus      String                   @default("active")
   subscriptionEndDate     DateTime?
+  purchasedSiteSlots      Int                      @default(1)
   safetyScore             Float                    @default(0)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt

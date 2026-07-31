@@ -110,19 +110,34 @@ export default function CreateSitePage() {
           router.refresh();
         }
       } else {
-        throw new Error(result.error || 'Failed to create site');
+        const err = new Error(result.error || result.message || 'Failed to create site') as Error & { code?: string };
+        err.code = result.code;
+        throw err;
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-        action: (
-          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-            <AlertCircle className="h-5 w-5 text-white" />
-          </div>
-        ),
-      });
+      if (error.code === 'SITE_LIMIT_REACHED') {
+        toast({
+          title: "Site Limit Reached",
+          description: error.message || "You've used all your subscription site slots. Subscribe again to add another site.",
+          variant: "destructive",
+          action: (
+            <Button size="sm" variant="outline" onClick={() => router.push('/contractor/settings')}>
+              Subscribe Again
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "An unexpected error occurred.",
+          variant: "destructive",
+          action: (
+            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+              <AlertCircle className="h-5 w-5 text-white" />
+            </div>
+          ),
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

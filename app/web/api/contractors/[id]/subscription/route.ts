@@ -16,6 +16,8 @@ export async function GET(
         subscriptionPlan: true,
       },
     });
+
+    const siteCount = await prisma.site.count({ where: { contractorId: id } });
     
     const allPlans = await prisma.subscriptionPlan.findMany({
       where: { isActive: true }
@@ -25,6 +27,8 @@ export async function GET(
       currentPlan: contractor?.subscriptionPlan,
       status: contractor?.subscriptionStatus,
       endDate: contractor?.subscriptionEndDate,
+      purchasedSiteSlots: contractor?.purchasedSiteSlots ?? 1,
+      usedSiteSlots: siteCount,
       availablePlans: allPlans
     });
   } catch (error) {
@@ -41,14 +45,24 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    
+
+    const updateData: any = {
+      subscriptionStatus: 'active',
+      subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    };
+    if (body.planId) updateData.subscriptionPlanId = body.planId;
+
+    if (body.subscribeAgain) {
+      const current = await prisma.contractor.findUnique({
+        where: { id },
+        select: { purchasedSiteSlots: true },
+      });
+      updateData.purchasedSiteSlots = (current?.purchasedSiteSlots ?? 1) + 1;
+    }
+
     const contractor = await prisma.contractor.update({
       where: { id },
-      data: {
-        subscriptionPlanId: body.planId,
-        subscriptionStatus: 'active',
-        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      },
+      data: updateData,
       include: {
         subscriptionPlan: true,
       },

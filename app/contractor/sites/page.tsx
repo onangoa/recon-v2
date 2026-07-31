@@ -89,6 +89,8 @@ export default function SitesManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [purchasedSiteSlots, setPurchasedSiteSlots] = useState<number | null>(null);
+  const [totalSitesCount, setTotalSitesCount] = useState(0);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,6 +113,8 @@ export default function SitesManagementPage() {
       setSites(data.sites);
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
+      setTotalSitesCount(data.pagination.total);
+      if (data.purchasedSiteSlots !== undefined) setPurchasedSiteSlots(data.purchasedSiteSlots);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -195,13 +199,37 @@ export default function SitesManagementPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground text-primary">Manage Sites</h1>
           <p className="text-muted-foreground mt-1 text-sm italic">Oversee all active, pending, and completed construction locations.</p>
+          {purchasedSiteSlots !== null && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Site slots: <span className="font-bold text-foreground">{totalSitesCount}</span> / {purchasedSiteSlots} used
+            </p>
+          )}
         </div>
-        <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
-          <Link href="/contractor/sites/create">
-            <Plus className="size-4" /> Add New Site
-          </Link>
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
+            <Link href="/contractor/sites/create">
+              <Plus className="size-4" /> Add New Site
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {purchasedSiteSlots !== null && totalSitesCount >= purchasedSiteSlots && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="size-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-amber-800">Site limit reached</p>
+              <p className="text-xs text-amber-700">
+                You've used all {purchasedSiteSlots} site slot{purchasedSiteSlots > 1 ? 's' : ''} in your subscription. Subscribe again to add another site.
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+            <Link href="/contractor/settings">Subscribe Again</Link>
+          </Button>
+        </div>
+      )}
 
       <Card className="border-none shadow-md overflow-hidden">
         <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
