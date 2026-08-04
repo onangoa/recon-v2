@@ -51,7 +51,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/docs'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    if (!user && !PUBLIC_PATHS.includes(pathname) && !pathname.startsWith('/web/api/')) {
+    if (!user && !PUBLIC_PATHS.includes(pathname) && !pathname.startsWith('/docs') && !pathname.startsWith('/web/api/')) {
       if (!pathname.includes('/auth/')) {
         const callbackUrl = encodeURIComponent(pathname);
         router.push(`/login?callbackUrl=${callbackUrl}`);

@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   '/register',
   '/forgot-password',
   '/reset-password',
+  '/docs',
 ];
 
 const AUTH_API_PATHS = [
@@ -70,7 +71,7 @@ function isStaticOrPublic(pathname: string): boolean {
     pathname.includes('.ico') ||
     pathname.includes('.jpg') ||
     pathname.includes('.jpeg') ||
-    pathname.includes('.webp');
+    pathname.includes('.webp') ;
 }
 
 export async function proxy(request: NextRequest) {
@@ -181,7 +182,8 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/forgot-password' ||
-    pathname.startsWith('/reset-password');
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/docs');
 
   if (isPublicPath) {
     if (isAuthenticated && tokenPayload && (pathname === '/login' || pathname === '/register')) {
