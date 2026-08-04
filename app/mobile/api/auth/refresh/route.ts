@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import {
   verifyRefreshToken,
   isRefreshTokenValid,
+  isRefreshTokenExpiredOrMissing,
+  getLatestValidRefreshTokenForUser,
   generateAccessToken,
   generateRefreshToken,
   saveRefreshToken,
@@ -37,9 +39,24 @@ export async function POST(request: NextRequest) {
     }
 
     const isValid = await isRefreshTokenValid(refreshToken);
+
+    // Tolerate race-condition rotations: if this token was already rotated by
+    // a concurrent refresh (revoked-but-not-expired), continue the session from
+    // the user's latest valid refresh token instead of killing all sessions.
+    let activeRefreshToken = refreshToken;
     if (!isValid) {
-      await revokeAllUserRefreshTokens(decoded.userId);
-      return mobileError('Refresh token revoked or expired', 401);
+      const expiredOrMissing = await isRefreshTokenExpiredOrMissing(refreshToken);
+      if (expiredOrMissing) {
+        await revokeAllUserRefreshTokens(decoded.userId);
+        return mobileError('Refresh token expired', 401);
+      }
+
+      const latest = await getLatestValidRefreshTokenForUser(decoded.userId);
+      if (!latest) {
+        await revokeAllUserRefreshTokens(decoded.userId);
+        return mobileError('Refresh token revoked', 401);
+      }
+      activeRefreshToken = latest.token;
     }
 
     const user = await prisma.user.findUnique({
@@ -62,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const newRefreshToken = generateRefreshToken(user.id);
 
-    await revokeRefreshToken(refreshToken);
+    await revokeRefreshToken(activeRefreshToken);
     await saveRefreshToken(user.id, newRefreshToken);
 
     const permissions = await getPermissions(user.id);

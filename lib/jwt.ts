@@ -85,6 +85,25 @@ export async function isRefreshTokenValid(token: string): Promise<boolean> {
   return true;
 }
 
+export async function isRefreshTokenExpiredOrMissing(token: string): Promise<boolean> {
+  const record = await prisma.refreshToken.findUnique({ where: { token } });
+  if (!record) return true;
+  if (record.expiresAt < new Date()) return true;
+  return false;
+}
+
+export async function getLatestValidRefreshTokenForUser(userId: string): Promise<{ token: string } | null> {
+  const record = await prisma.refreshToken.findFirst({
+    where: {
+      userId,
+      isRevoked: false,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return record ? { token: record.token } : null;
+}
+
 export async function deleteExpiredRefreshTokens() {
   await prisma.refreshToken.deleteMany({
     where: { expiresAt: { lt: new Date() } },

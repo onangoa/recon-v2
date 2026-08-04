@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyRefreshToken, isRefreshTokenValid, generateAccessToken, generateRefreshToken, saveRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from '@/lib/jwt';
+import { verifyRefreshToken, isRefreshTokenValid, isRefreshTokenExpiredOrMissing, getLatestValidRefreshTokenForUser, generateAccessToken, generateRefreshToken, saveRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 import { getPermissions } from '@/lib/rbac';
 import { resolveContractorForUser } from '@/lib/auth';
@@ -22,12 +22,35 @@ export async function POST(request: NextRequest) {
     }
 
     const isValid = await isRefreshTokenValid(refreshToken);
+
+    // Race-condition handling: the refresh token rotates on every refresh.
+    // When two refresh requests fire concurrently (edge middleware + client
+    // context timer, or multiple page/API requests on a stale access token),
+    // the second request will find its token already revoked by the first.
+    // Rather than killing all the user's sessions (which logs out an active
+    // user), tolerate a revoked-but-recently-rotated token by continuing the
+    // session from the user's latest valid refresh token. Only revoke all
+    // sessions when the user genuinely has no remaining valid refresh token.
+    let activeRefreshToken = refreshToken;
     if (!isValid) {
-      await revokeAllUserRefreshTokens(decoded.userId);
-      const response = NextResponse.json({ error: 'Refresh token revoked or expired' }, { status: 401 });
-      response.cookies.set('accessToken', '', { maxAge: 0, path: '/' });
-      response.cookies.set('refreshToken', '', { maxAge: 0, path: '/' });
-      return response;
+      const expiredOrMissing = await isRefreshTokenExpiredOrMissing(refreshToken);
+      if (expiredOrMissing) {
+        await revokeAllUserRefreshTokens(decoded.userId);
+        const response = NextResponse.json({ error: 'Refresh token expired' }, { status: 401 });
+        response.cookies.set('accessToken', '', { maxAge: 0, path: '/' });
+        response.cookies.set('refreshToken', '', { maxAge: 0, path: '/' });
+        return response;
+      }
+
+      const latest = await getLatestValidRefreshTokenForUser(decoded.userId);
+      if (!latest) {
+        await revokeAllUserRefreshTokens(decoded.userId);
+        const response = NextResponse.json({ error: 'Refresh token revoked' }, { status: 401 });
+        response.cookies.set('accessToken', '', { maxAge: 0, path: '/' });
+        response.cookies.set('refreshToken', '', { maxAge: 0, path: '/' });
+        return response;
+      }
+      activeRefreshToken = latest.token;
     }
 
     const user = await prisma.user.findUnique({
@@ -53,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const newRefreshToken = generateRefreshToken(user.id);
 
-    await revokeRefreshToken(refreshToken);
+    await revokeRefreshToken(activeRefreshToken);
     await saveRefreshToken(user.id, newRefreshToken);
 
     const permissions = await getPermissions(user.id);
