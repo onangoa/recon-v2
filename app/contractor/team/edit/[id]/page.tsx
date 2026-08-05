@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function EditTeamMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.message,
+          description: getErrorMessage(error, "Unable to load the team member. Please refresh the page and try again."),
           variant: "destructive",
         });
         router.push('/contractor/team');
@@ -139,12 +140,12 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
         router.push('/contractor/team');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update team member');
+        throw new Error(getApiError(result, "Unable to update the team member. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the team member. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

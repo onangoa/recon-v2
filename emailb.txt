@@ -1,0 +1,100 @@
+To: Co-op Bank OpenAPI Support Team
+Subject: Co-op Bank OpenAPI Integration – Test Results & Support Request
+Attachment: bank-api-test-2026-07-10T08-29-11-371Z.log
+
+Dear Co-op Bank OpenAPI Support Team,
+
+We are integrating with the Co-op Bank OpenAPI for our application (RECONSMI) and have completed an initial round of integration testing against the live API environment. We have attached the full test log (bank-api-test-2026-07-10T08-29-11-371Z.log) for your reference.
+
+Below is a summary of the results.
+
+==================================================
+TEST ENVIRONMENT
+==================================================
+- Base URL       : https://openapi.co-opbank.com
+- Mode           : LIVE
+- User ID         : RECON
+- Source Account  : 01192588813000
+- Destination     : 01100006870001 (Bank Code 11)
+- Mobile          : 2547<redacted>
+- Callback URL    : https://reconsmi.com/v1/ext/ipn
+- Test Date       : 2026-07-10
+
+==================================================
+SUMMARY
+==================================================
+Total APIs Tested : 9
+Passed            : 6
+Failed            : 3
+Skipped           : 0
+
+==================================================
+WORKING APIs (PASSED)
+==================================================
+1. Generate Token
+   Endpoint : POST /token
+   Result   : HTTP 200 OK
+   Notes    : OAuth2 token acquired successfully (expires_in=3600s).
+
+2. Account Validation
+   Endpoint : POST /Enquiry/Validation/IPSL/1.0.0/
+   Result   : HTTP 200 OK
+   Notes    : Account validated successfully. Recipient name returned: "RECON ENGINEERING INTERNATIONAL LIMITED".
+
+3. Transaction Status Check
+   Endpoint : POST /Enquiry/TransactionStatus_V3/3.0.0/
+   Result   : HTTP 202 Accepted
+   Notes    : API responded successfully (MessageCode -13: "MESSAGE REFERENCE DOES NOT EXIST" – expected since no prior successful transaction reference was available to query).
+
+4. Account Balance
+   Endpoint : POST /Enquiry/AccountBalance_v2/2.0.0/
+   Result   : HTTP 200 OK
+   Notes    : Balance retrieved successfully. Available balance: KES 468,737.75. Account name: RECON ENGINEERING INTERNATIONAL LIMITED.
+
+5. Account Mini-Statement
+   Endpoint : POST /Enquiry/MiniStatement/Account_v2/2.0.0/
+   Result   : HTTP 200 OK
+   Notes    : Recent transactions retrieved successfully (10 transactions returned).
+
+6. Account Full Statement
+   Endpoint : POST /Enquiry/AccountFullStatementPaginated/1.0.0/
+   Result   : HTTP 200 OK
+   Notes    : Full statement retrieved successfully for period 2026-06-30 to 2026-07-10.
+
+==================================================
+FAILED APIs (NEEDS SUPPORT)
+==================================================
+1. PesaLink Send to Account
+   Endpoint : POST /FundsTransfer/External/PesaLinkBulk_v1/1.0.0/
+   Result   : HTTP 404 Not Found
+   Response : "The requested resource is not available."
+   Details  : The API returned a WSO2 API Manager 404 fault, indicating the endpoint was not found. We kindly request confirmation of the correct endpoint URL and version for PesaLink bulk transfers.
+
+2. IFT Send to Account (Intra-bank Transfer)
+   Endpoint : POST /FundsTransfer/Internal/A2A_v3/3.0.0
+   Result   : HTTP 400 Bad Request
+   Response : MessageCode: -6 — "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+   Details  : The transfer was rejected due to transaction limits not being configured on the source account. We request that transaction limits be set up for account 01192588813000 to allow IFT transfers.
+
+3. B2C M-Pesa Send
+   Endpoint : POST /FundsTransfer/External/A2M/Mpesa_v2/2.0.0
+   Result   : HTTP 400 Bad Request
+   Response : MessageCode: -6 — "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+   Details  : Same as above – the transfer was rejected due to missing transaction limits on the source account. We request that M-Pesa B2C transaction limits be configured for account 01192588813000.
+
+==================================================
+ACTION REQUIRED
+==================================================
+1. Please confirm the correct endpoint URL and version for the PesaLink Send to Account API (currently returning 404).
+2. Please configure transaction limits on account 01192588813000 for both IFT (intra-bank) and B2C M-Pesa transfers.
+3. Please advise on the Instant Payment Notification (IPN) — is it only triggered when a transfer is initiated via the API, or does it also fire for general bank deposits (e.g., PesaLink transfers received from other banks, direct deposits, etc.)? We would like to know whether we can rely on the IPN webhook for all incoming deposits to account 01192588813000, or only for API-initiated transactions.
+
+We would appreciate your assistance in resolving these issues so we can proceed with the integration. The full test log is attached for your review.
+
+Thank you for your support.
+
+Best regards,
+
+RECONSMI Integration Team
+Email: [your-email@example.com]
+Phone: [your-phone-number]

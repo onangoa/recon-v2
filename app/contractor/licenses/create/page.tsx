@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Input } from '@/components/ui/input';
 import { useSite } from '@/hooks/use-site';
 
@@ -75,7 +76,7 @@ export default function CreateLicensePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload file');
+        throw new Error('Unable to upload the file. Please try again.');
       }
 
       const data = await response.json();
@@ -89,7 +90,7 @@ export default function CreateLicensePage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to upload file",
+        description: getErrorMessage(error, "Unable to upload the file. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -157,12 +158,12 @@ export default function CreateLicensePage() {
         router.push('/contractor/licenses');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create license');
+        throw new Error(getApiError(result, "Unable to create the license. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to create the license. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

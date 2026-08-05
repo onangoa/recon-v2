@@ -71,6 +71,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import Link from 'next/link';
 
 interface Designation {
@@ -118,7 +119,7 @@ export default function DesignationsPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, 'Unable to load designations. Please refresh the page and try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +161,7 @@ export default function DesignationsPage() {
       resetForm();
       fetchDesignations();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, editingId ? "Unable to update the designation. Please verify the details and try again." : "Unable to create the designation. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -211,7 +212,7 @@ export default function DesignationsPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete designation",
+        description: "Unable to delete the designation. Please try again.",
         variant: "destructive",
       });
     } finally {

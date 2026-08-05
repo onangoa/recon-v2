@@ -64,6 +64,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -149,11 +150,11 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
     setIsLoading(true);
     try {
       const response = await fetch(`/web/api/payroll-periods/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch payroll period');
+      if (!response.ok) throw new Error('Unable to load the payroll period. Please refresh the page and try again.');
       const data = await response.json();
       setPeriod(data);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load the payroll period. Please refresh the page and try again."), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -172,12 +173,12 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
         body: JSON.stringify({ status: 'processing' }),
       });
 
-      if (!response.ok) throw new Error('Failed to start processing');
+      if (!response.ok) throw new Error('Unable to process the payroll. Please try again.');
       
       toast({ title: "Success", description: "Payroll calculation completed." });
       fetchPeriod();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to process the payroll. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -186,13 +187,13 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const handleOpenDisburse = async () => {
     try {
       const res = await fetch('/web/api/wallets');
-      if (!res.ok) throw new Error('Failed to fetch wallets');
+      if (!res.ok) throw new Error('Unable to load the wallets. Please refresh the page and try again.');
       const data = await res.json();
       setWallets(data.wallets || data);
       setShowDisburseDialog(true);
       setDisburseResult(null);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load the wallets. Please refresh the page and try again."), variant: "destructive" });
     }
   };
 
@@ -209,12 +210,12 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
         body: JSON.stringify({ walletId: selectedWalletId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Disbursement failed');
+      if (!res.ok) throw new Error(getApiError(data, "Unable to disburse the payroll. Please verify the details and try again."));
       setDisburseResult(data);
       toast({ title: "Disbursement Complete", description: `${data.mpesa} M-Pesa payments pending approval, ${data.manual} manual payments completed${data.alreadyDisbursed > 0 ? `, ${data.alreadyDisbursed} already disbursed` : ''}`, variant: "success" });
       fetchPeriod();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to disburse the payroll. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsDisbursing(false);
     }

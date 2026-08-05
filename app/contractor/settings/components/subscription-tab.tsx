@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
 
 type PayAction =
@@ -50,7 +51,7 @@ export default function SubscriptionTab() {
         setSubscriptionData(subData);
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to load subscription info", variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load subscription details. Please refresh the page and try again."), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +173,7 @@ export default function SubscriptionTab() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || 'Failed to initiate payment');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to update the subscription. Please try again."));
       if (!data.checkoutRequestId) throw new Error('Checkout request ID not received from M-Pesa');
 
       setCheckoutRequestId(data.checkoutRequestId);
@@ -182,7 +183,7 @@ export default function SubscriptionTab() {
     } catch (err: any) {
       setIsPaying(false);
       setPayAction(null);
-      toast({ title: 'Payment Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Payment Error', description: getErrorMessage(err, "Unable to update the subscription. Please check your connection and try again."), variant: 'destructive' });
     }
   };
 

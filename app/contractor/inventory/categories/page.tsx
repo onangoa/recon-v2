@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import CsvImportDialog from '@/components/csv-import-dialog';
 
@@ -107,7 +108,7 @@ export default function InventoryCategoriesPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load categories. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -153,12 +154,12 @@ export default function InventoryCategoriesPage() {
           fetchCategories();
         }
       } else {
-        throw new Error('Failed to delete category');
+        throw new Error('Unable to delete the category.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the category. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

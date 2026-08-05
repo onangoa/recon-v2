@@ -68,6 +68,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 
 interface Site {
   id: string;
@@ -117,7 +118,7 @@ export default function SafetyIncidentsPage() {
       const data = await response.json();
       setIncidents(data);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load safety incidents. Please refresh the page and try again."), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +163,7 @@ export default function SafetyIncidentsPage() {
       resetForm();
       fetchIncidents();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, editingIncident ? "Unable to update the safety report. Please verify the details and try again." : "Unable to report the safety incident. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -191,7 +192,7 @@ export default function SafetyIncidentsPage() {
       toast({ title: "Deleted", description: "Incident report removed" });
       fetchIncidents();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to delete the safety report. Please try again."), variant: "destructive" });
     }
   };
 

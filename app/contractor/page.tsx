@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSite } from '@/hooks/use-site';
+import { getErrorMessage } from '@/lib/toast-utils';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -120,7 +121,7 @@ export default function ContractorDashboard() {
         setPoSummary(data.poSummary || []);
         setInventoryByStatus(data.inventoryByStatus || []);
       } catch (err: any) {
-        setError(err.message);
+        setError(getErrorMessage(err, "Unable to load dashboard data. Please refresh the page and try again."));
       } finally {
         setLoading(false);
       }

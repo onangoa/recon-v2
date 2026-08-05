@@ -24,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
@@ -58,7 +59,7 @@ export default function EditWalletPage({ params }: { params: Promise<{ id: strin
     setIsLoading(true);
     try {
       const response = await fetch(`/web/api/wallets/${walletId}`);
-      if (!response.ok) throw new Error('Failed to fetch wallet');
+      if (!response.ok) throw new Error('Unable to load the wallet. Please refresh the page and try again.');
       const data = await response.json();
       setFormData({
         name: data.name,
@@ -72,7 +73,7 @@ export default function EditWalletPage({ params }: { params: Promise<{ id: strin
         dailySpendLimit: data.dailySpendLimit?.toString() || '',
       });
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to load the wallet. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -122,12 +123,12 @@ export default function EditWalletPage({ params }: { params: Promise<{ id: strin
         router.push('/contractor/wallets');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update wallet');
+        throw new Error(getApiError(result, "Unable to update the wallet. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the wallet. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

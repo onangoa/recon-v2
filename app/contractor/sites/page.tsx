@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useSite } from '@/hooks/use-site';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 
 interface Site {
@@ -116,7 +117,7 @@ export default function SitesManagementPage() {
       setTotalSitesCount(data.pagination.total);
       if (data.purchasedSiteSlots !== undefined) setPurchasedSiteSlots(data.purchasedSiteSlots);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load sites. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -165,14 +166,14 @@ export default function SitesManagementPage() {
         const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.error || "Failed to decommission site.",
+          description: getApiError(errorData, "Unable to decommission the site. Please try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to decommission the site. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

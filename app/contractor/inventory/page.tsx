@@ -76,6 +76,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import { useSite } from '@/hooks/use-site';
 import { exportToCSV, exportToPDF } from '@/lib/export';
@@ -141,7 +142,7 @@ export default function InventoryPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load inventory items. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -192,12 +193,12 @@ export default function InventoryPage() {
         fetchInventory();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to record usage');
+        throw new Error(getApiError(data, 'Unable to record usage. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to record usage. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -245,12 +246,12 @@ export default function InventoryPage() {
           fetchInventory();
         }
       } else {
-        throw new Error('Failed to delete item');
+        throw new Error('Unable to delete the inventory item.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the inventory item. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

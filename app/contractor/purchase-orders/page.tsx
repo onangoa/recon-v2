@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import { useSite } from '@/hooks/use-site';
 import { exportToCSV, exportToPDF } from '@/lib/export';
@@ -117,7 +118,7 @@ export default function PurchaseOrdersList() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load purchase orders. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -163,12 +164,12 @@ export default function PurchaseOrdersList() {
           fetchOrders();
         }
       } else {
-        throw new Error('Failed to delete purchase order');
+        throw new Error('Unable to delete the purchase order. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the purchase order. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

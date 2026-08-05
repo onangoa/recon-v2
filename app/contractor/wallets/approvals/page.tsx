@@ -57,6 +57,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
 
 interface PendingTransaction {
@@ -123,13 +124,13 @@ function ApprovalsContent() {
       if (walletId) url += `&walletId=${walletId}`;
       
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch pending transactions');
+      if (!response.ok) throw new Error('Unable to load the wallet approvals. Please refresh the page and try again.');
       const data = await response.json();
       setTransactions(data.transactions || []);
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load the wallet approvals. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +175,7 @@ function ApprovalsContent() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to approve transactions');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to approve the wallet requests. Please try again."));
 
       toast({
         title: "Approvals Processed",
@@ -187,7 +188,7 @@ function ApprovalsContent() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to approve the wallet requests. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -214,7 +215,7 @@ function ApprovalsContent() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to reject transaction');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to reject the wallet request. Please try again."));
 
       toast({
         title: "Transaction Rejected",
@@ -229,7 +230,7 @@ function ApprovalsContent() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to reject the wallet request. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -270,10 +271,10 @@ function ApprovalsContent() {
           });
 
           const data = await response.json();
-          if (!response.ok) throw new Error(data.error || 'Failed to reject transaction');
+          if (!response.ok) throw new Error(getApiError(data, "Unable to reject the wallet request. Please try again."));
           results.push(transactionId);
         } catch (error: any) {
-          errors.push({ transactionId, error: error.message });
+          errors.push({ transactionId, error: getErrorMessage(error, "Unable to reject the wallet request.") });
         }
       }
 
@@ -290,7 +291,7 @@ function ApprovalsContent() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to reject the wallet requests. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -310,12 +311,12 @@ function ApprovalsContent() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to approve transaction');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to approve the wallet request. Please try again."));
 
       if (data.failed > 0) {
         toast({
           title: "Approval Failed",
-          description: data.errors?.[0]?.error || 'Failed to approve transaction',
+          description: data.errors?.[0]?.error || "Unable to approve the wallet request. Please try again.",
           variant: "destructive",
         });
       } else {
@@ -330,7 +331,7 @@ function ApprovalsContent() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to approve the wallet request. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

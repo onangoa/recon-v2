@@ -56,6 +56,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 
 interface PayrollPeriod {
@@ -89,13 +90,13 @@ export default function PayrollPage() {
     setError(null);
     try {
       const response = await fetch(`/web/api/payroll-periods?page=${currentPage}&limit=${limit}`);
-      if (!response.ok) throw new Error('Failed to fetch payroll periods');
+      if (!response.ok) throw new Error('Unable to load the payroll periods. Please refresh the page and try again.');
       const data = await response.json();
       setPeriods(data.periods);
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load the payroll periods. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }

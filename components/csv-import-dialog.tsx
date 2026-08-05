@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Upload, Download, Trash2, Loader2, FileSpreadsheet } from 'lucide-react';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface CsvImportColumn {
   key: string;
@@ -126,7 +127,7 @@ export default function CsvImportDialog({
       setStep('preview');
       setError(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to parse CSV file');
+      setError(getErrorMessage(err, "Unable to parse the CSV file. Please check the format and try again."));
     }
 
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -154,10 +155,10 @@ export default function CsvImportDialog({
         onSuccess();
         handleClose();
       } else {
-        throw new Error(result.error || 'Import failed');
+        throw new Error(getApiError(result, "Unable to import the data. Please verify the file contents and try again."));
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to import the data. Please check your connection and try again."));
     } finally {
       setIsImporting(false);
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { verifySiteOwnership } from '@/lib/contractor-isolation';
 import { checkDeviceStatus } from '@/lib/biometric-service';
 
 export async function PUT(
@@ -33,6 +34,20 @@ export async function PUT(
       }
     }
 
+    // If a site is being assigned, make sure it belongs to the contractor.
+    let siteUpdate: { siteId?: string | null } = {};
+    if (body.siteId !== undefined) {
+      if (body.siteId === null) {
+        siteUpdate.siteId = null;
+      } else {
+        const owns = await verifySiteOwnership(contractorId, String(body.siteId));
+        if (!owns) {
+          return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+        }
+        siteUpdate.siteId = String(body.siteId);
+      }
+    }
+
     const updated = await prisma.biometricDevice.update({
       where: { id },
       data: {
@@ -40,6 +55,7 @@ export async function PUT(
         sn: body.sn !== undefined ? sn : undefined,
         location: body.location !== undefined ? (body.location ? String(body.location) : null) : undefined,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : undefined,
+        ...siteUpdate,
       },
     });
 

@@ -67,6 +67,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 interface Document {
@@ -109,7 +110,7 @@ export default function SiteUploadsPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load documents. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -155,12 +156,12 @@ export default function SiteUploadsPage() {
           fetchDocuments();
         }
       } else {
-        throw new Error('Failed to delete document');
+        throw new Error('Unable to delete the document. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the document. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

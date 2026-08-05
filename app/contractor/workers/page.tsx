@@ -80,6 +80,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 
 interface Worker {
@@ -162,7 +163,7 @@ export default function WorkersPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, 'Unable to load workers. Please refresh the page and try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +214,7 @@ export default function WorkersPage() {
     } catch (err: any) {
       toast({
         title: 'Biometric Error',
-        description: err.message || 'Could not reach the biometric device',
+        description: getErrorMessage(err, "Unable to reach the biometric device. Please check the connection and try again."),
         variant: 'destructive',
       });
       setDeviceAvailable(false);
@@ -241,7 +242,7 @@ export default function WorkersPage() {
     } catch (err: any) {
       toast({
         title: 'Enrollment Failed',
-        description: err.message,
+        description: getErrorMessage(err, "Unable to reach the biometric device. Please check the connection and try again."),
         variant: 'destructive',
       });
       return false;
@@ -317,7 +318,7 @@ export default function WorkersPage() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to remove the worker. Please try again."),
         variant: "destructive",
       });
     } finally {

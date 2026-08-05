@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -234,7 +235,7 @@ export default function CreateWorkerPage() {
           });
           const enrollData = await enrollRes.json();
           if (!enrollRes.ok || !enrollData?.ok) {
-            throw new Error(enrollData?.error || 'Device enrollment failed');
+            throw new Error(getApiError(enrollData, 'Device enrollment failed'));
           }
           toast({
             title: "Saved & Enrolled!",
@@ -249,7 +250,7 @@ export default function CreateWorkerPage() {
         } catch (err: any) {
           toast({
             title: "Saved, but enrollment failed",
-            description: `Worker saved, but device enrollment failed: ${err.message}`,
+            description: `Worker saved, but device enrollment failed: ${getErrorMessage(err, "Unable to reach the biometric device. Please check the connection and try again.")}`,
             variant: "destructive",
           });
         } finally {
@@ -271,7 +272,7 @@ export default function CreateWorkerPage() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "An unexpected error occurred.",
+        description: getErrorMessage(err, "Unable to create the worker. Please verify the details and try again."),
         variant: "destructive",
       });
     } finally {

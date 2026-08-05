@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getErrorMessage } from '@/lib/toast-utils';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -65,7 +66,7 @@ export default function SuperadminDashboard() {
         setTransactions(data.recentTransactions || []);
         setPlanSalesData(data.planSalesData || []);
       } catch (err: any) {
-        setError(err.message);
+        setError(getErrorMessage(err, "Unable to load dashboard data. Please refresh the page and try again."));
       } finally {
         setLoading(false);
       }

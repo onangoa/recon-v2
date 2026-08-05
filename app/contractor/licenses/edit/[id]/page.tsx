@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Input } from '@/components/ui/input';
 import { useSite } from '@/hooks/use-site';
 
@@ -93,7 +94,7 @@ export default function EditLicensePage() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to fetch license',
+        description: "Unable to load the license. Please refresh the page and try again.",
         variant: 'destructive',
       });
       router.back();
@@ -130,7 +131,7 @@ export default function EditLicensePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload file');
+        throw new Error('Unable to upload the file. Please try again.');
       }
 
       const data = await response.json();
@@ -144,7 +145,7 @@ export default function EditLicensePage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to upload file",
+        description: getErrorMessage(error, "Unable to upload the file. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -179,7 +180,7 @@ export default function EditLicensePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update license');
+        throw new Error('Unable to update the license. Please verify the details and try again.');
       }
 
       toast({
@@ -191,7 +192,7 @@ export default function EditLicensePage() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update license',
+        description: getErrorMessage(error, "Unable to update the license. Please verify the details and try again."),
         variant: 'destructive',
       });
     } finally {

@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 export default function CreateVisitorPage() {
@@ -76,7 +77,7 @@ export default function CreateVisitorPage() {
     } catch (error) {
       toast({
         title: "Upload Error",
-        description: "Failed to upload file.",
+        description: "Unable to upload the file. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -144,12 +145,12 @@ export default function CreateVisitorPage() {
         router.push('/contractor/visitors');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to check in visitor');
+        throw new Error(getApiError(result, "Unable to create the visitor. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to create the visitor. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

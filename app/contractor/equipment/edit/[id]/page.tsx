@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function EditEquipmentPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.message,
+          description: getErrorMessage(error, "Unable to load the equipment for editing."),
           variant: "destructive",
         });
         router.push('/contractor/equipment');
@@ -136,12 +137,12 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
         router.refresh();
       } else {
         const result = await response.json();
-        throw new Error(result.error || 'Failed to update equipment');
+        throw new Error(getApiError(result, 'Unable to update the equipment. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the equipment. Please verify the details and try again."),
         variant: "destructive",
       });
     } finally {

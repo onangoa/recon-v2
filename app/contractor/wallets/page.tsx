@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useAuth } from '@/context/auth-context';
 import {
   AlertDialog,
@@ -81,7 +82,7 @@ export default function WalletsPage() {
       const data = await response.json();
       setWallets(data);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to load the wallets. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -110,12 +111,12 @@ export default function WalletsPage() {
         fetchWallets();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to delete wallet');
+        throw new Error(getApiError(data, "Unable to delete the wallet. Please try again."));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the wallet. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

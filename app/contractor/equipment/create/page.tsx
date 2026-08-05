@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 export default function CreateMachinePage() {
@@ -102,12 +103,12 @@ export default function CreateMachinePage() {
         router.push('/contractor/equipment');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create equipment');
+        throw new Error(getApiError(result, 'Unable to create the equipment. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to create the equipment. Please verify the details and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

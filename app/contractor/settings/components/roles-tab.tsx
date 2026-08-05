@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Permission {
   id: string;
@@ -40,7 +41,7 @@ export default function RolesTab() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to load roles. Please refresh the page and try again."),
         variant: "destructive",
       });
     } finally {
@@ -58,11 +59,11 @@ export default function RolesTab() {
         toast({ title: "Success", description: "Role deleted successfully.", variant: "success" });
         fetchRoles();
       } else {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to delete role');
+        const data = await response.json();
+        throw new Error(getApiError(data, "Unable to delete the role. Please try again."));
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to delete the role. Please try again."), variant: "destructive" });
     } finally {
       setIsDeleting(null);
     }

@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Contractor {
   id: string;
@@ -77,7 +78,7 @@ export default function ContractorDetailPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to load contractor details",
+        description: getErrorMessage(error, "Unable to load contractor details. Please go back and try again."),
         variant: "destructive",
       });
       router.push('/superadmin/contractors');
@@ -104,14 +105,14 @@ export default function ContractorDetailPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to delete contractor",
+          description: getApiError(data, "Unable to delete the contractor. Please try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to delete the contractor. Please check your connection and try again."),
         variant: "destructive",
       });
     }

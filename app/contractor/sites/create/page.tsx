@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import { useAuth } from '@/context/auth-context';
 
@@ -110,7 +111,7 @@ export default function CreateSitePage() {
           router.refresh();
         }
       } else {
-        const err = new Error(result.error || result.message || 'Failed to create site') as Error & { code?: string };
+        const err = new Error(getApiError(result, 'Unable to create the site. Please verify the details and try again.')) as Error & { code?: string };
         err.code = result.code;
         throw err;
       }
@@ -118,7 +119,7 @@ export default function CreateSitePage() {
       if (error.code === 'SITE_LIMIT_REACHED') {
         toast({
           title: "Site Limit Reached",
-          description: error.message || "You've used all your subscription site slots. Subscribe again to add another site.",
+          description: getErrorMessage(error, "You've used all your subscription site slots. Subscribe again to add another site."),
           variant: "destructive",
           action: (
             <Button size="sm" variant="outline" onClick={() => router.push('/contractor/settings?tab=subscription')}>
@@ -129,7 +130,7 @@ export default function CreateSitePage() {
       } else {
         toast({
           title: "Error",
-          description: error.message || "An unexpected error occurred.",
+          description: getErrorMessage(error, "Unable to create the site. Please check your connection and try again."),
           variant: "destructive",
           action: (
             <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Company {
   id: string;
@@ -55,18 +56,18 @@ export default function CompaniesPage() {
         setCompany(data);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to fetch company information.');
+        setError(getApiError(errorData, "Unable to load company information. Please refresh the page and try again."));
         toast({
           title: "Error",
-          description: errorData.error || "Failed to fetch company information.",
+          description: getApiError(errorData, "Unable to load company information. Please refresh the page and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
-      setError('Failed to fetch company information.');
+      setError(getErrorMessage(error, "Unable to load company information. Please refresh the page and try again."));
       toast({
         title: "Error",
-        description: "Failed to fetch company information.",
+        description: getErrorMessage(error, "Unable to load company information. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

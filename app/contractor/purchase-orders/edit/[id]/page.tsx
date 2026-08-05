@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 interface OrderItem {
@@ -103,13 +104,13 @@ export default function EditPurchaseOrder() {
             manualPrice: false
           })));
         } else {
-          throw new Error(poData.error || 'Failed to fetch purchase order');
+          throw new Error(getApiError(poData, 'Unable to load the purchase order for editing. Please refresh the page and try again.'));
         }
       } catch (error: any) {
         console.error('Failed to fetch data:', error);
         toast({
           title: "Error",
-          description: error.message || "Failed to load purchase order",
+          description: getErrorMessage(error, "Unable to load the purchase order for editing. Please check your connection and try again."),
           variant: "destructive",
         });
       } finally {
@@ -214,12 +215,12 @@ export default function EditPurchaseOrder() {
         router.refresh();
       } else {
         const result = await response.json();
-        throw new Error(result.error || 'Failed to update purchase order');
+        throw new Error(getApiError(result, 'Unable to update the purchase order. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the purchase order. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

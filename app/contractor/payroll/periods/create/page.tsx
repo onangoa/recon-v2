@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -59,7 +60,7 @@ export default function CreatePayrollPeriodPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create payroll period');
+      if (!response.ok) throw new Error('Unable to create the payroll period. Please verify the details and try again.');
 
       toast({
         title: "Success!",
@@ -75,7 +76,7 @@ export default function CreatePayrollPeriodPage() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "An unexpected error occurred.",
+        description: getErrorMessage(err, "Unable to create the payroll period. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

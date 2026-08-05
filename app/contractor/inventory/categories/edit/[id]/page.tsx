@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Category {
   id: string;
@@ -67,7 +68,7 @@ export default function EditInventoryCategoryPage() {
         console.error('Failed to fetch category:', error);
         toast({
           title: "Error",
-          description: "Failed to load category data",
+          description: "Unable to load the category for editing.",
           variant: "destructive",
         });
         router.push('/contractor/inventory/categories');
@@ -147,12 +148,12 @@ export default function EditInventoryCategoryPage() {
         router.push('/contractor/inventory/categories');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update category');
+        throw new Error(getApiError(result, 'Unable to update the category. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the category. Please verify the details and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

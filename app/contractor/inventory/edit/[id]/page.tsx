@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Category {
   id: string;
@@ -110,7 +111,7 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.message,
+          description: getErrorMessage(error, "Unable to load the inventory item for editing."),
           variant: "destructive",
         });
         router.push('/contractor/inventory');
@@ -231,12 +232,12 @@ export default function EditInventoryItemPage({ params }: { params: Promise<{ id
         router.push('/contractor/inventory');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update inventory item');
+        throw new Error(getApiError(result, 'Unable to update the inventory item. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the inventory item. Please verify the details and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

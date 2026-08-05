@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -125,7 +126,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           joinedAt: worker.joinedAt ? new Date(worker.joinedAt).toISOString().split('T')[0] : ''
         });
       } catch (err: any) {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
+        toast({ title: "Error", description: getErrorMessage(err, "Unable to load the worker details. Please refresh the page and try again."), variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
@@ -240,7 +241,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           });
           const enrollData = await enrollRes.json();
           if (!enrollRes.ok || !enrollData?.ok) {
-            throw new Error(enrollData?.error || 'Device enrollment failed');
+            throw new Error(getApiError(enrollData, 'Device enrollment failed'));
           }
           toast({
             title: "Updated & Enrolled!",
@@ -255,7 +256,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
         } catch (err: any) {
           toast({
             title: "Updated, but enrollment failed",
-            description: `Profile saved, but device enrollment failed: ${err.message}`,
+            description: `Profile saved, but device enrollment failed: ${getErrorMessage(err, "Unable to reach the biometric device. Please check the connection and try again.")}`,
             variant: "destructive",
           });
         } finally {
@@ -275,7 +276,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
       }
       router.push('/contractor/workers');
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to update the worker. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

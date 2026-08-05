@@ -1,0 +1,410 @@
+[2026-07-10T08:29:11.375Z] SEP  
+
+════════════════════════════════════════════════════════════
+  Co-op Bank OpenAPI — Integration Test Runner
+════════════════════════════════════════════════════════════
+[2026-07-10T08:29:11.376Z] INFO Base URL   : https://openapi.co-opbank.co.ke
+[2026-07-10T08:29:11.376Z] INFO Mode       : LIVE (real transfers WILL be submitted)
+[2026-07-10T08:29:11.376Z] INFO Interactive: off
+[2026-07-10T08:29:11.376Z] INFO User ID    : RECON
+[2026-07-10T08:29:11.376Z] INFO Account    : 01192588813000
+[2026-07-10T08:29:11.377Z] INFO Dest Acct  : 01100006870001 (bank 11)
+[2026-07-10T08:29:11.377Z] INFO Mobile     : 2547<redacted>
+[2026-07-10T08:29:11.377Z] INFO Amount     : KES 50
+[2026-07-10T08:29:11.377Z] INFO Callback   : https://reconsmi.com/v1/ext/ipn
+[2026-07-10T08:29:11.377Z] INFO AUTH_KEY   : MFZPeW…<redacted>
+[2026-07-10T08:29:11.377Z] INFO Filters    : only=all  skip=none
+[2026-07-10T08:29:11.377Z] SEP  
+
+════════════════════════════════════════════════════════════
+  1. Generate Token  —  POST /token
+════════════════════════════════════════════════════════════
+[2026-07-10T08:29:11.378Z] REQ  POST https://openapi.co-opbank.co.ke/token
+[2026-07-10T08:29:11.378Z] REQ  Headers
+{
+  "Authorization": "Basic MFZPeWMw…<redacted (82 chars)>",
+  "Content-Type": "application/x-www-form-urlencoded"
+}
+[2026-07-10T08:29:11.378Z] REQ  Request body
+grant_type=client_credentials
+[2026-07-10T08:29:12.191Z] RES  HTTP 200 OK  (812ms)
+[2026-07-10T08:29:12.192Z] RES  Response body
+{
+  "access_token": "eyJ4<redacted>"
+  scope": "am_application_scope default",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+[2026-07-10T08:29:12.192Z] OK   Token acquired. expires_in=3600s
+[2026-07-10T08:29:12.193Z] SEP  
+
+══════════════════════════════════════════════════════════════════
+  2. Account Validation  —  POST /Enquiry/Validation/IPSL/1.0.0/
+══════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:12.193Z] REQ  POST https://openapi.co-opbank.co.ke/Enquiry/Validation/IPSL/1.0.0/
+[2026-07-10T08:29:12.193Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:12.193Z] REQ  Request body
+{
+  "MessageReference": "31a374be8c2081",
+  "UserId": "RECON",
+  "AccountNumber": "01192588813000",
+  "RecipientBankIdentifier": "0011"
+}
+[2026-07-10T08:29:14.443Z] RES  HTTP 200 OK  (2250ms)
+[2026-07-10T08:29:14.443Z] RES  Response body
+{
+  "MessageReference": "991768d7-9900-4349-9742-d229f697b33",
+  "MessageDateTime": "2026-07-10T11:07:09",
+  "MessageCode": "0",
+  "MessageDescription": "Valid Account Number",
+  "RecipientName": "RECON ENGINEERING INTERNATIONAL LIMITED",
+  "RecipientAccountNumber": "01192588813000"
+}
+[2026-07-10T08:29:14.443Z] OK   Account Validation completed (HTTP 200)
+[2026-07-10T08:29:14.444Z] SEP  
+
+═══════════════════════════════════════════════════════════════════════════════════════
+  3. PesaLink Send to Account  —  POST /FundsTransfer/External/PesaLinkBulk_v1/1.0.0/
+═══════════════════════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:14.444Z] WARN Submitting REAL transfer: KES 50 from 01192588813000 to 01100006870001 (bank 11)
+[2026-07-10T08:29:14.444Z] REQ  POST https://openapi.co-opbank.co.ke/FundsTransfer/External/PesaLinkBulk_v1/1.0.0/
+[2026-07-10T08:29:14.444Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:14.444Z] REQ  Request body
+{
+  "MessageReference": "6155297d8a294c",
+  "UserId": "RECON",
+  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "ISO2CountryCode": "KE",
+  "Source": {
+    "AccountNumber": "01192588813000",
+    "Amount": 50,
+    "TransactionCurrency": "KES",
+    "Narration": "RECONSMI TEST PESALINK"
+  },
+  "Destinations": [
+    {
+      "ReferenceNumber": "6155297d8a294c_1",
+      "AccountNumber": "01100006870001",
+      "BankCode": "11",
+      "Amount": "50",
+      "TransactionCurrency": "KES",
+      "Narration": "RECONSMI TEST PESALINK"
+    }
+  ]
+}
+[2026-07-10T08:29:14.655Z] RES  HTTP 404 Not Found  (211ms)
+[2026-07-10T08:29:14.655Z] RES  Response body
+{
+  "rawResponse": "<am:fault xmlns:am=\"http://wso2.org/apimanager\"><am:code>404</am:code><am:type>Status report</am:type><am:message>Not Found</am:message><am:description>The requested resource is not available.</am:description></am:fault>"
+}
+[2026-07-10T08:29:14.655Z] ERR  PesaLink Send failed (HTTP 404): Not Found
+[2026-07-10T08:29:14.655Z] ERR  Error payload
+{
+  "rawResponse": "<am:fault xmlns:am=\"http://wso2.org/apimanager\"><am:code>404</am:code><am:type>Status report</am:type><am:message>Not Found</am:message><am:description>The requested resource is not available.</am:description></am:fault>"
+}
+[2026-07-10T08:29:14.656Z] SEP  
+
+════════════════════════════════════════════════════════════════════════
+  4. IFT Send to Account  —  POST /FundsTransfer/Internal/A2A_v3/3.0.0
+════════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:14.656Z] WARN Submitting REAL IFT: KES 50 from 01192588813000 to 01100006870001
+[2026-07-10T08:29:14.657Z] REQ  POST https://openapi.co-opbank.co.ke/FundsTransfer/Internal/A2A_v3/3.0.0
+[2026-07-10T08:29:14.657Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:14.657Z] REQ  Request body
+{
+  "MessageReference": "b8a269d0a82a20",
+  "UserId": "RECON",
+  "ISO2CountryCode": "KE",
+  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "Source": {
+    "AccountNumber": "01192588813000",
+    "Amount": 50,
+    "TransactionCurrency": "KES",
+    "Narration": "RECONSMI TEST IFT"
+  },
+  "Destinations": [
+    {
+      "ReferenceNumber": "b8a269d0a82a20_1",
+      "AccountNumber": "01100006870001",
+      "Amount": 50,
+      "TransactionCurrency": "KES",
+      "Narration": "RECONSMI TEST IFT"
+    }
+  ]
+}
+[2026-07-10T08:29:18.931Z] RES  HTTP 400 Bad Request  (4274ms)
+[2026-07-10T08:29:18.932Z] RES  Response body
+{
+  "MessageReference": "b8a269d0a82a20",
+  "MessageDateTime": "2026-07-10T11:29:10",
+  "MessageCode": "-6",
+  "MessageDescription": "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+}
+[2026-07-10T08:29:18.932Z] ERR  IFT Send failed (HTTP 400): Bad Request
+[2026-07-10T08:29:18.932Z] ERR  Error payload
+{
+  "MessageReference": "b8a269d0a82a20",
+  "MessageDateTime": "2026-07-10T11:29:10",
+  "MessageCode": "-6",
+  "MessageDescription": "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+}
+[2026-07-10T08:29:18.933Z] SEP  
+
+═════════════════════════════════════════════════════════════════════
+  5. B2C M-Pesa  —  POST /FundsTransfer/External/A2M/Mpesa_v2/2.0.0
+═════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:18.933Z] WARN Submitting REAL B2C M-Pesa: KES 50 from 01192588813000 to 2547<redacted>
+[2026-07-10T08:29:18.933Z] REQ  POST https://openapi.co-opbank.co.ke/FundsTransfer/External/A2M/Mpesa_v2/2.0.0
+[2026-07-10T08:29:18.933Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:18.933Z] REQ  Request body
+{
+  "MessageReference": "ff82e84ceb3ad5",
+  "UserId": "RECON",
+  "ISO2CountryCode": "KE",
+  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "Source": {
+    "AccountNumber": "01192588813000",
+    "Amount": "50",
+    "TransactionCurrency": "KES",
+    "Narration": "RECONSMI TEST B2C MPESA"
+  },
+  "Destinations": [
+    {
+      "ReferenceNumber": "ff82e84ceb3ad5_1",
+      "MobileNumber": "2547<redacted>",
+      "Amount": "50",
+      "Narration": "RECONSMI TEST B2C MPESA"
+    }
+  ]
+}
+[2026-07-10T08:29:21.740Z] RES  HTTP 400 Bad Request  (2807ms)
+[2026-07-10T08:29:21.740Z] RES  Response body
+{
+  "MessageReference": "ff82e84ceb3ad5",
+  "MessageDateTime": "2026-07-10T11:29:14",
+  "MessageCode": "-6",
+  "MessageDescription": "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+}
+[2026-07-10T08:29:21.740Z] ERR  B2C M-Pesa failed (HTTP 400): Bad Request
+[2026-07-10T08:29:21.741Z] ERR  Error payload
+{
+  "MessageReference": "ff82e84ceb3ad5",
+  "MessageDateTime": "2026-07-10T11:29:14",
+  "MessageCode": "-6",
+  "MessageDescription": "TRANSACTION LIMITS NOT CONFIGURED FOR SUPPLIED ACCOUNT"
+}
+[2026-07-10T08:29:21.741Z] SEP  
+
+═════════════════════════════════════════════════════════════════════════════
+  6. Transaction Status Check  —  POST /Enquiry/TransactionStatus_V3/3.0.0/
+═════════════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:21.741Z] REQ  POST https://openapi.co-opbank.co.ke/Enquiry/TransactionStatus_V3/3.0.0/
+[2026-07-10T08:29:21.741Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:21.741Z] REQ  Request body
+{
+  "MessageReference": "ff82e84ceb3ad5",
+  "UserId": "RECON"
+}
+[2026-07-10T08:29:22.782Z] RES  HTTP 202 Accepted  (1041ms)
+[2026-07-10T08:29:22.783Z] RES  Response body
+{
+  "MessageReference": "ff82e84ceb3ad5",
+  "MessageDateTime": "2026-07-10T11:07:18",
+  "MessageCode": "-13",
+  "MessageDescription": "MESSAGE REFERENCE DOES NOT EXIST"
+}
+[2026-07-10T08:29:22.783Z] OK   Transaction Status completed (HTTP 202)
+[2026-07-10T08:29:22.783Z] SEP  
+
+═════════════════════════════════════════════════════════════════
+  7. Account Balance  —  POST /Enquiry/AccountBalance_v2/2.0.0/
+═════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:22.783Z] REQ  POST https://openapi.co-opbank.co.ke/Enquiry/AccountBalance_v2/2.0.0/
+[2026-07-10T08:29:22.783Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:22.783Z] REQ  Request body
+{
+  "MessageReference": "860e2b825d49df",
+  "UserId": "RECON",
+  "AccountNumber": "01192588813000"
+}
+[2026-07-10T08:29:25.089Z] RES  HTTP 200 OK  (2306ms)
+[2026-07-10T08:29:25.089Z] RES  Response body
+{
+  "MessageReference": "69bc046e-5c2d-46ee-9f41-01788bf5290d",
+  "MessageDateTime": "2026-07-10T11:07:20",
+  "MessageCode": "0",
+  "MessageDescription": "SUCCESS",
+  "AccountNumber": "01192588813000",
+  "AccountName": "RECON ENGINEERING INTERNATIONAL LIMITED",
+  "Currency": "KES",
+  "ProductName": "MSME BRONZE",
+  "ClearedBalance": "<redacted>",
+  "BookedBalance": "0.0",
+  "BlockedBalance": "0.0",
+  "AvailableBalance": "<redacted>",
+  "ArrearsAmount": "null",
+  "BranchName": "WESTLANDS BRANCH",
+  "BranchSortCode": "1036",
+  "AverageBalance": "null",
+  "UnclearedBalance": "0.0",
+  "ODLimit": "0.0",
+  "CreditLimit": "300.0"
+}
+[2026-07-10T08:29:25.089Z] OK   Account Balance completed (HTTP 200)
+[2026-07-10T08:29:25.089Z] SEP  
+
+═══════════════════════════════════════════════════════════════════════════════
+  8. Account Mini-statement  —  POST /Enquiry/MiniStatement/Account_v2/2.0.0/
+═══════════════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:25.089Z] REQ  POST https://openapi.co-opbank.co.ke/Enquiry/MiniStatement/Account_v2/2.0.0/
+[2026-07-10T08:29:25.089Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:25.092Z] REQ  Request body
+{
+  "MessageReference": "beb0bd8e7852e1",
+  "AccountNumber": "01192588813000"
+}
+[2026-07-10T08:29:31.328Z] RES  HTTP 200 OK  (6238ms)
+[2026-07-10T08:29:31.328Z] RES  Response body
+{
+  "MessageReference": "993768d7-9900-4349-9742-d229f697b33e",
+  "MessageDateTime": "2026-07-10T11:07:24",
+  "MessageCode": 0,
+  "MessageDescription": "SUCCESS",
+  "AccountNumber": "01192588813000",
+  "AccountName": "RECON ENGINEERING INTERNATIONAL LIMITED",
+  "Transactions": [
+    {
+      "TransactionId": "CB0313166",
+      "TransactionDate": "2026-07-10T00:00:00",
+      "ValueDate": "2026-07-10T11:18:39",
+      "Code": null,
+      "Narration": "PESALINK~48962c8fe~ANTONY ODONGO ONANG'O~<redacted>",
+      "TransactionType": "C",
+      "ServicePoint": null,
+      "TransactionReference": "PESALINK",
+      "CreditAmount": 100,
+      "DebitAmount": 0,
+      "RunningClearedBalance": <redacted>,
+      "RunningBookBalance": null,
+      "DebitLimit": null,
+      "LimitExpiry": null
+    },
+    {
+      "TransactionId": "CB0262693",
+      "TransactionDate": "2026-07-10T00:00:00",
+      "ValueDate": "2026-07-10T10:36:03",
+      "Code": null,
+      "Narration": "PESALINK~88b4d0549~ANTONY ODONGO ONANG'O~<redacted>",
+      "TransactionType": "C",
+      "ServicePoint": null,
+      "TransactionReference": "PESALINK",
+      "CreditAmount": <redacted>,
+      "DebitAmount": 0,
+      "RunningClearedBalance": <redacted>,
+      "RunningBookBalance": null,
+      "DebitLimit": null,
+      "LimitExpiry": null
+    }
+  ]
+}
+[2026-07-10T08:29:31.328Z] OK   Mini Statement completed (HTTP 200)
+[2026-07-10T08:29:31.328Z] SEP  
+
+═══════════════════════════════════════════════════════════════════════════════
+  9. Account Statement  —  POST /Enquiry/AccountFullStatementPaginated/1.0.0/
+═══════════════════════════════════════════════════════════════════════════════
+[2026-07-10T08:29:31.329Z] REQ  POST https://openapi.co-opbank.co.ke/Enquiry/AccountFullStatementPaginated/1.0.0/
+[2026-07-10T08:29:31.329Z] REQ  Headers
+{
+  "Authorization": "Bearer eyJ4NXQ…<redacted (1019 chars)>",
+  "Content-Type": "application/json"
+}
+[2026-07-10T08:29:31.329Z] REQ  Request body
+{
+  "MessageReference": "cce109e8bf6b40",
+  "UserId": "RECON",
+  "ISO2CountryCode": "KE",
+  "AccountNumber": "01192588813000",
+  "StartDate": "2026-06-30",
+  "EndDate": "2026-07-10"
+}
+[2026-07-10T08:29:43.169Z] RES  HTTP 200 OK  (11840ms)
+[2026-07-10T08:29:43.169Z] RES  Response body
+{
+  "MessageReference": "cce109e8bf6b40",
+  "MessageDateTime": "2026-07-10T11:07:29",
+  "MessageCode": 0,
+  "MessageDescription": "Success",
+  "AccountNumber": "01192588813000",
+  "AccountName": "RECON ENGINEERING INTERNATIONAL LIMITED",
+  "Transactions": [
+    {
+      "TransactionId": "CB0313166",
+      "TransactionDate": "2026-07-10T00:00:00+03:00",
+      "ValueDate": "2026-07-10T00:00:00+03:00",
+      "Code": null,
+      "Narration": "PESALINK~48962c8fe~ANTONY ODONGO ONANG'O~<redacted> ",
+      "TransactionType": "C",
+      "ServicePoint": null,
+      "TransactionReference": null,
+      "CreditAmount": 100,
+      "DebitAmount": 0,
+      "RunningBalance": <redacted>,
+      "RunningBookBalance": null,
+      "DebitLimit": null,
+      "LimitExpiry": null
+    },
+    {
+      "TransactionId": "CB0262693",
+      "TransactionDate": "2026-07-10T00:00:00+03:00",
+      "ValueDate": "2026-07-10T00:00:00+03:00",
+      "Code": null,
+      "Narration": "PESALINK~88b4d0549~ANTONY ODONGO ONANG'O~<redacted> ",
+      "TransactionType": "C",
+      "ServicePoint": null,
+      "TransactionReference": null,
+      "CreditAmount": <redacted>,
+      "DebitAmount": 0,
+      "RunningBalance": <redacted>,
+      "RunningBookBalance": null,
+      "DebitLimit": null,
+      "LimitExpiry": null
+    }
+  ]
+}
+[2026-07-10T08:29:43.170Z] OK   Account Statement completed (HTTP 200)
+[2026-07-10T08:29:43.170Z] SEP  
+
+════════════════════════════════════════════════════════════
+  SUMMARY
+════════════════════════════════════════════════════════════
+[2026-07-10T08:29:43.174Z] INFO Totals → pass=6  fail=3  skip=0  (mode=LIVE)
+[2026-07-10T08:29:43.174Z] INFO Log file written to: bank-api-test-2026-07-10T08-29-11-371Z.log

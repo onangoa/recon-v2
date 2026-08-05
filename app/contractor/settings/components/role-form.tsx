@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Permission {
   id: string;
@@ -52,7 +53,7 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
       } catch (err: any) {
         toast({
           title: "Error",
-          description: err.message,
+          description: getErrorMessage(err, "Unable to load role permissions. Please refresh the page and try again."),
           variant: "destructive",
         });
       } finally {
@@ -90,10 +91,10 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
         router.refresh();
       } else {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to save role');
+        throw new Error(getApiError(error, "Unable to save the role. Please verify the details and try again."));
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to save the role. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

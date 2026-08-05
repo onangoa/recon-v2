@@ -26,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 interface DocumentEntry {
@@ -90,7 +91,7 @@ export default function CreateDocumentPage() {
       setDocuments(prev => prev.map(d => d.id === entry.id ? { ...d, isUploading: false } : d));
       toast({
         title: "Upload Error",
-        description: `Failed to upload ${entry.name}: ${error.message}`,
+        description: getErrorMessage(error, `Unable to upload "${entry.name}". Please try again.`),
         variant: "destructive",
       });
     }
@@ -138,14 +139,14 @@ export default function CreateDocumentPage() {
             method: 'POST',
             body: formDataUpload,
           });
-          if (!uploadResponse.ok) throw new Error('Failed to upload file');
+          if (!uploadResponse.ok) throw new Error('Unable to upload the file. Please try again.');
           const data = await uploadResponse.json();
           doc.fileUrl = data.url;
           doc.isUploaded = true;
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, fileUrl: data.url, isUploading: false, isUploaded: true } : d));
         } catch (error: any) {
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, isUploading: false } : d));
-          throw new Error(`Failed to upload ${doc.name}: ${error.message}`);
+          throw new Error(`Unable to upload "${doc.name}". Please try again.`);
         }
       }
 
@@ -178,12 +179,12 @@ export default function CreateDocumentPage() {
         router.refresh();
       } else {
         const result = await response.json();
-        throw new Error(result.error || 'Failed to save documents');
+        throw new Error(getApiError(result, "Unable to upload the documents. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to upload the documents. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

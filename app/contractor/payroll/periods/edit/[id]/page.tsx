@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -42,7 +43,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
     const fetchPeriod = async () => {
       try {
         const response = await fetch(`/web/api/payroll-periods/${id}`);
-        if (!response.ok) throw new Error('Failed to fetch period');
+        if (!response.ok) throw new Error('Unable to load the payroll period. Please refresh the page and try again.');
         const data = await response.json();
         
         setFormData({
@@ -54,7 +55,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
           status: data.status
         });
       } catch (err: any) {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
+        toast({ title: "Error", description: getErrorMessage(err, "Unable to load the payroll period. Please refresh the page and try again."), variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
@@ -73,7 +74,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error('Failed to update period');
+      if (!response.ok) throw new Error('Unable to update the payroll period. Please verify the details and try again.');
 
       toast({
         title: "Success!",
@@ -87,7 +88,7 @@ export default function EditPayrollPeriodPage({ params }: { params: Promise<{ id
       });
       router.push('/contractor/payroll');
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to update the payroll period. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

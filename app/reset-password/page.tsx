@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/card';
 import { useState, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSearchParams } from 'next/navigation';
 import { AuthNavbar } from '@/components/auth-navbar';
 
@@ -84,14 +85,14 @@ export function ResetPasswordPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Something went wrong",
+          description: getApiError(data, "Unable to reset your password. Please request a new password reset link."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: getErrorMessage(error, "Unable to reset your password. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

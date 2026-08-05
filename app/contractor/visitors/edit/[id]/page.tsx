@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 export default function EditVisitorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -66,9 +67,9 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+description: getErrorMessage(error, "Unable to load the visitor. Please refresh the page and try again."),
+        variant: "destructive",
+      });
         router.push('/contractor/visitors');
       } finally {
         setIsLoading(false);
@@ -110,7 +111,7 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
     } catch (error) {
       toast({
         title: "Upload Error",
-        description: "Failed to upload file.",
+        description: "Unable to upload the file. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -165,12 +166,12 @@ export default function EditVisitorPage({ params }: { params: Promise<{ id: stri
         router.refresh();
       } else {
         const result = await response.json();
-        throw new Error(result.error || 'Failed to update visitor');
+        throw new Error(getApiError(result, "Unable to update the visitor. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the visitor. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

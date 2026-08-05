@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSite } from '@/hooks/use-site';
+import { getErrorMessage } from '@/lib/toast-utils';
 
 interface PurchaseOrderItem {
   id: string;
@@ -87,7 +88,7 @@ export default function MaterialsPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, 'Unable to load materials. Please refresh the page and try again.'));
     } finally {
       setIsLoading(false);
     }

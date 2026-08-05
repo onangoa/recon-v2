@@ -52,6 +52,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Transaction {
   id: string;
@@ -101,7 +102,7 @@ export default function TransactionsPage() {
       setTransactions(txData);
       setWallets(Array.isArray(walletsData) ? walletsData : []);
     } catch (error) {
-      toast.error('Failed to load transactions');
+      toast.error('Unable to load transactions. Please refresh the page and try again.');
     } finally {
       setLoading(false);
     }
@@ -125,10 +126,10 @@ export default function TransactionsPage() {
         setFormData({ walletId: '', amount: '', type: 'credit', description: '', referenceNumber: '', status: 'completed' });
         fetchData();
       } else {
-        toast.error('Failed to add transaction');
+        toast.error('Unable to add the transaction. Please check the details and try again.');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error(getErrorMessage(error, 'Unable to add the transaction. Please check your connection and try again.'));
     }
   };
 

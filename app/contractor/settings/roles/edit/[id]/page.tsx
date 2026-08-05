@@ -13,6 +13,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import RoleForm from '../../../components/role-form';
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 
 export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
           permissionIds: data.permissions.map((p: any) => p.id),
         });
       } catch (err: any) {
-        toast({ title: "Error", description: err.message, variant: "destructive" });
+        toast({ title: "Error", description: getErrorMessage(err, "Unable to load role details."), variant: "destructive" });
         router.push('/contractor/settings?tab=roles');
       } finally {
         setIsLoading(false);

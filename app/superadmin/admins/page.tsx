@@ -52,6 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Admin {
   id: string;
@@ -85,7 +86,7 @@ export default function AdminsPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load admins",
+        description: "Unable to load administrators. Please refresh the page and try again.",
         variant: "destructive",
       });
     } finally {
@@ -119,14 +120,14 @@ export default function AdminsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create admin",
+          description: getApiError(data, "Unable to create the administrator account. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to create the administrator account. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -156,14 +157,14 @@ export default function AdminsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to update admin",
+          description: getApiError(data, "Unable to update the administrator account. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to update the administrator account. Please check your connection and try again."),
         variant: "destructive",
       });
     }
@@ -186,14 +187,14 @@ export default function AdminsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to remove admin",
+          description: getApiError(data, "Unable to remove the administrator. Please try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to remove the administrator. Please check your connection and try again."),
         variant: "destructive",
       });
     }

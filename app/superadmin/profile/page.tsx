@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function ProfilePage() {
   const { user, refreshSession } = useAuth();
@@ -59,10 +60,10 @@ export default function ProfilePage() {
         toast.success('Profile updated successfully');
         await refreshSession();
       } else {
-        toast.error(data.error || 'Failed to update profile');
+        toast.error(getApiError(data, 'Unable to update your profile. Please verify the details and try again.'));
       }
-    } catch {
-      toast.error('An error occurred');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to update your profile. Please check your connection and try again.'));
     } finally {
       setSavingProfile(false);
     }
@@ -96,10 +97,10 @@ export default function ProfilePage() {
           window.location.href = '/login';
         }, 2000);
       } else {
-        toast.error(data.error || 'Failed to change password');
+        toast.error(getApiError(data, 'Unable to change your password. Please verify your current password and try again.'));
       }
-    } catch {
-      toast.error('An error occurred');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Unable to change your password. Please check your connection and try again.'));
     } finally {
       setSavingPassword(false);
     }

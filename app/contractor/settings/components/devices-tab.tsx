@@ -34,6 +34,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { useSite } from '@/hooks/use-site';
 
 interface Device {
   id: string;
@@ -44,10 +46,12 @@ interface Device {
   createdAt: string;
   online?: boolean;
   userCount?: number;
+  siteId?: string | null;
 }
 
 export default function DevicesTab() {
   const { toast } = useToast();
+  const { activeSite } = useSite();
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
@@ -62,24 +66,38 @@ export default function DevicesTab() {
     isActive: true,
   });
 
+  const buildUrl = (withStatus = false) => {
+    const params = new URLSearchParams();
+    if (withStatus) params.set('status', '1');
+    if (activeSite?.id) params.set('siteId', activeSite.id);
+    const qs = params.toString();
+    return `/web/api/biometric/devices${qs ? `?${qs}` : ''}`;
+  };
+
   const fetchDevices = async (withStatus = false) => {
+    if (!activeSite?.id) {
+      setDevices([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await fetch(`/web/api/biometric/devices${withStatus ? '?status=1' : ''}`);
+      const res = await fetch(buildUrl(withStatus));
       if (!res.ok) throw new Error('Failed to fetch devices');
       const data = await res.json();
       setDevices(data.devices || []);
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err, "Unable to load biometric devices. Please refresh the page and try again."), variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
   const checkStatus = async () => {
+    if (!activeSite?.id) return;
     setIsCheckingStatus(true);
     try {
-      const res = await fetch('/web/api/biometric/devices?status=1');
+      const res = await fetch(buildUrl(true));
       if (!res.ok) throw new Error('Failed to check status');
       const data = await res.json();
       setDevices(data.devices || []);
@@ -89,7 +107,7 @@ export default function DevicesTab() {
         description: `${onlineCount} of ${(data.devices || []).length} device(s) online.`,
       });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err, "Unable to load biometric devices. Please refresh the page and try again."), variant: 'destructive' });
     } finally {
       setIsCheckingStatus(false);
     }
@@ -97,7 +115,8 @@ export default function DevicesTab() {
 
   useEffect(() => {
     fetchDevices();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSite?.id]);
 
   const resetForm = () => {
 setFormData({ name: '', sn: '', isActive: true });
@@ -123,10 +142,10 @@ setFormData({ name: '', sn: '', isActive: true });
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, siteId: activeSite?.id || null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save device');
+      if (!res.ok) throw new Error(getApiError(data, editingId ? "Unable to update the biometric device. Please try again." : "Unable to add the biometric device. Please verify the details and try again."));
       toast({
         title: editingId ? 'Device updated' : 'Device added',
         description: `"${formData.name}" (${formData.sn}) saved.`,
@@ -134,7 +153,7 @@ setFormData({ name: '', sn: '', isActive: true });
       resetForm();
       await fetchDevices();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err, editingId ? "Unable to update the biometric device. Please try again." : "Unable to add the biometric device. Please verify the details and try again."), variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -146,11 +165,11 @@ setFormData({ name: '', sn: '', isActive: true });
     try {
       const res = await fetch(`/web/api/biometric/devices/${id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete device');
+      if (!res.ok) throw new Error(getApiError(data, "Unable to remove the biometric device. Please try again."));
       toast({ title: 'Deleted', description: 'Device removed.' });
       await fetchDevices();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err, "Unable to remove the biometric device. Please try again."), variant: 'destructive' });
     } finally {
       setDeletingId(null);
     }
@@ -165,13 +184,23 @@ setFormData({ name: '', sn: '', isActive: true });
     );
   }
 
+  if (!activeSite?.id) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+        <Fingerprint className="h-12 w-12 opacity-10" />
+        <p className="text-sm italic">Select a site to view and manage its biometric devices.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Biometric Devices</h2>
           <p className="text-sm text-muted-foreground">
-            Add the serial numbers of your attendance devices. Workers are enrolled to the device you pick on the worker form.
+            Add the serial numbers of your attendance devices. Devices are scoped to the selected site
+            (<span className="font-medium text-foreground">{activeSite.name}</span>). Workers are enrolled to the device you pick on the worker form.
           </p>
         </div>
         <div className="flex gap-2">
@@ -252,7 +281,7 @@ setFormData({ name: '', sn: '', isActive: true });
       {devices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
           <Fingerprint className="h-12 w-12 opacity-10" />
-          <p className="text-sm italic">No biometric devices configured yet. Click “Add Device” to get started.</p>
+          <p className="text-sm italic">No biometric devices configured for this site yet. Click “Add Device” to get started.</p>
         </div>
       ) : (
         <Card className="border-none shadow-md overflow-hidden">

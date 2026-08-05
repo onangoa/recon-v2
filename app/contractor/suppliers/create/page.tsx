@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function CreateSupplierPage() {
   const router = useRouter();
@@ -81,12 +82,12 @@ export default function CreateSupplierPage() {
         router.push('/contractor/suppliers');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create supplier');
+        throw new Error(getApiError(result, "Unable to create the supplier. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to create the supplier. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

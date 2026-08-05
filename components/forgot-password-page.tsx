@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export function ForgotPasswordPage() {
   const { toast } = useToast();
@@ -74,7 +75,7 @@ export function ForgotPasswordPage() {
       } else {
         toast({
           title: "Error",
-          description: data?.error || data?.message || "Something went wrong",
+          description: getApiError(data, "Unable to send the password reset link. Please try again."),
           variant: "destructive",
         });
       }
@@ -82,7 +83,7 @@ export function ForgotPasswordPage() {
       console.error('Forgot password error:', error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: getErrorMessage(error, "Unable to send the password reset link. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

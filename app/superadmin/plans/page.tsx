@@ -40,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Plan {
   id: string;
@@ -91,7 +92,7 @@ export default function PlansPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load plans",
+        description: "Unable to load subscription plans. Please refresh the page and try again.",
         variant: "destructive",
       });
     } finally {
@@ -127,14 +128,14 @@ export default function PlansPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create plan",
+          description: getApiError(data, "Unable to create the subscription plan. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to create the subscription plan. Please check your connection and try again."),
         variant: "destructive",
       });
     }
@@ -165,14 +166,14 @@ export default function PlansPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to update plan",
+          description: getApiError(data, "Unable to update the subscription plan. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to update the subscription plan. Please check your connection and try again."),
         variant: "destructive",
       });
     }
@@ -195,14 +196,14 @@ export default function PlansPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to delete plan",
+          description: getApiError(data, "Unable to delete the subscription plan. Please try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to delete the subscription plan. Please check your connection and try again."),
         variant: "destructive",
       });
     }
@@ -229,14 +230,14 @@ export default function PlansPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || `Failed to ${action} plan`,
+          description: getApiError(data, `Unable to ${action} the subscription plan. Please try again.`),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, `Unable to ${action} the subscription plan. Please check your connection and try again.`),
         variant: "destructive",
       });
     }

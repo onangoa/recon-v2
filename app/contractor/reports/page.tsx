@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import { exportToCSV, exportToPDF } from '@/lib/export';
 
@@ -110,7 +111,7 @@ export default function ReportsPage() {
       const json = await res.json();
       setData(json);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to load report data. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }

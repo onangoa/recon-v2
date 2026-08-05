@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function NotificationsTab() {
   const { toast } = useToast();
@@ -37,7 +38,7 @@ export default function NotificationsTab() {
         setPreferences(prefData);
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to load preferences", variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load notification preferences."), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -63,10 +64,13 @@ export default function NotificationsTab() {
         body: JSON.stringify({ preferences }),
       });
 
-      if (!response.ok) throw new Error('Failed to save preferences');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(getApiError(errorData, "Unable to update notification preferences. Please try again."));
+      }
       toast({ title: "Success", description: "Preferences saved successfully" });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to update notification preferences. Please try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

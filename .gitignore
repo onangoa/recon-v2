@@ -19,3 +19,6 @@ zgame
 
 public/uploads
 mobileapp
+
+# IPN logs
+logs/

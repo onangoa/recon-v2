@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSite } from '@/hooks/use-site';
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 import { format } from 'date-fns';
 
 interface AttendanceLog {
@@ -96,7 +97,7 @@ export default function AttendancePage() {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to load attendance logs',
+        description: getErrorMessage(error, 'Unable to load attendance logs. Please refresh the page and try again.'),
         variant: 'destructive'
       });
     } finally {

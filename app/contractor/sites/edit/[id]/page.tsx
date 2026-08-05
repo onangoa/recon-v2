@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Site {
   id: string;
@@ -60,9 +61,10 @@ export default function EditSitePage() {
             isPrimary: site.isPrimary || false,
           });
         } else {
+          const errorData = await response.json();
           toast({
             title: "Error",
-            description: "Failed to fetch site data.",
+            description: getApiError(errorData, "Unable to load the site for editing. Please refresh the page and try again."),
             variant: "destructive",
           });
           router.push('/contractor/sites');
@@ -70,7 +72,7 @@ export default function EditSitePage() {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to fetch site data.",
+          description: getErrorMessage(error, "Unable to load the site for editing. Please check your connection and try again."),
           variant: "destructive",
         });
         router.push('/contractor/sites');
@@ -138,12 +140,12 @@ export default function EditSitePage() {
         router.push('/contractor/sites');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update site');
+        throw new Error(getApiError(result, 'Unable to update the site. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the site. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

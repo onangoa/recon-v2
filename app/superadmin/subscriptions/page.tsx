@@ -50,6 +50,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Subscription {
   id: string;
@@ -93,7 +94,7 @@ export default function SubscriptionsPage() {
       setSubscriptions(subsData);
       setPlans(plansData);
     } catch (error) {
-      toast.error('Failed to load subscriptions');
+      toast.error('Unable to load subscriptions. Please refresh the page and try again.');
     } finally {
       setLoading(false);
     }
@@ -119,10 +120,10 @@ export default function SubscriptionsPage() {
         setIsUpdateDialogOpen(false);
         fetchData();
       } else {
-        toast.error('Failed to update subscription');
+        toast.error('Unable to update the subscription plan. Please verify the selection and try again.');
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error(getErrorMessage(error, 'Unable to update the subscription plan. Please check your connection and try again.'));
     }
   };
 

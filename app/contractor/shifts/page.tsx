@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useSite } from '@/hooks/use-site';
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 
 interface Shift {
   id: string;
@@ -104,7 +105,7 @@ export default function ShiftsPage() {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to load shifts',
+        description: getErrorMessage(error, 'Unable to load shifts. Please refresh the page and try again.'),
         variant: 'destructive'
       });
     } finally {
@@ -171,7 +172,7 @@ export default function ShiftsPage() {
       console.error(error);
       toast({
         title: 'Error',
-        description: error.message || `Failed to ${editingShift ? 'update' : 'create'} shift`,
+        description: getErrorMessage(error, editingShift ? "Unable to update the shift. Please verify the details and try again." : "Unable to create the shift. Please verify the details and try again."),
         variant: 'destructive'
       });
     }
@@ -199,7 +200,7 @@ export default function ShiftsPage() {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to delete shift',
+        description: getErrorMessage(error, 'Unable to delete the shift. Please try again.'),
         variant: 'destructive'
       });
     } finally {

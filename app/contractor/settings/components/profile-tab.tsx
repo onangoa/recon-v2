@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ProfileTab() {
@@ -47,7 +48,7 @@ export default function ProfileTab() {
         setAvatarUrl(profile.user.avatar || '');
       }
     } catch (err) {
-      toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load profile. Please refresh the page and try again."), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -81,14 +82,17 @@ export default function ProfileTab() {
         body: formDataUpload,
       });
 
-      if (!response.ok) throw new Error('Failed to upload image');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(getApiError(errorData, "Unable to upload the profile picture. Please try again."));
+      }
 
       const data = await response.json();
       setAvatarUrl(data.url);
       
       toast({ title: "Success", description: "Profile picture uploaded. Click Save to apply changes." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to upload the profile picture. Please try again."), variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
@@ -115,12 +119,15 @@ export default function ProfileTab() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to update profile');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(getApiError(errorData, "Unable to update profile. Please verify the details and try again."));
+      }
 
       toast({ title: "Success", description: "Profile updated successfully" });
       window.location.reload();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to update profile. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

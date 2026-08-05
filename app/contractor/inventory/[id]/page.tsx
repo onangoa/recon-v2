@@ -53,6 +53,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import {
   Select,
   SelectContent,
@@ -150,7 +151,7 @@ export default function InventoryItemView() {
       
       fetchTransfers();
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load the inventory item details. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -244,12 +245,12 @@ export default function InventoryItemView() {
         fetchTransfers();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create transfer');
+        throw new Error(getApiError(data, 'Unable to create the stock transfer. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to create the stock transfer. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -276,12 +277,12 @@ export default function InventoryItemView() {
         fetchTransfers();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to approve transfer');
+        throw new Error(getApiError(data, 'Unable to approve the stock transfer. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to approve the stock transfer. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -307,12 +308,12 @@ export default function InventoryItemView() {
         fetchTransfers();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to reject transfer');
+        throw new Error(getApiError(data, 'Unable to reject the stock transfer. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to reject the stock transfer. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -365,12 +366,12 @@ export default function InventoryItemView() {
         fetchItem();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to record usage');
+        throw new Error(getApiError(data, 'Unable to record usage for this inventory item. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to record usage for this inventory item. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -414,12 +415,12 @@ export default function InventoryItemView() {
         fetchItem();
       } else {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to record stock in');
+        throw new Error(getApiError(data, 'Unable to add stock to this inventory item. Please try again.'));
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to add stock to this inventory item. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

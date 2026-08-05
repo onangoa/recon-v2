@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import Link from 'next/link';
 
@@ -132,13 +133,13 @@ export default function SalaryComponentsPage() {
     setIsLoading(true);
     try {
       const response = await fetch(`/web/api/salary-components?page=${currentPage}&limit=${limit}&search=${searchQuery}${activeSite?.contractorId ? `&contractorId=${activeSite.contractorId}` : ''}`);
-      if (!response.ok) throw new Error('Failed to fetch components');
+      if (!response.ok) throw new Error('Unable to load the payroll components. Please refresh the page and try again.');
       const data = await response.json();
       setComponents(data.components);
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to load the payroll components. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -177,14 +178,14 @@ export default function SalaryComponentsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save component');
+        throw new Error(getApiError(errorData, "Unable to save the payroll component. Please verify the details and try again."));
       }
 
       toast({ title: "Success", description: `Salary component ${editingComponent ? 'updated' : 'created'} successfully` });
       handleCloseDialog();
       fetchComponents();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to save the payroll component. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -233,7 +234,7 @@ export default function SalaryComponentsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete component');
+        throw new Error('Unable to delete the payroll component. Please try again.');
       }
 
       toast({
@@ -246,7 +247,7 @@ export default function SalaryComponentsPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete component",
+        description: getErrorMessage(error, "Unable to delete the payroll component. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

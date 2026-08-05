@@ -63,6 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 interface Visitor {
@@ -108,7 +109,7 @@ export default function VisitorsPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load visitors. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -154,12 +155,12 @@ export default function VisitorsPage() {
           fetchVisitors();
         }
       } else {
-        throw new Error('Failed to delete visitor');
+        throw new Error('Unable to delete the visitor. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the visitor. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -188,12 +189,12 @@ export default function VisitorsPage() {
         });
         fetchVisitors();
       } else {
-        throw new Error('Failed to check out visitor');
+        throw new Error('Unable to check out the visitor. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to check out the visitor. Please check your connection and try again."),
         variant: "destructive",
       });
     }

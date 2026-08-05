@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Company {
   id: string;
@@ -61,7 +62,7 @@ export default function EditCompanyPage() {
           const errorData = await response.json();
           toast({
             title: "Error",
-            description: errorData.error || "Failed to fetch company data.",
+            description: getApiError(errorData, "Unable to load the company for editing. Please refresh the page and try again."),
             variant: "destructive",
           });
           router.push('/contractor/company');
@@ -69,7 +70,7 @@ export default function EditCompanyPage() {
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to fetch company data.",
+          description: getErrorMessage(error, "Unable to load the company for editing. Please check your connection and try again."),
           variant: "destructive",
         });
         router.push('/contractor/company');
@@ -122,12 +123,12 @@ export default function EditCompanyPage() {
         router.push('/contractor/company');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to update company');
+        throw new Error(getApiError(result, 'Unable to update the company information. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the company information. Please check your connection and try again."),
         variant: "destructive",
         action: (
           <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">

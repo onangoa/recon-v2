@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 export default function EditDocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.message,
+          description: getErrorMessage(error, "Unable to load the document. Please refresh the page and try again."),
           variant: "destructive",
         });
         router.push('/contractor/uploads');
@@ -110,12 +111,12 @@ export default function EditDocumentPage({ params }: { params: Promise<{ id: str
         router.refresh();
       } else {
         const result = await response.json();
-        throw new Error(result.error || 'Failed to update document');
+        throw new Error(getApiError(result, "Unable to update the document. Please verify the details and try again."));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to update the document. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

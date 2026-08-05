@@ -69,6 +69,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
 interface Contractor {
   id: string;
@@ -153,7 +154,7 @@ export default function ContractorsPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load data",
+        description: "Unable to load contractors. Please refresh the page and try again.",
         variant: "destructive",
       });
     } finally {
@@ -207,14 +208,14 @@ export default function ContractorsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to create contractor",
+          description: getApiError(data, "Unable to create the contractor account. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: getErrorMessage(error, "Unable to create the contractor account. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -245,14 +246,14 @@ export default function ContractorsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to update contractor",
+          description: getApiError(data, "Unable to update the contractor. Please verify the details and try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to update the contractor. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -277,14 +278,14 @@ export default function ContractorsPage() {
       } else {
         toast({
           title: "Error",
-          description: data.error || "Failed to delete contractor",
+          description: getApiError(data, "Unable to delete the contractor. Please try again."),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An error occurred",
+        description: getErrorMessage(error, "Unable to delete the contractor. Please check your connection and try again."),
         variant: "destructive",
       });
     }

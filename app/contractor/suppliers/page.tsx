@@ -66,6 +66,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { exportToCSV, exportToPDF } from '@/lib/export';
 
 interface Supplier {
@@ -115,7 +116,7 @@ export default function SuppliersPage() {
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load suppliers. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -161,12 +162,12 @@ export default function SuppliersPage() {
           fetchSuppliers();
         }
       } else {
-        throw new Error('Failed to delete supplier');
+        throw new Error('Unable to delete the supplier. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the supplier. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

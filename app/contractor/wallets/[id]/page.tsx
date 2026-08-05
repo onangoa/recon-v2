@@ -78,6 +78,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
 
 interface Wallet {
@@ -172,11 +173,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const fetchWalletData = async () => {
     try {
       const response = await fetch(`/web/api/wallets/${walletId}`);
-      if (!response.ok) throw new Error('Failed to fetch wallet');
+      if (!response.ok) throw new Error('Unable to load the wallet. Please refresh the page and try again.');
       const data = await response.json();
       setWallet(data);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err, "Unable to load the wallet. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -226,7 +227,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to initiate deposit');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to initiate the wallet deposit. Please verify the details and try again."));
 
       toast({
         title: "STK Push Initiated",
@@ -243,7 +244,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to initiate the wallet deposit. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -287,7 +288,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to initiate payment');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to initiate the wallet payment. Please verify the details and try again."));
 
       toast({
         title: "Payment Initiated",
@@ -305,7 +306,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to initiate the wallet payment. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -339,7 +340,7 @@ const handleBankDeposit = async () => {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to initiate bank top-up');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to initiate the bank top-up. Please verify the details and try again."));
 
       toast({
         title: "Bank Top-up Initiated",
@@ -355,7 +356,7 @@ const handleBankDeposit = async () => {
       fetchTransactions();
       fetchWalletData();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to initiate the bank top-up. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsBankDepositing(false);
     }
@@ -401,7 +402,7 @@ const handleBankDeposit = async () => {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to create bank payout');
+      if (!response.ok) throw new Error(getApiError(data, "Unable to create the bank payout. Please verify the details and try again."));
 
       toast({
         title: "Bank Payout Created",
@@ -418,7 +419,7 @@ const handleBankDeposit = async () => {
       fetchTransactions();
       fetchWalletData();
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to create the bank payout. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsBankPaying(false);
     }

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
 
 export default function SecurityTab() {
@@ -53,13 +54,13 @@ export default function SecurityTab() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Failed to update password');
+        throw new Error(getApiError(errorData, "Unable to update security settings. Please verify the details and try again."));
       }
 
       toast({ title: "Success", description: "Password updated successfully" });
       setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to update security settings. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

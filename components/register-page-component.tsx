@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getErrorMessage } from '@/lib/toast-utils';
 
 interface Plan {
   id: string;
@@ -164,7 +165,7 @@ export function RegisterPageComponent() {
       pollPaymentStatus(data.checkoutRequestId);
     } catch (error: any) {
       console.error('Payment initiation error:', error);
-      toast({ title: "Payment Error", description: error.message, variant: "destructive" });
+      toast({ title: "Payment Error", description: getErrorMessage(error, "Unable to initiate the M-Pesa payment. Please check your details and try again."), variant: "destructive" });
       setIsLoading(false);
     }
   };
@@ -322,7 +323,7 @@ export function RegisterPageComponent() {
         toast({ title: "Payment Pending", description: "Your payment is still being processed. Please check again in a few moments.", variant: "default" });
       }
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to check payment status", variant: "destructive" });
+      toast({ title: "Error", description: getErrorMessage(error, "Unable to check the payment status. Please try again in a few moments."), variant: "destructive" });
     } finally {
       setIsCheckingStatus(false);
     }

@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -127,7 +128,7 @@ export default function PurchaseOrderView() {
       const data = await response.json();
       setOrder(data);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(getErrorMessage(err, "Unable to load the purchase order details. Please refresh the page and try again."));
     } finally {
       setIsLoading(false);
     }
@@ -207,12 +208,12 @@ export default function PurchaseOrderView() {
         fetchOrder();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to record delivery');
+        throw new Error(getApiError(errorData, 'Unable to record the delivery. Please verify the details and try again.'));
       }
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err.message,
+        description: getErrorMessage(err, "Unable to record the delivery. Please check your connection and try again."),
         variant: 'destructive',
       });
     } finally {
@@ -259,12 +260,12 @@ export default function PurchaseOrderView() {
         fetchOrder();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to record stock received');
+        throw new Error(getApiError(errorData, 'Unable to record the stock received. Please verify the details and try again.'));
       }
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err.message,
+        description: getErrorMessage(err, "Unable to record the stock received. Please check your connection and try again."),
         variant: 'destructive',
       });
     } finally {
@@ -288,12 +289,12 @@ export default function PurchaseOrderView() {
         });
         router.push('/contractor/purchase-orders');
       } else {
-        throw new Error('Failed to delete purchase order');
+        throw new Error('Unable to delete the purchase order. Please try again.');
       }
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message,
+        description: getErrorMessage(err, "Unable to delete the purchase order. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
@@ -306,7 +307,7 @@ export default function PurchaseOrderView() {
     setIsDownloading(true);
     try {
       const response = await fetch(`/web/api/purchase-orders/${order.id}/pdf`);
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      if (!response.ok) throw new Error('Unable to download the PDF. Please try again.');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -319,7 +320,7 @@ export default function PurchaseOrderView() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to download PDF",
+        description: getErrorMessage(err, "Unable to download the PDF. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {

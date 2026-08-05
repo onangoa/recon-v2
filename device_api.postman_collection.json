@@ -1,0 +1,217 @@
+{
+	"info": {
+		"name": "FlaskProject Device API",
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"description": "Collection for device-facing APIs.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://192.168.8.12:7788",
+			"type": "string"
+		},
+		{
+			"key": "deviceSn",
+			"value": "AYTI14109277",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "POST /api/sendUserToDevice",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sn\": \"{{deviceSn}}\",\n  \"access_times\": 0,\n  \"admin\": 0,\n  \"birthday\": \"\",\n  \"card\": 0,\n  \"department\": \"\",\n  \"endtime\": \"\",\n  \"enrollid\": 2,\n  \"face\": \"/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAKAAeADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAABAAIAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3iilOe5pDUQgoJRirJaJLZI2Cg0tBpjEooA==\",\n  \"groupid\": 0,\n  \"name\": \"Antony O\",\n  \"password\": \"\",\n  \"pwd\": 0,\n  \"shiftid\": 0,\n  \"starttime\": \"\",\n  \"userprofile\": \"\",\n  \"verifymode\": 0,\n  \"zoneid\": 0\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/sendUserToDevice",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "sendUserToDevice"]
+				},
+				"description": "Sends a `setuserinfo` command to the specified device over websocket, saves the command to machine_command table, and waits for the raw device response.\n\nRequired field: `sn` (device serial number) — the device must be connected.\n\nThe `face` field should contain a **base64-encoded JPEG** image string of the user's face photo. This is the same data stored in the `signatures` column of the `enrollinfo` table where `backupnum = 50`."
+			},
+			"response": [
+				{
+					"name": "Success response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sendUserToDevice",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sendUserToDevice"]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n  \"ret\": \"setuserinfo\",\n  \"enrollid\": 2,\n  \"sn\": \"AYTI14109277\",\n  \"result\": true\n}"
+				},
+				{
+					"name": "Device not connected",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/sendUserToDevice",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "sendUserToDevice"]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n  \"error\": \"Device not connected\"\n}"
+				}
+			]
+		},
+		{
+			"name": "POST /api/getUserList",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"deviceSn\": \"{{deviceSn}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/getUserList",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "getUserList"]
+				},
+				"description": "Sends a `getuserlist` command to the specified device over websocket, saves the command to machine_command table, and waits for the raw device response containing the user list."
+			},
+			"response": [
+				{
+					"name": "Success response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/getUserList",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "getUserList"]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n  \"ret\": \"getuserlist\",\n  \"sn\": \"AYTI14109277\",\n  \"result\": true,\n  \"count\": 2,\n  \"from\": 0,\n  \"to\": 2,\n  \"record\": [\n    {\n      \"enrollid\": 1,\n      \"admin\": \"0\",\n      \"backupnum\": 50\n    },\n    {\n      \"enrollid\": 2,\n      \"admin\": \"0\",\n      \"backupnum\": 50\n    }\n  ]\n}"
+				}
+			]
+		},
+		{
+			"name": "POST /api/getRecords",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"deviceSn\": \"{{deviceSn}}\",\n  \"enrollId\": null,\n  \"pn\": 1,\n  \"pageSize\": 20\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/getRecords",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "getRecords"]
+				},
+				"description": "Returns attendance records from the database.\n\nOptional filters:\n- `deviceSn` — filter by device serial number\n- `enrollId` — filter by enroll ID\n- `pn` — page number (default 1)\n- `pageSize` — records per page (default 20)\n\nResults are ordered by newest first."
+			},
+			"response": [
+				{
+					"name": "Success response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/getRecords",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "getRecords"]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"body": "{\n  \"total\": 100,\n  \"pn\": 1,\n  \"pageSize\": 20,\n  \"records\": [\n    {\n      \"id\": 100,\n      \"enroll_id\": 1,\n      \"records_time\": \"2026-07-31 06:00:00\",\n      \"mode\": 1,\n      \"intOut\": 0,\n      \"event\": 0,\n      \"device_serial_num\": \"AYTI14109277\",\n      \"temperature\": 36.5,\n      \"image\": \"photo.jpg\"\n    }\n  ]\n}"
+				}
+			]
+		}
+	]
+}

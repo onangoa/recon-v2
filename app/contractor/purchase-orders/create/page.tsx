@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 
 interface OrderItem {
@@ -210,12 +211,12 @@ export default function CreatePurchaseOrder() {
         router.push('/contractor/purchase-orders');
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to create purchase order');
+        throw new Error(getApiError(result, 'Unable to create the purchase order. Please verify the details and try again.'));
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: getErrorMessage(error, "Unable to create the purchase order. Please check your connection and try again."),
         variant: "destructive",
       });
     } finally {
