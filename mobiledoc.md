@@ -1,4 +1,4 @@
-# ReconSMI — Mobile API Reference (`/mobile/api`)
+# ReconSMI — Mobile API Reference (`/mobile/api`) opencode -s ses_02f374714ffecNfca4RxgjAPDe
 
 Generated from the route handlers in `app/mobile/api/**`. Use this to update the old mobile app.
 

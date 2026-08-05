@@ -46,10 +46,8 @@ export async function PATCH(
       return mobileError('Name is required', 400);
     }
 
-    // Restrict updates to suppliers owned by this contractor. Shared suppliers
-    // (contractorId = null) are read-only for individual contractors.
     const existing = permCheck.contractorId
-      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      ? await prisma.supplier.findFirst({ where: { id, OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] } })
       : await prisma.supplier.findUnique({ where: { id } });
 
     if (!existing) {
@@ -83,9 +81,8 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Restrict deletes to suppliers owned by this contractor.
     const existing = permCheck.contractorId
-      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      ? await prisma.supplier.findFirst({ where: { id, OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] } })
       : await prisma.supplier.findUnique({ where: { id } });
 
     if (!existing) {

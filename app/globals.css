@@ -160,3 +160,117 @@
 body {
   @apply bg-background text-foreground;
 }
+
+/* Documentation page styles */
+.docs-content {
+  color: var(--foreground);
+  line-height: 1.75;
+}
+.docs-content h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin: 0 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.docs-content h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+  padding-top: 0.5rem;
+}
+.docs-content h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 2rem 0 0.75rem;
+}
+.docs-content h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+.docs-content p {
+  margin: 0 0 1rem;
+}
+.docs-content a {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.docs-content a:hover {
+  opacity: 0.8;
+}
+.docs-content ul,
+.docs-content ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+.docs-content ul {
+  list-style: disc;
+}
+.docs-content ol {
+  list-style: decimal;
+}
+.docs-content li {
+  margin: 0.25rem 0;
+}
+.docs-content blockquote {
+  border-left: 4px solid var(--primary);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background: var(--muted);
+  border-radius: 0.25rem;
+  color: var(--muted-foreground);
+}
+.docs-content blockquote p {
+  margin: 0;
+}
+.docs-content code {
+  background: var(--muted);
+  color: var(--primary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.825em;
+  font-family: ui-monospace, monospace;
+}
+.docs-content pre {
+  background: var(--muted);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0 0 1rem;
+}
+.docs-content pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+}
+.docs-content th {
+  text-align: left;
+  font-weight: 700;
+  padding: 0.625rem 0.75rem;
+  background: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+.docs-content td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.docs-content tr:last-child td {
+  border-bottom: none;
+}
+.docs-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+.docs-content strong {
+  font-weight: 700;
+}
