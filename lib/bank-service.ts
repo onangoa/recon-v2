@@ -577,6 +577,276 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
   }
 };
 
+/**
+ * Handle an incoming bank IPN (Instant Payment Notification).
+ *
+ * The bank notifies us whenever a credit or debit hits the company
+ * account.  This function mirrors the M-Pesa C2B confirmation flow:
+ * it de-duplicates by the bank TransactionId, tries to match an
+ * existing pending transaction (e.g. a bank top-up initiated via
+ * `initiateBankTopup`), and either completes that transaction or
+ * creates a brand-new completed record — always using the same
+ * `Transaction` model that M-Pesa uses.  The wallet balance is
+ * adjusted atomically inside a Prisma transaction.
+ */
+export async function handleBankIPN(ipnData: any) {
+  try {
+    const {
+      AcctNo,
+      Amount,
+      Currency,
+      EventType,
+      Narration,
+      PaymentRef,
+      TransactionId,
+      TransactionDate,
+      PostingDate,
+      ValueDate,
+      BookedBalance,
+      ClearedBalance,
+      CustMemoLine1,
+      CustMemoLine2,
+      CustMemoLine3,
+      ExchangeRate,
+    } = ipnData;
+
+    const eventType = String(EventType || 'CREDIT').toUpperCase();
+    const amount = parseFloat(String(Amount || '0'));
+    const bankTransactionId = String(TransactionId || '').trim();
+
+    if (!bankTransactionId) {
+      return { success: false, error: 'TransactionId missing in IPN payload' };
+    }
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return { success: false, error: 'Invalid or zero amount' };
+    }
+
+    // ----------------------------------------------------------------
+    // 1. De-duplicate – the bank may resend the same IPN multiple times
+    // ----------------------------------------------------------------
+    const existing = await prisma.transaction.findFirst({
+      where: {
+        OR: [
+          { externalId: bankTransactionId },
+          { reference: bankTransactionId },
+          { receiptNumber: bankTransactionId },
+        ],
+      },
+    });
+
+    if (existing) {
+      console.warn(`Bank IPN duplicate transaction ignored: ${bankTransactionId}`);
+      return { success: true, message: 'Duplicate IPN ignored' };
+    }
+
+    // ----------------------------------------------------------------
+    // 2. Parse the reference / channel from the narration & memo lines
+    //    Narration:      "PESALINK~13a6212d6~ANTONY ODO ~560901~0042~100"
+    //    CustMemoLine1:  "PESALINK~13a6212d6~ANTHONY"
+    //    Segment 0 → channel, Segment 1 → reference, rest → sender info
+    // ----------------------------------------------------------------
+    const narrationStr = String(Narration || '');
+    const memo1Str = String(CustMemoLine1 || '');
+    const narrationParts = narrationStr.split('~').map((p) => p.trim()).filter(Boolean);
+    const memo1Parts = memo1Str.split('~').map((p) => p.trim()).filter(Boolean);
+
+    const channel = narrationParts[0] || memo1Parts[0] || '';
+    const parsedReference = narrationParts[1] || memo1Parts[1] || '';
+    const senderName =
+      [memo1Parts[2], ...narrationParts.slice(2)].filter(Boolean).join(' ').trim() || '';
+
+    // ----------------------------------------------------------------
+    // 3. Try to match a pending transaction (e.g. a bank top-up)
+    //    Strategy A: Match by parsed reference from narration
+    //    Strategy B: Match by amount + sender account number (the
+    //                accountReference stored by initiateBankTopup)
+    //                for a recent pending BANK_TOPUP transaction.
+    // ----------------------------------------------------------------
+    let pendingTransaction: any = null;
+
+    // 3a. Strategy A – direct reference match
+    if (parsedReference) {
+      pendingTransaction = await prisma.transaction.findFirst({
+        where: {
+          OR: [
+            { externalId: parsedReference },
+            { reference: parsedReference },
+            { originatorConversationId: parsedReference },
+          ],
+          status: 'pending',
+        },
+        include: { wallet: true },
+      });
+    }
+
+    // 3b. Strategy B – match by amount + sender account for pending top-ups
+    if (pendingTransaction === null) {
+      const senderAccountStr = String(CustMemoLine2 || '').split('~').map((p) => p.trim()).filter(Boolean)[1]
+        || narrationParts[3]
+        || '';
+      const matchAccount = senderAccountStr || String(AcctNo || '');
+
+      if (matchAccount) {
+        pendingTransaction = await prisma.transaction.findFirst({
+          where: {
+            status: 'pending',
+            amount,
+            accountReference: matchAccount,
+          },
+          orderBy: { createdAt: 'desc' },
+          include: { wallet: true },
+        });
+      }
+    }
+
+    const isCredit = eventType === 'CREDIT';
+
+    const ipnMetadata = {
+      bankIPN: true,
+      accountNo: AcctNo,
+      currency: Currency,
+      eventType,
+      channel,
+      parsedReference,
+      senderName,
+      paymentRef: PaymentRef,
+      bankTransactionId,
+      transactionDate: TransactionDate,
+      postingDate: PostingDate,
+      valueDate: ValueDate,
+      bookedBalance: BookedBalance,
+      clearedBalance: ClearedBalance,
+      exchangeRate: ExchangeRate,
+      custMemoLine1: CustMemoLine1,
+      custMemoLine2: CustMemoLine2,
+      custMemoLine3: CustMemoLine3,
+      narration: Narration,
+    };
+
+    // ----------------------------------------------------------------
+    // 4. Complete the matched pending transaction
+    // ----------------------------------------------------------------
+    if (pendingTransaction) {
+      const completedTx = await prisma.$transaction(async (tx) => {
+        const updated = await tx.transaction.update({
+          where: { id: pendingTransaction.id },
+          data: {
+            status: 'completed',
+            receiptNumber: bankTransactionId,
+            externalId: pendingTransaction.externalId || bankTransactionId,
+            rawCallbackData: JSON.stringify(ipnData),
+            callbackReceivedAt: new Date(),
+            resultDesc: `Bank IPN: ${narrationStr}`,
+            metadata: JSON.stringify({ ...ipnMetadata, matchedPendingTransaction: true }),
+          },
+        });
+
+        // Use the transaction's own type to decide increment / decrement
+        // (consistent with handleBankFundsTransferCallback)
+        if (pendingTransaction.type === 'credit') {
+          await tx.wallet.update({
+            where: { id: pendingTransaction.walletId },
+            data: { balance: { increment: pendingTransaction.amount } },
+          });
+        } else {
+          await tx.wallet.update({
+            where: { id: pendingTransaction.walletId },
+            data: { balance: { decrement: pendingTransaction.amount } },
+          });
+        }
+
+        return updated;
+      });
+
+      console.log(
+        `Bank IPN: completed pending transaction ${completedTx.id} ` +
+        `for wallet ${pendingTransaction.walletId} (${eventType} ${amount})`,
+      );
+      return { success: true, transactionId: completedTx.id, status: 'completed', matched: 'pending' };
+    }
+
+    // ----------------------------------------------------------------
+    // 5. No pending transaction – find a wallet and create a new record
+    //    (mirrors the M-Pesa C2B confirmation flow)
+    // ----------------------------------------------------------------
+    let wallet: any = null;
+
+    // a) Match the bank account number to a wallet by name
+    if (AcctNo) {
+      wallet = await prisma.wallet.findFirst({
+        where: {
+          OR: [
+            { name: AcctNo },
+            { name: { contains: AcctNo } },
+          ],
+        },
+      });
+    }
+
+    // b) Fall back to the system "System Fees" wallet or any system wallet
+    if (!wallet) {
+      wallet = await prisma.wallet.findFirst({
+        where: {
+          OR: [
+            { name: 'System Fees', contractorId: null },
+            { contractorId: null },
+          ],
+        },
+      });
+    }
+
+    if (!wallet) {
+      console.warn(`Bank IPN: no wallet found for account ${AcctNo}`);
+      return { success: false, error: 'Wallet not found for incoming bank payment' };
+    }
+
+    const newTransaction = await prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          amount,
+          type: isCredit ? 'credit' : 'debit',
+          status: 'completed',
+          reference: PaymentRef || bankTransactionId,
+          receiptNumber: bankTransactionId,
+          externalId: bankTransactionId,
+          transactionType: 'BANK_IPN',
+          accountReference: AcctNo,
+          transactionDesc: narrationStr || `Bank ${eventType} via ${channel}`,
+          remarks: channel || 'BANK_IPN',
+          rawCallbackData: JSON.stringify(ipnData),
+          callbackReceivedAt: new Date(),
+          metadata: JSON.stringify(ipnMetadata),
+        },
+      });
+
+      if (isCredit) {
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: amount } },
+        });
+      } else {
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { decrement: amount } },
+        });
+      }
+
+      return transaction;
+    });
+
+    console.log(
+      `Bank IPN: created new transaction ${newTransaction.id} ` +
+      `for wallet ${wallet.id} (${eventType} ${amount})`,
+    );
+    return { success: true, transactionId: newTransaction.id, status: 'completed', matched: 'new' };
+  } catch (error: any) {
+    console.error('Bank IPN processing error:', error);
+    throw new Error(error.message || 'Failed to process bank IPN');
+  }
+}
+
 export const BankService = {
   getBankToken,
   validateBankAccount,
@@ -591,4 +861,5 @@ export const BankService = {
   createBankPayout,
   executeBankPayout,
   handleBankFundsTransferCallback,
+  handleBankIPN,
 };
