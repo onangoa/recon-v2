@@ -567,6 +567,7 @@ model License {
   status           String    @default("active")
   fileName         String?
   fileData         String?
+  notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   site             Site?     @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -774,17 +775,19 @@ model SubscriptionPlan {
 }
 
 model Wallet {
-  id           String        @id @default(cuid())
-  name         String
-  description  String?
-  balance      Float         @default(0)
-  currency     String        @default("KES")
-  status       String        @default("active")
-  contractorId String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
-  contractor   Contractor?   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  id                      String        @id @default(cuid())
+  name                    String
+  description             String?
+  balance                 Float         @default(0)
+  currency                String        @default("KES")
+  status                  String        @default("active")
+  supportedPaymentOptions String?       @db.Text
+  dailySpendLimit         Float?
+  contractorId            String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  transactions            Transaction[]
+  contractor              Contractor?   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
 }

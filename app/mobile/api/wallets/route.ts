@@ -83,6 +83,10 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         description: body.description || null,
+        supportedPaymentOptions: Array.isArray(body.supportedPaymentOptions)
+          ? body.supportedPaymentOptions.join(',')
+          : (body.supportedPaymentOptions || null),
+        dailySpendLimit: body.dailySpendLimit != null ? Number(body.dailySpendLimit) : null,
         contractorId: permCheck.contractorId,
       },
     });

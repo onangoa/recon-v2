@@ -62,6 +62,10 @@ export async function PATCH(
       data: {
         name: body.name,
         description: body.description,
+        supportedPaymentOptions: Array.isArray(body.supportedPaymentOptions)
+          ? body.supportedPaymentOptions.join(',')
+          : (body.supportedPaymentOptions || null),
+        dailySpendLimit: body.dailySpendLimit != null ? Number(body.dailySpendLimit) : null,
       },
     });
 
