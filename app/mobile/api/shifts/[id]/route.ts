@@ -7,6 +7,41 @@ import {
   mobileError,
 } from '@/lib/mobile-auth';
 
+function stringifyWorkingDays(value: any): string {
+  if (value == null) return '[]';
+  if (Array.isArray(value)) return JSON.stringify(value);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return '[]';
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return JSON.stringify(parsed);
+      } catch (_) {}
+    }
+    const parts = trimmed.split(',').map((p) => p.trim()).filter(Boolean);
+    return JSON.stringify(parts);
+  }
+  return '[]';
+}
+
+function parseWorkingDays(value: any): any[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_) {}
+    }
+    return trimmed.split(',').map((p) => p.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +62,7 @@ export async function GET(
       return mobileError('Shift not found', 404);
     }
 
-    return mobileSuccess(shift);
+    return mobileSuccess({ ...shift, workingDays: parseWorkingDays(shift.workingDays) });
   } catch (error) {
     console.error('Mobile fetch shift error:', error);
     return mobileError('Failed to fetch shift', 500);
@@ -61,7 +96,7 @@ export async function PUT(
         startTime,
         endTime,
         breakDuration: breakDuration !== undefined ? parseFloat(breakDuration) : undefined,
-        workingDays,
+        workingDays: workingDays !== undefined ? stringifyWorkingDays(workingDays) : undefined,
         allowOvertime,
       }
     });
@@ -73,10 +108,10 @@ export async function PUT(
       module: 'SHIFTS',
       description: `Updated shift: ${shift.name}`,
       targetId: shift.id,
-      details: shift
+      details: { ...shift, workingDays: parseWorkingDays(shift.workingDays) }
     });
 
-    return mobileSuccess(shift, 'Shift updated');
+    return mobileSuccess({ ...shift, workingDays: parseWorkingDays(shift.workingDays) }, 'Shift updated');
   } catch (error) {
     console.error('Mobile update shift error:', error);
     return mobileError('Failed to update shift', 500);

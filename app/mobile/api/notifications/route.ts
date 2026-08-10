@@ -18,7 +18,21 @@ export async function GET(request: NextRequest) {
       take: 20
     });
 
-    return mobileSuccess(notifications);
+    // Map Prisma rows into the shape the mobile client expects
+    // (snake_case keys + a `readAt` timestamp derived from `isRead`).
+    const mapped = notifications.map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      type_id: null,
+      is_read: n.isRead,
+      read_at: n.isRead ? n.createdAt.toISOString() : null,
+      created_at: n.createdAt.toISOString(),
+      link: n.link,
+    }));
+
+    return mobileSuccess(mapped);
   } catch (error) {
     return mobileError('Failed to fetch notifications', 500);
   }

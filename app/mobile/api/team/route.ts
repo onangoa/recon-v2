@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
       return mobileError('Name is required', 400);
     }
 
+    // Validate the assigned site (when provided) BEFORE creating the member
+    // so we don't leave orphan rows when the site is invalid.
+    if (body.siteId) {
+      const site = await prisma.site.findUnique({ where: { id: body.siteId } });
+      if (!site || site.contractorId !== contractorId) {
+        return mobileError('Invalid site', 400);
+      }
+    }
+
     const temporaryPassword = body.password || Math.random().toString(36).slice(-10) + 'A1!';
     const hashedPassword = await hashPassword(temporaryPassword);
 
@@ -137,13 +146,6 @@ export async function POST(request: NextRequest) {
         siteId: body.siteId || null,
       },
     });
-
-    if (body.siteId) {
-      const site = await prisma.site.findUnique({ where: { id: body.siteId }});
-      if (!site || site.contractorId !== contractorId) {
-        return mobileError('Invalid site', 400);
-      }
-    }
 
     await ActivityLogger.log({
       userId: permCheck.userId || 'system',

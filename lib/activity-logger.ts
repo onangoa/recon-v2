@@ -15,7 +15,9 @@ export type ActivityModule =
   | 'DOCUMENTS' 
   | 'SAFETY'
   | 'TEAM'
-  | 'SETTINGS';
+  | 'SETTINGS'
+  | 'SHIFTS'
+  | 'ATTENDANCE';
 
 interface LogActivityOptions {
   userId: string;
