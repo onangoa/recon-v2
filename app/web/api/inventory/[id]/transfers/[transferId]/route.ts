@@ -4,16 +4,16 @@ import { requirePermission } from '@/lib/require-permission';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; transferId: string }> }
 ) {
   const permCheck = await requirePermission(request, 'inventory:update');
   if (!permCheck.authorized) return permCheck.error;
   try {
-    const { id } = await params;
+    const { id, transferId } = await params;
     const body = await request.json();
     
     const transfer = await prisma.stockTransfer.findUnique({
-      where: { id },
+      where: { id: transferId },
       include: {
         inventory: true,
       },
@@ -81,7 +81,7 @@ export async function PATCH(
         }
 
         await tx.stockTransfer.update({
-          where: { id },
+          where: { id: transferId },
           data: {
             status: 'approved',
             approvedBy: body.approvedBy || 'current-user',
@@ -91,7 +91,7 @@ export async function PATCH(
       });
     } else if (body.status === 'rejected') {
       await prisma.stockTransfer.update({
-        where: { id },
+        where: { id: transferId },
         data: {
           status: 'rejected',
           rejectionReason: body.rejectionReason,
@@ -102,7 +102,7 @@ export async function PATCH(
     }
 
     const updatedTransfer = await prisma.stockTransfer.findUnique({
-      where: { id },
+      where: { id: transferId },
       include: {
         fromSite: true,
         toSite: true,

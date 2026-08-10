@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const contractorId = permCheck.contractorId!;
 
+    const contractor = await prisma.contractor.findUnique({
+      where: { id: contractorId },
+      select: { id: true },
+    });
+
     if (!contractor) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
     }
