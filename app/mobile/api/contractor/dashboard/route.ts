@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       safetyIncidents,
       recentActivityLogs,
       attendanceData,
+      absentData,
+      lateData,
       monthlyCredits,
       monthlyDebits,
       poSummary,
@@ -84,6 +86,16 @@ export async function GET(request: NextRequest) {
         _avg: { totalHours: true },
         _count: true,
       }),
+      prisma.attendance.groupBy({
+        by: ['date'],
+        where: { ...contractorFilter, date: { gte: sevenDaysAgo }, status: 'Absent' },
+        _count: true,
+      }),
+      prisma.attendance.groupBy({
+        by: ['date'],
+        where: { ...contractorFilter, date: { gte: sevenDaysAgo }, status: 'Late' },
+        _count: true,
+      }),
       prisma.transaction.aggregate({
         where: { wallet: { contractorId }, type: 'credit', createdAt: { gte: thirtyDaysAgo } },
         _sum: { amount: true },
@@ -109,6 +121,16 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // Build lookup maps for absent and late counts by date string
+    const absentByDate = new Map<string, number>();
+    for (const a of absentData) {
+      absentByDate.set(new Date(a.date).toDateString(), a._count);
+    }
+    const lateByDate = new Map<string, number>();
+    for (const l of lateData) {
+      lateByDate.set(new Date(l.date).toDateString(), l._count);
+    }
+
     return mobileSuccess({
       stats: {
         totalWorkers,
@@ -125,13 +147,21 @@ export async function GET(request: NextRequest) {
         walletBalance: walletBalance._sum.balance || 0,
       },
       recentActivityLogs,
-      attendanceData: attendanceData.map(item => ({
-        date: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }),
-        totalHours: item._sum.totalHours || 0,
-        overtimeHours: item._sum.overtimeHours || 0,
-        avgHours: item._avg.totalHours || 0,
-        workersPresent: item._count,
-      })),
+      attendanceData: attendanceData.map(item => {
+        const dateKey = new Date(item.date).toDateString();
+        const present = item._count;
+        const absent = absentByDate.get(dateKey) || 0;
+        const late = lateByDate.get(dateKey) || 0;
+        return {
+          date: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }),
+          totalHours: item._sum.totalHours || 0,
+          overtimeHours: item._sum.overtimeHours || 0,
+          avgHours: item._avg.totalHours || 0,
+          workersPresent: present - absent,
+          workersAbsent: absent,
+          workersLate: late,
+        };
+      }),
       poSummary: poSummary.map(po => ({
         status: po.status,
         count: po._count,

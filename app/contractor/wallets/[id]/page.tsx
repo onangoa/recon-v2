@@ -80,6 +80,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
+import { KENYAN_BANKS } from '@/lib/bank-codes';
 
 interface Wallet {
   id: string;
@@ -904,14 +905,22 @@ const handleBankDeposit = async () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Destination Bank Code {bankPayoutChannel === 'pesalink' ? '*' : '(Optional)'}</Label>
-                          <Input
-                            type="text"
-                            placeholder="e.g. 11"
+                          <Label>Destination Bank {bankPayoutChannel === 'pesalink' ? '*' : '(Optional)'}</Label>
+                          <Select
                             value={bankPayoutBankCode}
-                            onChange={(e) => setBankPayoutBankCode(e.target.value)}
-                            className="bg-muted/30 border-none h-11"
-                          />
+                            onValueChange={setBankPayoutBankCode}
+                          >
+                            <SelectTrigger className="bg-muted/30 border-none h-11">
+                              <SelectValue placeholder="Select bank" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {KENYAN_BANKS.map((bank) => (
+                                <SelectItem key={bank.code} value={bank.code}>
+                                  {bank.name} ({bank.code})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </>
                     )}
