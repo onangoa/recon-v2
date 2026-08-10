@@ -180,8 +180,8 @@ export default function CsvImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-primary" />
             Import {title}
@@ -189,6 +189,7 @@ export default function CsvImportDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {step === 'upload' && (
           <div className="space-y-6">
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
@@ -240,7 +241,7 @@ export default function CsvImportDialog({
               </div>
             </div>
 
-            <ScrollArea className="max-h-[400px] rounded-md border">
+            <ScrollArea className="h-[350px] rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -291,8 +292,9 @@ export default function CsvImportDialog({
             )}
           </div>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={handleClose}>Cancel</Button>

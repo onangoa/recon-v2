@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revokeAllUserRefreshTokens } from '@/lib/jwt';
+import { revokeAllUserRefreshTokens, verifyAccessToken, verifyRefreshToken } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
-import { verifyAccessToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,9 +36,10 @@ export async function POST(request: NextRequest) {
 
     if (refreshToken) {
       try {
-        await revokeAllUserRefreshTokens(
-          (verifyAccessToken(refreshToken) || {} as any)?.userId || ''
-        );
+        const decoded = verifyRefreshToken(refreshToken);
+        if (decoded?.userId) {
+          await revokeAllUserRefreshTokens(decoded.userId);
+        }
       } catch {}
     }
 

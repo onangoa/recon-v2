@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'inventory:read');
@@ -38,7 +38,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'inventory:update');
@@ -51,10 +51,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    // Restrict updates to categories owned by this contractor. Shared global
-    // categories (contractorId = null) are read-only for individual contractors.
+    // Allow updates to categories owned by this contractor or shared globals.
     const existing = permCheck.contractorId
-      ? await prisma.inventoryCategory.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      ? await prisma.inventoryCategory.findFirst({ where: { id, OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] } })
       : await prisma.inventoryCategory.findUnique({ where: { id } });
 
     if (!existing) {
@@ -85,7 +84,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'inventory:delete');
@@ -93,10 +92,10 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Restrict deletes to categories owned by this contractor.
+    // Allow deletes to categories owned by this contractor or shared globals.
     const owningWhere: any = { id };
     if (permCheck.contractorId) {
-      owningWhere.contractorId = permCheck.contractorId;
+      owningWhere.OR = [{ contractorId: permCheck.contractorId }, { contractorId: null }];
     }
 
     const categoryWithMaterials = await prisma.inventoryCategory.findFirst({

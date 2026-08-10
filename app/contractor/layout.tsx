@@ -71,7 +71,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { activeSite, sites, setActiveSite, isLoading: sitesLoading } = useSite();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, logout } = useAuth();
 
   // Onboarding state: no sites yet and user is on the create page.
   // Show a minimal layout without the sidebar / active-site chrome.
@@ -79,10 +79,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     !sitesLoading && sites.length === 0 && pathname.startsWith('/contractor/sites/create');
 
   const handleLogout = async () => {
-    await fetch('/web/api/auth/logout', { method: 'POST' });
-    localStorage.removeItem('user');
-    localStorage.removeItem('activeSite');
-    router.push('/');
+    await logout();
   };
 
   const displayName = user?.name || 'User';

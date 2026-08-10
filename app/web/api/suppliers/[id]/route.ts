@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'suppliers:read');
@@ -29,7 +29,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'suppliers:update');
@@ -42,10 +42,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    // Restrict updates to suppliers owned by this contractor. Shared global
-    // suppliers (contractorId = null) are read-only for individual contractors.
+    // Allow updates to suppliers owned by this contractor or shared globals.
     const existing = permCheck.contractorId
-      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      ? await prisma.supplier.findFirst({ where: { id, OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] } })
       : await prisma.supplier.findUnique({ where: { id } });
 
     if (!existing) {
@@ -71,7 +70,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const permCheck = await requirePermission(request, 'suppliers:delete');
@@ -79,9 +78,9 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Restrict deletes to suppliers owned by this contractor.
+    // Allow deletes to suppliers owned by this contractor or shared globals.
     const existing = permCheck.contractorId
-      ? await prisma.supplier.findFirst({ where: { id, contractorId: permCheck.contractorId } })
+      ? await prisma.supplier.findFirst({ where: { id, OR: [{ contractorId: permCheck.contractorId }, { contractorId: null }] } })
       : await prisma.supplier.findUnique({ where: { id } });
 
     if (!existing) {

@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isRefreshingRef = useRef(false);
+  const userRef = useRef<User | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const clearAllState = useCallback(() => {
     setUser(null);
@@ -124,11 +129,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('selectedSiteId', refreshData.selectedSiteId);
           }
         } else {
-          clearAllState();
+          if (!userRef.current) {
+            clearAllState();
+          }
         }
       }
     } catch (error) {
       console.error('Failed to refresh session:', error);
+      if (!userRef.current) {
+        clearAllState();
+      }
       const storedUser = localStorage.getItem('user');
       const storedContractor = localStorage.getItem('contractor');
       const storedSites = localStorage.getItem('sites');
@@ -156,14 +166,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshSession();
   }, [refreshSession]);
 
+  const proactiveRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+
+    try {
+      const refreshResponse = await fetch('/web/api/auth/refresh', { method: 'POST' });
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        setUser(refreshData.user);
+        setContractor(refreshData.contractor);
+        setSites(refreshData.sites || []);
+        setSelectedSiteId(refreshData.selectedSiteId || null);
+        setNeedsOnboarding(refreshData.needsOnboarding || false);
+
+        localStorage.setItem('user', JSON.stringify(refreshData.user));
+        if (refreshData.contractor) {
+          localStorage.setItem('contractor', JSON.stringify(refreshData.contractor));
+        } else {
+          localStorage.removeItem('contractor');
+        }
+        localStorage.setItem('sites', JSON.stringify(refreshData.sites || []));
+        if (refreshData.selectedSiteId) {
+          localStorage.setItem('selectedSiteId', refreshData.selectedSiteId);
+        }
+      }
+    } catch (error) {
+      console.error('Proactive refresh failed:', error);
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
     }
     if (user) {
       refreshTimerRef.current = setInterval(() => {
-        refreshSession();
-      }, 14 * 60 * 1000);
+        proactiveRefresh();
+      }, 10 * 60 * 1000);
 
       return () => {
         if (refreshTimerRef.current) {
@@ -171,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       };
     }
-  }, [user, refreshSession]);
+  }, [user, proactiveRefresh]);
 
   useEffect(() => {
     if (isLoading) return;
