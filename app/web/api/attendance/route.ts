@@ -215,6 +215,10 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
       });
     }
 
+    if (!attendance) {
+      return NextResponse.json({ error: 'Attendance record not created' }, { status: 500 });
+    }
+
     await ActivityLogger.log({
       userId: permCheck.userId || 'system',
       contractorId,

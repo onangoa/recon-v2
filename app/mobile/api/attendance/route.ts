@@ -146,6 +146,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (!attendance) {
+      return mobileError('Attendance record not created', 500);
+    }
+
     await ActivityLogger.log({
       userId: permCheck.userId || 'system',
       contractorId,
