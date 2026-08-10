@@ -21,7 +21,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  X
+  X,
+  FileSpreadsheet,
+  FileDown,
+  Fingerprint,
+  Timer,
+  TrendingUp,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -65,6 +70,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { exportToCSV, exportToPDF } from '@/lib/export';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -109,6 +115,7 @@ interface SalarySlip {
   leaveDays: number;
   leaveHours: number;
   status: string;
+  note?: string | null;
   details: SalarySlipDetail[];
 }
 
@@ -145,6 +152,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const limit = 10;
   
   const [viewingSlip, setViewingSlip] = useState<SalarySlip | null>(null);
+  const [showProcessDialog, setShowProcessDialog] = useState(false);
+  const [attendancePreview, setAttendancePreview] = useState<any[] | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const fetchPeriod = async () => {
     setIsLoading(true);
@@ -164,6 +174,37 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
     fetchPeriod();
   }, [id]);
 
+  const fetchAttendancePreview = async () => {
+    setLoadingPreview(true);
+    try {
+      const startDate = new Date(period!.startDate).toISOString().split('T')[0];
+      const endDate = new Date(period!.endDate).toISOString().split('T')[0];
+      const res = await fetch(`/web/api/attendance?startDate=${startDate}&endDate=${endDate}`);
+      if (!res.ok) throw new Error('Failed to fetch attendance');
+      const data = await res.json();
+      const byWorker = new Map<string, { name: string; days: number; hours: number; overtime: number; lateDays: number }>();
+      for (const a of data) {
+        const existing = byWorker.get(a.worker.id) || { name: a.worker.name, days: 0, hours: 0, overtime: 0, lateDays: 0 };
+        if (a.status !== 'Absent' && a.checkIn) existing.days++;
+        existing.hours += a.totalHours || 0;
+        existing.overtime += a.overtimeHours || 0;
+        existing.lateDays += a.lateDays || 0;
+        byWorker.set(a.worker.id, existing);
+      }
+      setAttendancePreview(Array.from(byWorker.values()).sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err: any) {
+      toast({ title: "Error", description: getErrorMessage(err, "Unable to load attendance preview."), variant: "destructive" });
+      setAttendancePreview([]);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleOpenProcessDialog = () => {
+    setShowProcessDialog(true);
+    fetchAttendancePreview();
+  };
+
   const handleProcessPayroll = async () => {
     setIsProcessing(true);
     try {
@@ -175,7 +216,8 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
 
       if (!response.ok) throw new Error('Unable to process the payroll. Please try again.');
       
-      toast({ title: "Success", description: "Payroll calculation completed." });
+      toast({ title: "Success", description: "Payroll calculation completed. Attendance has been linked." });
+      setShowProcessDialog(false);
       fetchPeriod();
     } catch (err: any) {
       toast({ title: "Error", description: getErrorMessage(err, "Unable to process the payroll. Please check your connection and try again."), variant: "destructive" });
@@ -226,6 +268,49 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       style: 'currency',
       currency: 'KES',
     }).format(amount);
+  };
+
+  const handleExportCSV = () => {
+    if (!period || period.salarySlips.length === 0) return;
+    const data = period.salarySlips.map(s => ({
+      'Worker': s.worker.name,
+      'Designation': s.designation?.title || 'N/A',
+      'Days Worked': String(s.daysWorked),
+      'Working Days': String(s.workingDays),
+      'Hours Worked': s.attainedHours.toFixed(1),
+      'Expected Hours': s.workingHours.toFixed(1),
+      'Overtime Hours': s.overtimeHours.toFixed(1),
+      'Overtime Pay': s.overtimePay.toFixed(2),
+      'Late Days': String(s.lateDays),
+      'Late Hours': s.lateHours.toFixed(1),
+      'Basic Salary': s.basicSalary.toFixed(2),
+      'Gross Pay': s.grossPay.toFixed(2),
+      'PAYE Tax': s.payeTax.toFixed(2),
+      'Total Deductions': s.totalDeductions.toFixed(2),
+      'Net Pay': s.netPay.toFixed(2),
+      'Status': s.status || 'draft',
+    }));
+    exportToCSV(data, `payslips-${period.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`);
+    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+  };
+
+  const handleExportPDF = () => {
+    if (!period || period.salarySlips.length === 0) return;
+    const headers = ['Worker', 'Designation', 'Days', 'Hours', 'OT Hrs', 'OT Pay', 'Gross', 'PAYE', 'Net Pay', 'Status'];
+    const rows = period.salarySlips.map(s => [
+      s.worker.name,
+      s.designation?.title || 'N/A',
+      `${s.daysWorked}/${s.workingDays}`,
+      s.attainedHours.toFixed(1),
+      s.overtimeHours.toFixed(1),
+      formatCurrency(s.overtimePay),
+      formatCurrency(s.grossPay),
+      formatCurrency(s.payeTax),
+      formatCurrency(s.netPay),
+      s.status || 'draft',
+    ]);
+    exportToPDF(`Payslips - ${period.name}`, headers, rows, `payslips-${period.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`, { 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' } });
+    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
   };
 
   if (isLoading) {
@@ -290,16 +375,28 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
             <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           {period.status === 'draft' && (
-            <Button onClick={handleProcessPayroll} disabled={isProcessing} className="gap-2">
+            <Button onClick={handleOpenProcessDialog} disabled={isProcessing} className="gap-2">
               {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               Process Payroll
             </Button>
           )}
           {period.status === 'completed' && (
             <>
-              <Button variant="outline" className="gap-2 text-primary border-primary/20">
-                <Download className="w-4 h-4" /> Export CSV
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2" disabled={period.salarySlips.length === 0}>
+                    <Download className="w-4 h-4" /> Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                    <FileSpreadsheet className="w-4 h-4" /> Export CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                    <FileDown className="w-4 h-4" /> Export PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={handleOpenDisburse}>
                 <Send className="w-4 h-4" /> Disburse Payroll
               </Button>
@@ -308,7 +405,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
         <Card className="bg-muted/20 border-none shadow-sm">
           <CardContent className="pt-6">
             <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">Gross Pay</p>
@@ -329,8 +426,41 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
         </Card>
         <Card className="bg-muted/20 border-none shadow-sm">
           <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">Employees</p>
-            <h3 className="text-xl font-bold">{period.totalEmployees} Active</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Fingerprint className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Total Days Worked</p>
+                <h3 className="text-xl font-bold">{period.salarySlips.reduce((acc, s) => acc + s.daysWorked, 0)}</h3>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/20 border-none shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Timer className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Total Hours</p>
+                <h3 className="text-xl font-bold">{period.salarySlips.reduce((acc, s) => acc + s.attainedHours, 0).toFixed(1)}h</h3>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/20 border-none shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Total Overtime</p>
+                <h3 className="text-xl font-bold text-orange-600">{period.salarySlips.reduce((acc, s) => acc + s.overtimeHours, 0).toFixed(1)}h</h3>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -369,6 +499,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                   <TableRow>
                     <TableHead className="font-bold text-xs uppercase tracking-wider">Worker</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider">Designation</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Days</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Hours</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider text-center">OT Hrs</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Gross Pay</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-right text-red-600">PAYE Tax</TableHead>
                     <TableHead className="font-bold text-xs uppercase tracking-wider text-right text-emerald-600">Net Pay</TableHead>
@@ -401,6 +534,25 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                         <Badge variant="outline" className="text-[10px] font-semibold">
                           {slip.designation?.title || 'Worker'}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold text-sm">{slip.daysWorked}</span>
+                          <span className="text-[10px] text-muted-foreground">/ {slip.workingDays || 0}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-mono text-xs font-bold">{slip.attainedHours.toFixed(1)}h</span>
+                        <p className="text-[10px] text-muted-foreground">/ {slip.workingHours.toFixed(1)}h</p>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {slip.overtimeHours > 0 ? (
+                          <Badge className="bg-orange-500/10 text-orange-600 border-none font-bold text-[10px]">
+                            {slip.overtimeHours.toFixed(1)}h
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {formatCurrency(slip.grossPay)}
@@ -582,6 +734,111 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Process Payroll Dialog with Attendance Preview */}
+      <Dialog open={showProcessDialog} onOpenChange={setShowProcessDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="w-5 h-5 text-primary" />
+              Process Payroll
+            </DialogTitle>
+            <DialogDescription>
+              Attendance records from <strong>{new Date(period.startDate).toLocaleDateString()}</strong> to <strong>{new Date(period.endDate).toLocaleDateString()}</strong> will be linked to calculate each worker's pay based on days worked, hours, and overtime.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto min-h-0 py-4">
+            {loadingPreview ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground italic">Loading attendance data...</p>
+              </div>
+            ) : attendancePreview && attendancePreview.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-muted/30 rounded-lg text-center">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Workers with Attendance</p>
+                    <h4 className="text-lg font-bold">{attendancePreview.length}</h4>
+                  </div>
+                  <div className="p-3 bg-muted/30 rounded-lg text-center">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Total Days Worked</p>
+                    <h4 className="text-lg font-bold">{attendancePreview.reduce((a, w) => a + w.days, 0)}</h4>
+                  </div>
+                  <div className="p-3 bg-muted/30 rounded-lg text-center">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Total Overtime</p>
+                    <h4 className="text-lg font-bold text-orange-600">{attendancePreview.reduce((a, w) => a + w.overtime, 0).toFixed(1)}h</h4>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="text-[10px] font-bold uppercase">Worker</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase text-center">Days</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase text-center">Hours</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase text-center">Overtime</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase text-center">Late Days</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendancePreview.slice(0, 10).map((w, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-sm font-medium">{w.name}</TableCell>
+                          <TableCell className="text-center text-sm font-bold">{w.days}</TableCell>
+                          <TableCell className="text-center text-sm font-mono">{w.hours.toFixed(1)}h</TableCell>
+                          <TableCell className="text-center">
+                            {w.overtime > 0 ? (
+                              <Badge className="bg-orange-500/10 text-orange-600 border-none text-[10px] font-bold">
+                                {w.overtime.toFixed(1)}h
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center text-sm">{w.lateDays > 0 ? <span className="text-red-600 font-bold">{w.lateDays}</span> : '0'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {attendancePreview.length > 10 && (
+                  <p className="text-xs text-muted-foreground italic text-center">
+                    Showing 10 of {attendancePreview.length} workers. All will be included in payroll.
+                  </p>
+                )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">How attendance affects pay:</p>
+                    <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                      <li>Basic salary is pro-rated by days worked / expected working days</li>
+                      <li>Overtime is paid at 1x the derived hourly rate</li>
+                      <li>Late hours are deducted as unpaid post-tax deductions</li>
+                      <li>Workers without attendance records will have 0 days worked</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                <Fingerprint className="h-10 w-10 opacity-20" />
+                <p className="text-sm font-medium">No attendance records found for this period.</p>
+                <p className="text-xs italic">Workers will have 0 days worked. Pay will be calculated as 0 basic + allowances.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-shrink-0">
+            <Button variant="outline" onClick={() => setShowProcessDialog(false)}>Cancel</Button>
+            <Button onClick={handleProcessPayroll} disabled={isProcessing} className="gap-2">
+              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {isProcessing ? 'Processing...' : 'Confirm & Process'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
