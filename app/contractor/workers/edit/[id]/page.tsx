@@ -236,6 +236,15 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
   const handleSubmit = async (e: React.FormEvent, enrollDevice = false) => {
     e.preventDefault();
 
+    if (!formData.name.trim() || !formData.designationId || !formData.nationalId.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Name, National ID and Designation are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (formData.enrollId.trim()) {
       const num = Number(formData.enrollId.trim());
       const isOwn = originalEnrollId.trim() !== '' && Number(originalEnrollId) === num;
@@ -382,12 +391,13 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">National ID</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">National ID <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={formData.nationalId}
                   onChange={(e) => setFormData({...formData, nationalId: e.target.value})}
                   disabled={isSubmitting}
+                  required
                   className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
               </div>

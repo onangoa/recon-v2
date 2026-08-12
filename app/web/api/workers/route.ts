@@ -17,18 +17,27 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const designationId = searchParams.get('designationId');
+    const unassigned = searchParams.get('unassigned');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const baseWhere = search ? {
-      OR: [
+    const baseWhere: any = {};
+    if (search) {
+      baseWhere.OR = [
         { name: { contains: search } },
         { email: { contains: search } },
         { phone: { contains: search } },
         { nationalId: { contains: search } },
-      ]
-    } : {};
+      ];
+    }
+    if (designationId) {
+      baseWhere.designationId = designationId;
+    }
+    if (unassigned === '1' || unassigned === 'true') {
+      baseWhere.designationId = null;
+    }
 
     const where = withContractorFilter({ where: baseWhere }, contractor.id).where;
 
@@ -43,6 +52,29 @@ export async function GET(request: NextRequest) {
       prisma.worker.count({ where })
     ]);
 
+    // Aggregated stats across ALL the contractor's workers (independent of search/filter/pagination).
+    const statsWhere = { contractorId: contractor.id };
+    const [byDesigGroup, totalActiveCount] = await Promise.all([
+      prisma.worker.groupBy({
+        by: ['designationId'],
+        where: statsWhere,
+        _count: { _all: true },
+      }),
+      prisma.worker.count({ where: { ...statsWhere, status: 'Active' } }),
+    ]);
+    const desigIds = byDesigGroup.map((g) => g.designationId).filter((d): d is string => d !== null);
+    const desigs = desigIds.length
+      ? await prisma.designation.findMany({ where: { id: { in: desigIds } }, select: { id: true, title: true } })
+      : [];
+    const titleMap = new Map(desigs.map((d) => [d.id, d.title]));
+    const byDesignation = byDesigGroup
+      .map((g) => ({
+        designationId: g.designationId,
+        title: g.designationId ? (titleMap.get(g.designationId) || 'Unknown') : 'Unassigned',
+        count: g._count._all,
+      }))
+      .sort((a, b) => b.count - a.count);
+
     return NextResponse.json({
       workers,
       pagination: {
@@ -50,7 +82,11 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit),
         page,
         limit
-      }
+      },
+      stats: {
+        totalActive: totalActiveCount,
+        byDesignation,
+      },
     });
   } catch (error) {
     console.error('Failed to fetch workers:', error);

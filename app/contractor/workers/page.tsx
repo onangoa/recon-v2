@@ -14,6 +14,7 @@ import {
   HardHat,
   MoreVertical,
   Filter,
+  X,
   BadgeCheck,
   Clock,
   Loader2,
@@ -121,6 +122,17 @@ interface DeviceConfig {
   online?: boolean;
 }
 
+interface DesignationOption {
+  id: string;
+  title: string;
+}
+
+interface ByDesignationStat {
+  designationId: string | null;
+  title: string;
+  count: number;
+}
+
 export default function WorkersPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -134,6 +146,12 @@ export default function WorkersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const limit = 10;
+
+  // ---- Filter & stats ----
+  const [designations, setDesignations] = useState<DesignationOption[]>([]);
+  const [filterDesignationId, setFilterDesignationId] = useState<string>('');
+  const [byDesignation, setByDesignation] = useState<ByDesignationStat[]>([]);
+  const [totalActive, setTotalActive] = useState(0);
 
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -155,7 +173,9 @@ export default function WorkersPage() {
     setError(null);
     try {
       let url = `/web/api/workers?page=${currentPage}&limit=${limit}`;
-      if (searchQuery) url += `&search=${searchQuery}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+      if (filterDesignationId === 'unassigned') url += `&unassigned=1`;
+      else if (filterDesignationId) url += `&designationId=${filterDesignationId}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch workers');
@@ -163,12 +183,31 @@ export default function WorkersPage() {
       setWorkers(data.workers);
       setTotalPages(data.pagination.pages);
       setTotalCount(data.pagination.total);
+      if (data.stats) {
+        setTotalActive(data.stats.totalActive ?? 0);
+        setByDesignation(Array.isArray(data.stats.byDesignation) ? data.stats.byDesignation : []);
+      }
     } catch (err: any) {
       setError(getErrorMessage(err, 'Unable to load workers. Please refresh the page and try again.'));
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Fetch designations for the filter dropdown (one-time).
+  useEffect(() => {
+    const fetchDesignations = async () => {
+      try {
+        const res = await fetch('/web/api/designations?limit=1000');
+        if (!res.ok) return;
+        const data = await res.json();
+        setDesignations(Array.isArray(data.designations) ? data.designations.map((d: any) => ({ id: d.id, title: d.title })) : []);
+      } catch {
+        /* silent */
+      }
+    };
+    fetchDesignations();
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -178,6 +217,11 @@ export default function WorkersPage() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (currentPage !== 1) setCurrentPage(1);
+    else fetchWorkers();
+  }, [filterDesignationId]);
 
   useEffect(() => {
     fetchWorkers();
@@ -397,7 +441,7 @@ export default function WorkersPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Active</p>
-                <h3 className="text-2xl font-bold">{workers.filter(w => w.status === 'Active').length}</h3>
+                <h3 className="text-2xl font-bold">{totalActive}</h3>
               </div>
             </div>
           </CardContent>
@@ -410,26 +454,87 @@ export default function WorkersPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">On-Site Today</p>
-                <h3 className="text-2xl font-bold">{workers.filter(w => w.status === 'Active').length}</h3>
+                <h3 className="text-2xl font-bold">{totalActive}</h3>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Workers per category (across all workers, not just the current page) */}
+      {byDesignation.length > 0 && (
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-primary" />
+              Workers per Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {byDesignation.map((d) => {
+                const active = filterDesignationId === (d.designationId || 'unassigned');
+                return (
+                  <button
+                    key={d.designationId || 'unassigned'}
+                    type="button"
+                    onClick={() => setFilterDesignationId(active ? '' : (d.designationId || 'unassigned'))}
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${active ? 'bg-primary text-white border-primary' : 'bg-muted/40 text-foreground border-gray-200 hover:bg-muted/70'}`}
+                  >
+                    {d.title}
+                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+                      {d.count}
+                    </Badge>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-none shadow-md overflow-hidden">
         <CardHeader className="pb-3 border-b bg-muted/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search workers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
-              />
+            <div className="flex flex-1 gap-3">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search workers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <select
+                  value={filterDesignationId}
+                  onChange={(e) => setFilterDesignationId(e.target.value)}
+                  disabled={isLoading}
+                  className="h-10 pl-10 pr-8 rounded-md bg-background border-none text-sm shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 appearance-none"
+                >
+                  <option value="">All categories</option>
+                  <option value="unassigned">Unassigned</option>
+                  {designations.map((d) => (
+                    <option key={d.id} value={d.id}>{d.title}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2">
+              {(filterDesignationId || searchQuery) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setFilterDesignationId(''); setSearchQuery(''); }}
+                  disabled={isLoading}
+                  className="gap-1 text-muted-foreground"
+                >
+                  <X className="w-4 h-4" />
+                  Clear filters
+                </Button>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -440,6 +545,13 @@ export default function WorkersPage() {
               </Button>
             </div>
           </div>
+          {filterDesignationId && (
+            <p className="text-xs text-muted-foreground italic mt-2">
+              Filtered by: <span className="font-bold text-foreground">
+                {filterDesignationId === 'unassigned' ? 'Unassigned' : (designations.find((d) => d.id === filterDesignationId)?.title || 'category')}
+              </span>
+            </p>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
