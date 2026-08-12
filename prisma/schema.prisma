@@ -140,6 +140,7 @@ model Worker {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   enrollId              String?         @unique
+  idDocumentUrl         String?
   attendances           Attendance[]
   payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")
   salarySlips           SalarySlip[]
@@ -502,6 +503,7 @@ model Equipment {
   status       String    @default("Active")
   lastService  DateTime?
   nextService  DateTime?
+  image        String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   site         Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)

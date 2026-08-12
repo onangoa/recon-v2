@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  Eye,
   Activity,
   Wrench,
   AlertCircle,
@@ -326,6 +327,14 @@ export default function EquipmentPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onClick={() => {
+                              router.push(`/contractor/equipment/${equip.id}`);
+                            }}
+                          >
+                            <Eye className="size-4" /> View
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
                             onClick={() => {

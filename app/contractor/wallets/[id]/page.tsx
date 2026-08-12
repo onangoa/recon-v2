@@ -926,12 +926,18 @@ const handleBankDeposit = async () => {
                     )}
 
                     <div className="space-y-2">
-                      <Label>Description / Remarks</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Description / Remarks</Label>
+                        <span className={`text-xs font-mono ${bankPayoutMemo.length >= 15 ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+                          {bankPayoutMemo.length}/15
+                        </span>
+                      </div>
                       <Textarea
-                        placeholder="Payment reason..."
+                        placeholder="Max 15 characters..."
                         value={bankPayoutMemo}
-                        onChange={(e) => setBankPayoutMemo(e.target.value)}
+                        onChange={(e) => setBankPayoutMemo(e.target.value.slice(0, 15))}
                         className="bg-muted/30 border-none"
+                        maxLength={15}
                       />
                     </div>
                   </div>

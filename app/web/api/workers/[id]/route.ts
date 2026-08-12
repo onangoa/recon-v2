@@ -97,6 +97,7 @@ export async function PUT(
         paymentAccount: body.paymentAccount !== undefined ? body.paymentAccount : undefined,
         status: body.status,
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
+        idDocumentUrl: body.idDocumentUrl !== undefined ? (body.idDocumentUrl || null) : undefined,
       },
       include: {
         designation: true,

@@ -100,6 +100,7 @@ export async function POST(request: Request) {
         lastService: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : null,
         nextService: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
         projectId: body.projectId || null,
+        image: body.image || null,
       },
     });
 

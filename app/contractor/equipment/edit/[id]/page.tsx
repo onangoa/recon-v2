@@ -9,7 +9,8 @@ import {
   X, 
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -42,7 +43,41 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
     nextMaintenanceDate: '',
     status: '',
     notes: '',
+    image: '',
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      setImageFile(selected);
+      setFormData((prev) => ({ ...prev, image: '' }));
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || formData.image) return formData.image || null;
+    setIsUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', imageFile);
+      const response = await fetch('/web/api/upload', { method: 'POST', body: fd });
+      if (!response.ok) throw new Error('Unable to upload the image. Please try again.');
+      const data = await response.json();
+      setFormData((prev) => ({ ...prev, image: data.url }));
+      return data.url;
+    } catch (error: any) {
+      toast({
+        title: "Upload Error",
+        description: getErrorMessage(error, "Unable to upload the image. Please try again."),
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     params.then(({ id: paramId }) => {
@@ -70,6 +105,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
           nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate).toISOString().split('T')[0] : '',
           status: data.status || '',
           notes: data.notes || '',
+          image: data.image || '',
         });
       } catch (error: any) {
         toast({
@@ -110,6 +146,19 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
     setIsSubmitting(true);
 
     try {
+      let imageUrl: string | null = formData.image || null;
+      if (imageFile && !imageUrl) {
+        imageUrl = await uploadImage();
+        if (!imageUrl) {
+          toast({
+            title: "Upload Error",
+            description: "The image could not be uploaded. Please try again or remove it.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const response = await fetch(`/web/api/equipment/${id}`, {
         method: 'PATCH',
         headers: {
@@ -117,6 +166,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
         },
         body: JSON.stringify({
           ...formData,
+          image: imageUrl,
           type: formData.machineType,
           serialNo: formData.serialNumber,
         }),
@@ -323,6 +373,55 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
+            </div>
+          </div>
+
+          {/* Equipment Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Equipment Image</label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={isUploading || isSubmitting}
+                  className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary/10 file:text-primary file:font-medium hover:file:bg-primary/20"
+                />
+                {isUploading && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </div>
+                )}
+              </div>
+              {imageFile && !formData.image && !isUploading && (
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                  <Upload className="w-3 h-3" />
+                  Image will be uploaded when you save.
+                </p>
+              )}
+              {formData.image && (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-muted/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={formData.image} alt="Equipment preview" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Image ready!</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setFormData((prev) => ({ ...prev, image: '' })); setImageFile(null); }}
+                      className="text-destructive hover:bg-destructive/10 h-7 px-2"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

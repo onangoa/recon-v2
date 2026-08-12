@@ -26,7 +26,8 @@ import {
   CreditCard,
   Briefcase,
   Fingerprint,
-  ScanLine
+  ScanLine,
+  Eye
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -542,6 +543,9 @@ export default function WorkersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/contractor/workers/${worker.id}`)}>
+                            <Eye className="w-4 h-4 mr-2" /> View
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/contractor/workers/edit/${worker.id}`)}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>

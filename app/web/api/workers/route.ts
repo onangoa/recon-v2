@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
         contractorId: contractorId,
         status: body.status || 'Active',
         joinedAt: body.joinedAt ? new Date(body.joinedAt) : undefined,
+        idDocumentUrl: body.idDocumentUrl || null,
       },
       include: {
         designation: true,

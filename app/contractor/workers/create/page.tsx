@@ -9,7 +9,9 @@ import {
   UserPlus,
   CheckCircle2,
   ScanLine,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  CreditCard
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -51,6 +53,8 @@ export default function CreateWorkerPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isUploadingId, setIsUploadingId] = useState(false);
+  const [idDocFile, setIdDocFile] = useState<File | null>(null);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [takenEnrollIds, setTakenEnrollIds] = useState<number[]>([]);
@@ -73,7 +77,8 @@ export default function CreateWorkerPage() {
     paymentMode: 'manual',
     paymentPhone: '',
     paymentAccount: '',
-    joinedAt: new Date().toISOString().split('T')[0]
+    joinedAt: new Date().toISOString().split('T')[0],
+    idDocumentUrl: '',
   });
 
   useEffect(() => {
@@ -166,6 +171,37 @@ export default function CreateWorkerPage() {
     }
   }, [formData.enrollId, takenEnrollIds, deviceEnrollIds]);
 
+  const handleIdDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      setIdDocFile(selected);
+      setFormData((prev) => ({ ...prev, idDocumentUrl: '' }));
+    }
+  };
+
+  const uploadIdDoc = async (): Promise<string | null> => {
+    if (!idDocFile || formData.idDocumentUrl) return formData.idDocumentUrl || null;
+    setIsUploadingId(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', idDocFile);
+      const response = await fetch('/web/api/upload', { method: 'POST', body: fd });
+      if (!response.ok) throw new Error('Unable to upload the ID document. Please try again.');
+      const data = await response.json();
+      setFormData((prev) => ({ ...prev, idDocumentUrl: data.url }));
+      return data.url;
+    } catch (error: any) {
+      toast({
+        title: "Upload Error",
+        description: getErrorMessage(error, "Unable to upload the ID document. Please try again."),
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploadingId(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent, enrollDevice = false) => {
     e.preventDefault();
     
@@ -213,11 +249,25 @@ export default function CreateWorkerPage() {
 
     setIsSubmitting(true);
     try {
+      let idDocUrl: string | null = formData.idDocumentUrl || null;
+      if (idDocFile && !idDocUrl) {
+        idDocUrl = await uploadIdDoc();
+        if (!idDocUrl) {
+          toast({
+            title: "Upload Error",
+            description: "The ID document could not be uploaded. Please try again or remove it.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const response = await fetch('/web/api/workers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          idDocumentUrl: idDocUrl,
           contractorId: 'placeholder-id',
         }),
       });
@@ -508,6 +558,61 @@ export default function CreateWorkerPage() {
                     disabled={isSubmitting}
                     className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                   />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Worker ID Document */}
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-primary" /> Worker ID Document
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleIdDocChange}
+                  disabled={isUploadingId || isSubmitting}
+                  className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary/10 file:text-primary file:font-medium hover:file:bg-primary/20"
+                />
+                {isUploadingId && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </div>
+                )}
+              </div>
+              {idDocFile && !formData.idDocumentUrl && !isUploadingId && (
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                  <Upload className="w-3 h-3" />
+                  Document will be uploaded when you save.
+                </p>
+              )}
+              {formData.idDocumentUrl && (
+                <div className="flex items-center gap-3">
+                  <a href={formData.idDocumentUrl} target="_blank" rel="noopener noreferrer" className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-muted/30 block">
+                    {formData.idDocumentUrl.match(/\.(pdf)$/i) ? (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-destructive">PDF</div>
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={formData.idDocumentUrl} alt="ID preview" className="w-full h-full object-cover" />
+                    )}
+                  </a>
+                  <div className="flex items-center gap-2 text-sm text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>ID document uploaded!</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setFormData((prev) => ({ ...prev, idDocumentUrl: '' })); setIdDocFile(null); }}
+                      className="text-destructive hover:bg-destructive/10 h-7 px-2"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
