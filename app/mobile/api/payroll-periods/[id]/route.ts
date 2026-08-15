@@ -163,7 +163,7 @@ export async function PUT(
                 leaveHours: agg.leaveHours,
               },
           rate: {
-            paymentFrequency: simpleMode ? 'daily' : (period.paymentFrequency || 'monthly'),
+            paymentFrequency: 'daily',
             hoursPerDay,
             daysInPeriod,
             expectedDaysInPeriod: expectedDays,
