@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { shiftNetHours, countExpectedDays, aggregateAttendance } from '@/lib/attendance-utils';
+import { syncBiometricToDatabase } from '@/lib/biometric-attendance';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export async function GET(
   request: NextRequest,
@@ -100,6 +102,19 @@ export async function PUT(
         where: { contractorId: period.contractorId, isActive: true }
       });
 
+      // 3a. Sync biometric attendance records to the database so the
+      // payroll query below can find them. The attendance page reads
+      // live from the biometric device API, but payroll reads from the
+      // DB — without this sync the DB can be empty even though the
+      // attendance page shows data.
+      await syncBiometricToDatabase(period.contractorId, period.startDate, period.endDate);
+
+      // Normalise period dates to local start/end of day to avoid
+      // timezone edge cases where attendance stored at local midnight
+      // falls outside a period boundary stored at UTC midnight.
+      const periodStart = startOfDay(period.startDate);
+      const periodEnd = endOfDay(period.endDate);
+
       let totalGross = 0;
       let totalNet = 0;
       let totalDeductions = 0;
@@ -113,7 +128,7 @@ export async function PUT(
         const attendanceRecords = await prisma.attendance.findMany({
           where: {
             workerId: worker.id,
-            date: { gte: period.startDate, lte: period.endDate },
+            date: { gte: periodStart, lte: periodEnd },
           },
         });
 

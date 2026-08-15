@@ -1,6 +1,8 @@
-import { startOfDay, differenceInMinutes } from 'date-fns';
+import { startOfDay, endOfDay, differenceInMinutes, isWithinInterval } from 'date-fns';
 import { computeWorkedHours, ShiftShape } from './attendance-utils';
+import { getRecords } from './biometric-service';
 import type { BiometricRecord } from './biometric-service';
+import { prisma } from './prisma';
 
 /**
  * Pure transformation that turns raw biometric scan records (from the
@@ -211,4 +213,124 @@ function buildSession(records: BiometricRecord[], shift: ShiftShape | null): Bui
     notes: notes.join(' | '),
     logs,
   };
+}
+
+/**
+ * Pull attendance records from all active biometric devices for a contractor
+ * and persist them to the Attendance table so downstream processes (payroll)
+ * can query the database instead of the live device API.
+ *
+ * This mirrors the GET /web/api/attendance "biometric API source" flow but
+ * writes the transformed records to the database, closing the gap between
+ * what the attendance page shows (live from device) and what payroll reads
+ * (from the database).
+ */
+export async function syncBiometricToDatabase(
+  contractorId: string,
+  from?: Date,
+  to?: Date,
+): Promise<{ synced: number; devices: number }> {
+  if (!process.env.BIOMETRIC_API_BASE_URL) {
+    return { synced: 0, devices: 0 };
+  }
+
+  const devices = await prisma.biometricDevice.findMany({
+    where: { contractorId, isActive: true },
+    select: { sn: true, name: true },
+  });
+
+  if (devices.length === 0) {
+    return { synced: 0, devices: 0 };
+  }
+
+  const workers = await prisma.worker.findMany({
+    where: { contractorId },
+    select: {
+      id: true,
+      name: true,
+      enrollId: true,
+      shiftId: true,
+      designation: { select: { title: true } },
+      shift: true,
+    },
+  });
+
+  const workerShiftId = new Map(workers.map((w) => [w.id, w.shiftId]));
+
+  const pageSize = 500;
+  const collected: BiometricRecord[] = [];
+
+  for (const device of devices) {
+    let pn = 1;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const page = await getRecords(device.sn, { pn, pageSize });
+        if (!page.records || page.records.length === 0) break;
+        collected.push(...page.records);
+        if (page.records.length < pageSize || collected.length >= page.total) break;
+        pn++;
+      } catch (err) {
+        console.error(`Failed to fetch records from device ${device.sn}:`, err);
+        break;
+      }
+    }
+  }
+
+  const workersForTransform: WorkerForTransform[] = workers.map((w) => ({
+    id: w.id,
+    name: w.name,
+    enrollId: w.enrollId,
+    designation: w.designation,
+    shift: (w.shift as unknown as ShiftShape) || null,
+  }));
+
+  let views = transformRecordsToAttendance(collected, workersForTransform);
+
+  if (from && to) {
+    const lo = startOfDay(from);
+    const hi = endOfDay(to);
+    views = views.filter((v) => isWithinInterval(new Date(v.date), { start: lo, end: hi }));
+  }
+
+  let synced = 0;
+  for (const v of views) {
+    const date = new Date(v.date);
+    const checkIn = v.checkIn ? new Date(v.checkIn) : null;
+    const checkOut = v.checkOut ? new Date(v.checkOut) : null;
+
+    try {
+      await prisma.attendance.upsert({
+        where: { workerId_date: { workerId: v.worker.id, date } },
+        create: {
+          contractorId,
+          workerId: v.worker.id,
+          shiftId: workerShiftId.get(v.worker.id) || null,
+          date,
+          checkIn,
+          checkOut,
+          totalHours: v.totalHours,
+          overtimeHours: v.overtimeHours,
+          lateHours: v.lateHours,
+          lateDays: v.lateDays,
+          status: v.status,
+          notes: v.notes,
+        },
+        update: {
+          checkIn,
+          checkOut,
+          totalHours: v.totalHours,
+          overtimeHours: v.overtimeHours,
+          lateHours: v.lateHours,
+          lateDays: v.lateDays,
+          status: v.status,
+          notes: v.notes,
+        },
+      });
+      synced++;
+    } catch (err) {
+      console.error(`Failed to sync attendance for worker ${v.worker.id}:`, err);
+    }
+  }
+
+  return { synced, devices: devices.length };
 }

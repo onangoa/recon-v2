@@ -7,6 +7,8 @@ import {
   mobileError,
 } from '@/lib/mobile-auth';
 import { shiftNetHours, countExpectedDays, aggregateAttendance } from '@/lib/attendance-utils';
+import { syncBiometricToDatabase } from '@/lib/biometric-attendance';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export async function GET(
   request: NextRequest,
@@ -99,6 +101,11 @@ export async function PUT(
         where: { contractorId: period.contractorId, isActive: true }
       });
 
+      await syncBiometricToDatabase(period.contractorId, period.startDate, period.endDate);
+
+      const periodStart = startOfDay(period.startDate);
+      const periodEnd = endOfDay(period.endDate);
+
       let totalGross = 0;
       let totalNet = 0;
       let totalDeductions = 0;
@@ -109,7 +116,7 @@ export async function PUT(
         const attendanceRecords = await prisma.attendance.findMany({
           where: {
             workerId: worker.id,
-            date: { gte: period.startDate, lte: period.endDate },
+            date: { gte: periodStart, lte: periodEnd },
           },
         });
 
