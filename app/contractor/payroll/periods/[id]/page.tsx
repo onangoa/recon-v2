@@ -69,6 +69,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { exportToCSV, exportToPDF } from '@/lib/export';
 import { useRouter } from 'next/navigation';
@@ -153,6 +154,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   
   const [viewingSlip, setViewingSlip] = useState<SalarySlip | null>(null);
   const [showProcessDialog, setShowProcessDialog] = useState(false);
+  const [simpleMode, setSimpleMode] = useState(false);
   const [attendancePreview, setAttendancePreview] = useState<any[] | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -211,7 +213,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       const response = await fetch(`/web/api/payroll-periods/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'processing' }),
+        body: JSON.stringify({ status: 'processing', simpleMode }),
       });
 
       if (!response.ok) throw new Error('Unable to process the payroll. Please try again.');
@@ -830,6 +832,22 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                 <p className="text-xs italic">Workers will have 0 days worked. Pay will be calculated as 0 basic + allowances.</p>
               </div>
             )}
+          </div>
+
+          <div className="flex-shrink-0 border-t pt-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={simpleMode}
+                onCheckedChange={(checked) => setSimpleMode(checked === true)}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-bold">Simple Mode (Salary &times; Working Days)</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Ignores attendance, hours, overtime, and late penalties. Each worker is paid their daily rate multiplied by the expected working days in the period.
+                </p>
+              </div>
+            </label>
           </div>
 
           <DialogFooter className="flex-shrink-0">

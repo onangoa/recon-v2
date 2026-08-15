@@ -68,7 +68,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, ...otherData } = body;
+    const { status, simpleMode, ...otherData } = body;
 
     // Check if we are starting processing
     if (status === 'processing') {
@@ -145,23 +145,37 @@ export async function PUT(
         );
         const expectedHours = expectedDays * hoursPerDay;
 
-        // Calculate
+        // In simple mode: pay salary * working days, ignore attendance,
+        // overtime, late penalties, and hours.
         const calc = PayrollCalculator.calculate({
           basicSalary: worker.designation.salary || 0,
           components: components as unknown as SalaryComponentData[],
           includePersonalRelief: true,
-          attendance: {
-            overtimeHours: agg.overtimeHours,
-            lateHours: agg.lateHours,
-            lateDays: agg.lateDays,
-            daysWorked: agg.daysWorked,
-            workingDays: expectedDays,
-            attainedDays: agg.daysWorked,
-            workingHours: expectedHours,
-            attainedHours: agg.attainedHours,
-            leaveDays: agg.leaveDays,
-            leaveHours: agg.leaveHours,
-          },
+          attendance: simpleMode
+            ? {
+                overtimeHours: 0,
+                lateHours: 0,
+                lateDays: 0,
+                daysWorked: expectedDays,
+                workingDays: expectedDays,
+                attainedDays: expectedDays,
+                workingHours: expectedHours,
+                attainedHours: expectedHours,
+                leaveDays: 0,
+                leaveHours: 0,
+              }
+            : {
+                overtimeHours: agg.overtimeHours,
+                lateHours: agg.lateHours,
+                lateDays: agg.lateDays,
+                daysWorked: agg.daysWorked,
+                workingDays: expectedDays,
+                attainedDays: agg.daysWorked,
+                workingHours: expectedHours,
+                attainedHours: agg.attainedHours,
+                leaveDays: agg.leaveDays,
+                leaveHours: agg.leaveHours,
+              },
           rate: {
             paymentFrequency: period.paymentFrequency || 'monthly',
             hoursPerDay,
@@ -171,6 +185,12 @@ export async function PUT(
         });
 
         // Upsert Salary Slip (prevent duplicates for same period/worker)
+        const slipDaysWorked = simpleMode ? expectedDays : agg.daysWorked;
+        const slipOvertimeHours = simpleMode ? 0 : agg.overtimeHours;
+        const slipLateDays = simpleMode ? 0 : agg.lateDays;
+        const slipLateHours = simpleMode ? 0 : agg.lateHours;
+        const slipAttainedHours = simpleMode ? expectedHours : agg.attainedHours;
+
         await prisma.salarySlip.upsert({
           where: {
             // We need a unique constraint in schema for this to work perfectly,
@@ -181,15 +201,15 @@ export async function PUT(
           },
           update: {
             basicSalary: calc.payableBasic,
-            overtimeHours: agg.overtimeHours,
+            overtimeHours: slipOvertimeHours,
             overtimePay: calc.overtimePay,
-            daysWorked: agg.daysWorked,
+            daysWorked: slipDaysWorked,
             workingDays: expectedDays,
-            attainedDays: agg.daysWorked,
+            attainedDays: slipDaysWorked,
             workingHours: expectedHours,
-            attainedHours: agg.attainedHours,
-            lateDays: agg.lateDays,
-            lateHours: agg.lateHours,
+            attainedHours: slipAttainedHours,
+            lateDays: slipLateDays,
+            lateHours: slipLateHours,
             leaveDays: agg.leaveDays,
             leaveHours: agg.leaveHours,
             totalAllowance: calc.totalAllowance,
@@ -216,15 +236,15 @@ export async function PUT(
             workerId: worker.id,
             designationId: worker.designationId,
             basicSalary: calc.payableBasic,
-            overtimeHours: agg.overtimeHours,
+            overtimeHours: slipOvertimeHours,
             overtimePay: calc.overtimePay,
-            daysWorked: agg.daysWorked,
+            daysWorked: slipDaysWorked,
             workingDays: expectedDays,
-            attainedDays: agg.daysWorked,
+            attainedDays: slipDaysWorked,
             workingHours: expectedHours,
-            attainedHours: agg.attainedHours,
-            lateDays: agg.lateDays,
-            lateHours: agg.lateHours,
+            attainedHours: slipAttainedHours,
+            lateDays: slipLateDays,
+            lateHours: slipLateHours,
             leaveDays: agg.leaveDays,
             leaveHours: agg.leaveHours,
             totalAllowance: calc.totalAllowance,
