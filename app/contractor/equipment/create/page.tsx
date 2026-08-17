@@ -47,6 +47,7 @@ export default function CreateMachinePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [customMachineType, setCustomMachineType] = useState('');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -100,7 +101,7 @@ export default function CreateMachinePage() {
       return;
     }
 
-    if (!formData.machineType.trim()) {
+    if (!formData.machineType.trim() && !customMachineType.trim()) {
       toast({
         title: "Validation Error", 
         description: "Machine type is required.",
@@ -132,6 +133,7 @@ export default function CreateMachinePage() {
         },
         body: JSON.stringify({
           ...formData,
+          machineType: formData.machineType === '__other__' ? customMachineType.trim() : formData.machineType,
           image: imageUrl,
           siteId: activeSite.id,
         }),
@@ -234,7 +236,19 @@ export default function CreateMachinePage() {
                 <option value="mixer">Mixer</option>
                 <option value="dozer">Dozer</option>
                 <option value="generator">Generator</option>
+                <option value="general">General</option>
+                <option value="__other__">Other (specify)</option>
               </select>
+              {formData.machineType === '__other__' && (
+                <input
+                  type="text"
+                  value={customMachineType}
+                  onChange={(e) => setCustomMachineType(e.target.value)}
+                  placeholder="Enter machine type"
+                  disabled={isSubmitting}
+                  className="w-full mt-2 rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+              )}
             </div>
           </div>
 

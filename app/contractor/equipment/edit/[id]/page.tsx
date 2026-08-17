@@ -47,6 +47,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
   });
   const [isUploading, setIsUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [customMachineType, setCustomMachineType] = useState('');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -93,9 +94,12 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
         const response = await fetch(`/web/api/equipment/${id}`);
         if (!response.ok) throw new Error('Failed to fetch equipment');
         const data = await response.json();
+        const knownTypes = ['excavator', 'crane', 'mixer', 'dozer', 'generator', 'general'];
+        const existingType = data.type || '';
+        const isKnownType = knownTypes.includes(existingType.toLowerCase()) && existingType !== '';
         setFormData({
           name: data.name || '',
-          machineType: data.type || '',
+          machineType: isKnownType ? existingType : '__other__',
           model: data.model || '',
           serialNumber: data.serialNo || '',
           condition: data.condition || '',
@@ -107,6 +111,9 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
           notes: data.notes || '',
           image: data.image || '',
         });
+        if (!isKnownType) {
+          setCustomMachineType(existingType);
+        }
       } catch (error: any) {
         toast({
           title: "Error",
@@ -134,7 +141,7 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
       return;
     }
 
-    if (!formData.machineType) {
+    if (!formData.machineType || (formData.machineType === '__other__' && !customMachineType.trim())) {
       toast({
         title: "Validation Error",
         description: "Machine type is required.",
@@ -166,8 +173,9 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
         },
         body: JSON.stringify({
           ...formData,
+          machineType: formData.machineType === '__other__' ? customMachineType.trim() : formData.machineType,
           image: imageUrl,
-          type: formData.machineType,
+          type: formData.machineType === '__other__' ? customMachineType.trim() : formData.machineType,
           serialNo: formData.serialNumber,
         }),
       });
@@ -268,7 +276,18 @@ export default function EditEquipmentPage({ params }: { params: Promise<{ id: st
                 <option value="dozer">Dozer</option>
                 <option value="generator">Generator</option>
                 <option value="general">General</option>
+                <option value="__other__">Other (specify)</option>
               </select>
+              {formData.machineType === '__other__' && (
+                <input
+                  type="text"
+                  value={customMachineType}
+                  onChange={(e) => setCustomMachineType(e.target.value)}
+                  placeholder="Enter machine type"
+                  disabled={isSubmitting}
+                  className="w-full mt-2 rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+              )}
             </div>
           </div>
 

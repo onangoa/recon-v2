@@ -214,7 +214,7 @@ export default function AttendancePage() {
   const filterLabel = useMemo(() => {
     if (filterMode === 'today') return `Today · ${format(new Date(), 'PPP')}`;
     if (filterMode === 'range' && dateRange?.from) {
-      if (dateRange.to) {
+      if (dateRange.to && format(dateRange.to, 'yyyy-MM-dd') !== format(dateRange.from, 'yyyy-MM-dd')) {
         return `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d, yyyy')}`;
       }
       return format(dateRange.from, 'PPP');
@@ -295,7 +295,7 @@ export default function AttendancePage() {
                       <Filter className="size-4" /> Date Range
                       {filterMode === 'range' && dateRange?.from && (
                         <span className="text-xs ml-1 hidden sm:inline">
-                          {dateRange.to
+                          {dateRange.to && format(dateRange.to, 'yyyy-MM-dd') !== format(dateRange.from, 'yyyy-MM-dd')
                             ? `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d')}`
                             : format(dateRange.from, 'MMM d')}
                         </span>
