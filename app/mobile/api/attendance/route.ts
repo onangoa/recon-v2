@@ -75,8 +75,8 @@ export async function GET(request: NextRequest) {
             return d >= lo && d <= hi;
           });
         } else if (startDate && endDate) {
-          const lo = new Date(startDate);
-          const hi = new Date(endDate);
+          const lo = startOfDay(new Date(startDate));
+          const hi = endOfDay(new Date(endDate));
           attendances = attendances.filter((a) => isWithinInterval(new Date(a.date), { start: lo, end: hi }));
         }
 
@@ -95,8 +95,8 @@ export async function GET(request: NextRequest) {
       };
     } else if (startDate && endDate) {
       where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate)
+        gte: startOfDay(new Date(startDate)),
+        lte: endOfDay(new Date(endDate))
       };
     }
 

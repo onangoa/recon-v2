@@ -83,6 +83,16 @@ interface SendNotificationOptions {
   html?: string;
 }
 
+interface SendToContractorOptions {
+  contractorId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  link?: string;
+  html?: string;
+  excludeUserId?: string;
+}
+
 export class NotificationService {
   /**
    * Sends a notification to a user, respecting their preferences.
@@ -135,6 +145,49 @@ export class NotificationService {
       return { success: true };
     } catch (error) {
       console.error('Notification Service Error:', error);
+      return { success: false, error };
+    }
+  }
+
+  /**
+   * Sends a notification to every user under a contractor
+   * (the contractor owner plus all active team members with a user account).
+   * Optionally excludes a specific user (e.g. the person who performed the action).
+   */
+  static async sendToContractor(options: SendToContractorOptions) {
+    const { contractorId, excludeUserId, ...sendOptions } = options;
+
+    try {
+      const contractor = await prisma.contractor.findUnique({
+        where: { id: contractorId },
+        select: { userId: true },
+      });
+
+      const teamMembers = await prisma.teamMember.findMany({
+        where: {
+          contractorId,
+          status: 'Active',
+          userId: { not: null },
+        },
+        select: { userId: true },
+      });
+
+      const userIds = new Set<string>();
+      if (contractor?.userId) userIds.add(contractor.userId);
+      for (const m of teamMembers) {
+        if (m.userId) userIds.add(m.userId);
+      }
+      if (excludeUserId) userIds.delete(excludeUserId);
+
+      await Promise.all(
+        Array.from(userIds).map((userId) =>
+          this.send({ ...sendOptions, userId, contractorId })
+        )
+      );
+
+      return { success: true, recipientCount: userIds.size };
+    } catch (error) {
+      console.error('Notification Service Error (sendToContractor):', error);
       return { success: false, error };
     }
   }

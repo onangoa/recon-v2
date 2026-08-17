@@ -136,21 +136,14 @@ export async function POST(request: NextRequest) {
         details: { orderNumber: purchaseOrder.orderNumber, total: purchaseOrder.total, status: purchaseOrder.status }
       });
 
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-        select: { userId: true },
+      await NotificationService.sendToContractor({
+        contractorId,
+        title: 'Purchase Order Placed',
+        message: `PO ${purchaseOrder.orderNumber} has been placed with ${purchaseOrder.supplier?.name || 'supplier'} for ${purchaseOrder.site.name}.`,
+        type: 'orders',
+        link: `/contractor/purchase-orders/${purchaseOrder.id}`,
+        excludeUserId: permCheck.userId,
       });
-
-      if (contractor?.userId) {
-        await NotificationService.send({
-          userId: contractor.userId,
-          contractorId,
-          title: 'Purchase Order Placed',
-          message: `PO ${purchaseOrder.orderNumber} has been placed with ${purchaseOrder.supplier?.name || 'supplier'} for ${purchaseOrder.site.name}.`,
-          type: 'orders',
-          link: `/contractor/purchase-orders/${purchaseOrder.id}`,
-        });
-      }
     }
 
     return mobileSuccess(purchaseOrder, 'Purchase order created');

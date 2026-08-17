@@ -153,6 +153,9 @@ export default function AttendancePage() {
 
   useEffect(() => {
     if (activeSite?.contractorId) {
+      if (filterMode === 'range' && !dateRange?.from) {
+        return;
+      }
       fetchAttendance();
     }
   }, [activeSite, filterMode, dateRange]);

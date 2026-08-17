@@ -142,21 +142,14 @@ export async function POST(
     });
 
     if (result.updatedPO.status === 'delivered') {
-      const contractor = await prisma.contractor.findUnique({
-        where: { id: contractorId },
-        select: { userId: true },
+      await NotificationService.sendToContractor({
+        contractorId,
+        title: 'Purchase Order Delivered',
+        message: `PO ${result.updatedPO.orderNumber} from ${result.updatedPO.supplier?.name || 'supplier'} has been delivered. All items have been received.`,
+        type: 'orders',
+        link: `/contractor/purchase-orders/${result.updatedPO.id}`,
+        excludeUserId: permCheck.userId,
       });
-
-      if (contractor?.userId) {
-        await NotificationService.send({
-          userId: contractor.userId,
-          contractorId,
-          title: 'Purchase Order Delivered',
-          message: `PO ${result.updatedPO.orderNumber} from ${result.updatedPO.supplier?.name || 'supplier'} has been delivered. All items have been received.`,
-          type: 'orders',
-          link: `/contractor/purchase-orders/${result.updatedPO.id}`,
-        });
-      }
     }
 
     return NextResponse.json(result.updatedPO);
