@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3010'}/reset-password?token=${resetToken}`;
+    const baseUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3010').replace(/\/$/, '');
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
     // Try to send email, but don't fail the request if email is not configured
     try {

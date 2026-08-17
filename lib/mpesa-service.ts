@@ -611,7 +611,7 @@ const processSubscription = async (
 // Send welcome email to new user
 const sendWelcomeEmail = async (user: any, password: string, contractor: any, mpesaNumber: string) => {
   try {
-    const loginUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3010'}/login`;
+    const loginUrl = `${(process.env.NEXTAUTH_URL || 'http://localhost:3010').replace(/\/$/, '')}/login`;
 
     const emailResult = await EmailService.send({
       to: user.email,
