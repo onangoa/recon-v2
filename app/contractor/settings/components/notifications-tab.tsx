@@ -93,6 +93,7 @@ export default function NotificationsTab() {
     { key: 'inventory', label: 'Inventory & Stock', desc: 'Alerts for low stock levels and material deliveries.' },
     { key: 'team', label: 'Team Management', desc: 'Updates on team member status and role changes.' },
     { key: 'license', label: 'License Expiry Alerts', desc: 'Reminders for licenses that are about to expire or have expired.' },
+    { key: 'orders', label: 'Purchase Orders', desc: 'Alerts when purchase orders are placed and delivered.' },
   ];
 
   return (

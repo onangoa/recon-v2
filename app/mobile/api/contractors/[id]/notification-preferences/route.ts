@@ -18,7 +18,7 @@ export async function GET(
       where: { contractorId: id },
     });
 
-    const defaultTypes = ['payroll', 'safety', 'inventory', 'team', 'license'];
+    const defaultTypes = ['payroll', 'safety', 'inventory', 'team', 'license', 'orders'];
     const mergedPreferences = defaultTypes.map(type => {
       const existing = preferences.find(p => p.type === type);
       return existing || { type, emailEnabled: true, pushEnabled: true };

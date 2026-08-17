@@ -71,7 +71,7 @@ export class EmailService {
   }
 }
 
-export type NotificationType = 'payroll' | 'safety' | 'inventory' | 'team' | 'license' | 'system';
+export type NotificationType = 'payroll' | 'safety' | 'inventory' | 'team' | 'license' | 'orders' | 'system';
 
 interface SendNotificationOptions {
   userId: string;

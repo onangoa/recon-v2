@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { NotificationService } from '@/lib/notification-service';
 import { requirePermission } from '@/lib/require-permission';
 import { verifyContractorAccess } from '@/lib/contractor-isolation';
 
@@ -139,6 +140,24 @@ export async function POST(
         updatedItems: result.updatedItemIds.length,
       },
     });
+
+    if (result.updatedPO.status === 'delivered') {
+      const contractor = await prisma.contractor.findUnique({
+        where: { id: contractorId },
+        select: { userId: true },
+      });
+
+      if (contractor?.userId) {
+        await NotificationService.send({
+          userId: contractor.userId,
+          contractorId,
+          title: 'Purchase Order Delivered',
+          message: `PO ${result.updatedPO.orderNumber} from ${result.updatedPO.supplier?.name || 'supplier'} has been delivered. All items have been received.`,
+          type: 'orders',
+          link: `/contractor/purchase-orders/${result.updatedPO.id}`,
+        });
+      }
+    }
 
     return NextResponse.json(result.updatedPO);
   } catch (error: any) {

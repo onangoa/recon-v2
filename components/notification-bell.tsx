@@ -10,6 +10,7 @@ import {
   Coins, 
   Package, 
   UserPlus,
+  ShoppingCart,
   Trash2,
   ExternalLink,
   Loader2
@@ -105,6 +106,7 @@ export default function NotificationBell() {
       case 'safety': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'inventory': return <Package className="w-4 h-4 text-amber-500" />;
       case 'team': return <UserPlus className="w-4 h-4 text-blue-500" />;
+      case 'orders': return <ShoppingCart className="w-4 h-4 text-indigo-500" />;
       default: return <Bell className="w-4 h-4 text-primary" />;
     }
   };

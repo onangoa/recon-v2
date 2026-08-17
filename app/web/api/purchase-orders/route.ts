@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { NotificationService } from '@/lib/notification-service';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { verifySiteOwnership } from '@/lib/contractor-isolation';
 
@@ -131,6 +132,22 @@ export async function POST(request: Request) {
         targetId: purchaseOrder.id,
         details: { orderNumber: purchaseOrder.orderNumber, total: purchaseOrder.total, status: purchaseOrder.status }
       });
+
+      const contractor = await prisma.contractor.findUnique({
+        where: { id: contractorId },
+        select: { userId: true },
+      });
+
+      if (contractor?.userId) {
+        await NotificationService.send({
+          userId: contractor.userId,
+          contractorId,
+          title: 'Purchase Order Placed',
+          message: `PO ${purchaseOrder.orderNumber} has been placed with ${purchaseOrder.supplier?.name || 'supplier'} for ${purchaseOrder.site.name}.`,
+          type: 'orders',
+          link: `/contractor/purchase-orders/${purchaseOrder.id}`,
+        });
+      }
     }
 
     return NextResponse.json(purchaseOrder);

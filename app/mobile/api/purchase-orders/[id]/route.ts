@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { NotificationService } from '@/lib/notification-service';
 import {
   mobileRequirePermission,
   mobileSuccess,
@@ -171,6 +172,24 @@ export async function PATCH(
         targetId: result.id,
         details: { orderNumber: result.orderNumber, status: result.status, total: result.total }
       });
+
+      if (existingPO.status !== 'delivered' && result.status === 'delivered') {
+        const contractor = await prisma.contractor.findUnique({
+          where: { id: contractorId },
+          select: { userId: true },
+        });
+
+        if (contractor?.userId) {
+          await NotificationService.send({
+            userId: contractor.userId,
+            contractorId,
+            title: 'Purchase Order Delivered',
+            message: `PO ${result.orderNumber} from ${result.supplier?.name || 'supplier'} has been delivered. All items have been received.`,
+            type: 'orders',
+            link: `/contractor/purchase-orders/${result.id}`,
+          });
+        }
+      }
     }
 
     return mobileSuccess(result, 'Purchase order updated');
