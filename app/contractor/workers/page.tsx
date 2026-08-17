@@ -28,7 +28,9 @@ import {
   Briefcase,
   Fingerprint,
   ScanLine,
-  Eye
+  Eye,
+  Calendar,
+  BarChart3,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -81,6 +83,13 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
@@ -133,6 +142,22 @@ interface ByDesignationStat {
   count: number;
 }
 
+interface WorkerStats {
+  totalWorkers: number;
+  activeInPeriod: number;
+  onSiteToday: number;
+  byDesignation: ByDesignationStat[];
+  currentPeriod: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+  byDesignationForDate: ByDesignationStat[] | null;
+}
+
+type CategoryViewMode = 'total' | 'calendar';
+
 export default function WorkersPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -152,6 +177,14 @@ export default function WorkersPage() {
   const [filterDesignationId, setFilterDesignationId] = useState<string>('');
   const [byDesignation, setByDesignation] = useState<ByDesignationStat[]>([]);
   const [totalActive, setTotalActive] = useState(0);
+
+  // ---- Attendance-based stats ----
+  const [stats, setStats] = useState<WorkerStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [categoryViewMode, setCategoryViewMode] = useState<CategoryViewMode>('total');
+  const [selectedCategoryDate, setSelectedCategoryDate] = useState<Date | undefined>();
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [byDesignationForDate, setByDesignationForDate] = useState<ByDesignationStat[]>([]);
 
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -208,6 +241,37 @@ export default function WorkersPage() {
     };
     fetchDesignations();
   }, []);
+
+  const fetchStats = async (date?: Date) => {
+    try {
+      setStatsLoading(true);
+      let url = '/web/api/workers/stats';
+      if (date) {
+        url += `?date=${format(date, 'yyyy-MM-dd')}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data: WorkerStats = await res.json();
+      setStats(data);
+      if (data.byDesignationForDate) {
+        setByDesignationForDate(data.byDesignationForDate);
+      }
+    } catch {
+      /* silent */
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    if (categoryViewMode === 'calendar' && selectedCategoryDate) {
+      fetchStats(selectedCategoryDate);
+    }
+  }, [categoryViewMode, selectedCategoryDate]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -441,7 +505,7 @@ export default function WorkersPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Active</p>
-                <h3 className="text-2xl font-bold">{totalActive}</h3>
+                <h3 className="text-2xl font-bold">{stats?.activeInPeriod ?? '—'}</h3>
               </div>
             </div>
           </CardContent>
@@ -454,41 +518,134 @@ export default function WorkersPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">On-Site Today</p>
-                <h3 className="text-2xl font-bold">{totalActive}</h3>
+                <h3 className="text-2xl font-bold">{stats?.onSiteToday ?? '—'}</h3>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Workers per category (across all workers, not just the current page) */}
+      {/* Workers per category — toggle between total and calendar (date-specific) views */}
       {byDesignation.length > 0 && (
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-primary" />
-              Workers per Category
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-primary" />
+                Workers per Category
+              </CardTitle>
+              <div className="flex items-center gap-1">
+                <Popover open={categoryPickerOpen} onOpenChange={setCategoryPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={categoryViewMode === 'calendar' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => setCategoryViewMode('calendar')}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-xs">Calendar</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedCategoryDate}
+                      onSelect={(date) => {
+                        setSelectedCategoryDate(date);
+                        if (date) setCategoryPickerOpen(false);
+                      }}
+                      disabled={(date) => {
+                        if (!stats?.currentPeriod) return false;
+                        const periodStart = startOfDay(new Date(stats.currentPeriod.startDate));
+                        const periodEnd = endOfDay(new Date(stats.currentPeriod.endDate));
+                        return date < periodStart || date > periodEnd || date > new Date();
+                      }}
+                      numberOfMonths={1}
+                    />
+                    {selectedCategoryDate && (
+                      <div className="flex items-center justify-between p-3 border-t">
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {format(selectedCategoryDate, 'PPP')}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => { setSelectedCategoryDate(undefined); }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  variant={categoryViewMode === 'total' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={() => { setCategoryViewMode('total'); setSelectedCategoryDate(undefined); }}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="text-xs">Total</span>
+                </Button>
+              </div>
+            </div>
+            {categoryViewMode === 'calendar' && (
+              <p className="text-xs text-muted-foreground italic mt-1">
+                {selectedCategoryDate
+                  ? <>Showing on-site counts for <span className="font-bold text-foreground">{format(selectedCategoryDate, 'PPP')}</span></>
+                  : 'Pick a date within the payroll period to see on-site breakdown per category.'}
+                {stats?.currentPeriod && (
+                  <> · Period: <span className="font-medium">{stats.currentPeriod.name} ({format(new Date(stats.currentPeriod.startDate), 'MMM d')} – {format(new Date(stats.currentPeriod.endDate), 'MMM d')})</span></>
+                )}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {byDesignation.map((d) => {
-                const active = filterDesignationId === (d.designationId || 'unassigned');
-                return (
-                  <button
-                    key={d.designationId || 'unassigned'}
-                    type="button"
-                    onClick={() => setFilterDesignationId(active ? '' : (d.designationId || 'unassigned'))}
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${active ? 'bg-primary text-white border-primary' : 'bg-muted/40 text-foreground border-gray-200 hover:bg-muted/70'}`}
-                  >
-                    {d.title}
-                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
-                      {d.count}
-                    </Badge>
-                  </button>
-                );
-              })}
-            </div>
+            {categoryViewMode === 'calendar' && selectedCategoryDate ? (
+              statsLoading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">Loading…</span>
+                </div>
+              ) : byDesignationForDate.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {byDesignationForDate.map((d) => (
+                    <div
+                      key={d.designationId || 'unassigned'}
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold border bg-muted/40 border-gray-200"
+                    >
+                      {d.title}
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600">
+                        {d.count}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No workers were on-site on this date.</p>
+              )
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {byDesignation.map((d) => {
+                  const active = filterDesignationId === (d.designationId || 'unassigned');
+                  return (
+                    <button
+                      key={d.designationId || 'unassigned'}
+                      type="button"
+                      onClick={() => setFilterDesignationId(active ? '' : (d.designationId || 'unassigned'))}
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold border transition-colors ${active ? 'bg-primary text-white border-primary' : 'bg-muted/40 text-foreground border-gray-200 hover:bg-muted/70'}`}
+                    >
+                      {d.title}
+                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+                        {d.count}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
