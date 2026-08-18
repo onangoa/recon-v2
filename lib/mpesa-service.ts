@@ -433,11 +433,32 @@ const processRegistration = async (formData: any, transactionId: string) => {
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
+      include: { contractor: true, roleRelation: true },
     });
 
     if (existingUser) {
       console.log(`User with email ${email} already exists, skipping registration`);
-      
+
+      // Repair: if the user exists but has no role assigned (created before the fix),
+      // create the Contractor Admin role and link it.
+      if (existingUser.contractor && !existingUser.roleRelation) {
+        console.log(`Repairing missing role for existing user: ${email}`);
+        const allPermissions = await prisma.permission.findMany({ select: { id: true } });
+        const adminRole = await prisma.role.create({
+          data: {
+            name: 'Contractor Admin',
+            description: 'Full access to contractor dashboard',
+            scope: 'contractor',
+            contractorId: existingUser.contractor.id,
+            permissions: { connect: allPermissions.map((p) => ({ id: p.id })) },
+          },
+        });
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { roleId: adminRole.id },
+        });
+      }
+
       // Update transaction to show registration was skipped
       await updateTransaction(transactionId, {
         metadata: JSON.stringify({
@@ -446,12 +467,15 @@ const processRegistration = async (formData: any, transactionId: string) => {
           formData: formData
         })
       });
-      
+
       return;
     }
 
     // Hash the password before storing
     const hashedPassword = await hashPassword(password);
+
+    // Fetch all permissions to grant the new contractor owner full access
+    const allPermissions = await prisma.permission.findMany({ select: { id: true } });
 
     // Create User and Contractor in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -483,6 +507,27 @@ const processRegistration = async (formData: any, transactionId: string) => {
           currency: 'KES',
           contractorId: contractor.id,
         }
+      });
+
+      // Grant the new owner full access within their own contractor account
+      // by creating a "Contractor Admin" role scoped to this contractor and
+      // attaching it to the user. Without this, requirePermission() denies
+      // every action (including sites:create during onboarding).
+      const adminRole = await tx.role.create({
+        data: {
+          name: 'Contractor Admin',
+          description: 'Full access to contractor dashboard',
+          scope: 'contractor',
+          contractorId: contractor.id,
+          permissions: {
+            connect: allPermissions.map((p) => ({ id: p.id })),
+          },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { roleId: adminRole.id },
       });
 
       return { user, contractor };
