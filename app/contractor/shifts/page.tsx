@@ -247,7 +247,7 @@ export default function ShiftsPage() {
           <Button className="gap-2" onClick={handleOpenCreate}>
             <Plus className="size-4" /> Create Shift
           </Button>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>{editingShift ? 'Edit Shift' : 'Create New Shift'}</DialogTitle>
@@ -326,34 +326,32 @@ export default function ShiftsPage() {
 
                 {formData.allowOvertime && (
                   <div className="ml-6 space-y-3 p-3 bg-muted/30 rounded-lg border border-muted">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-1.5">
-                        <label htmlFor="overtimeThreshold" className="text-xs font-medium text-muted-foreground">
-                          Overtime starts after (minutes past end time)
-                        </label>
-                        <Input 
-                          id="overtimeThreshold" 
-                          type="number" 
-                          min={0}
-                          value={formData.overtimeThresholdMinutes}
-                          onChange={e => setFormData({...formData, overtimeThresholdMinutes: parseInt(e.target.value) || 0})}
-                        />
-                        <p className="text-[10px] text-muted-foreground italic">e.g. 60 = overtime starts 1 hour after shift end. 0 = immediate.</p>
-                      </div>
-                      <div className="grid gap-1.5">
-                        <label htmlFor="overtimeRateType" className="text-xs font-medium text-muted-foreground">
-                          Payment rate type
-                        </label>
-                        <select
-                          id="overtimeRateType"
-                          value={formData.overtimeRateType}
-                          onChange={e => setFormData({...formData, overtimeRateType: e.target.value})}
-                          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        >
-                          <option value="hourly">Hourly multiplier (× hourly rate)</option>
-                          <option value="fixed">Fixed amount (KES per hour)</option>
-                        </select>
-                      </div>
+                    <div className="grid gap-1.5">
+                      <label htmlFor="overtimeThreshold" className="text-xs font-medium text-muted-foreground">
+                        Overtime starts after (minutes past end time)
+                      </label>
+                      <Input 
+                        id="overtimeThreshold" 
+                        type="number" 
+                        min={0}
+                        value={formData.overtimeThresholdMinutes}
+                        onChange={e => setFormData({...formData, overtimeThresholdMinutes: parseInt(e.target.value) || 0})}
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">e.g. 60 = overtime starts 1 hour after shift end. 0 = immediate.</p>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <label htmlFor="overtimeRateType" className="text-xs font-medium text-muted-foreground">
+                        Payment rate type
+                      </label>
+                      <select
+                        id="overtimeRateType"
+                        value={formData.overtimeRateType}
+                        onChange={e => setFormData({...formData, overtimeRateType: e.target.value})}
+                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="hourly">Hourly multiplier (× hourly rate)</option>
+                        <option value="fixed">Fixed amount (KES per hour)</option>
+                      </select>
                     </div>
                     <div className="grid gap-1.5">
                       <label htmlFor="overtimeRateAmount" className="text-xs font-medium text-muted-foreground">
