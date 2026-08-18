@@ -818,7 +818,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                     <p className="font-bold">How attendance affects pay:</p>
                     <ul className="mt-1 space-y-0.5 list-disc list-inside">
                       <li>Basic salary is pro-rated by days worked / expected working days</li>
-                      <li>Overtime is paid at 1x the derived hourly rate</li>
+                      <li>Overtime is paid according to each shift's configured rate</li>
                       <li>Late hours are deducted as unpaid post-tax deductions</li>
                       <li>Workers without attendance records will have 0 days worked</li>
                     </ul>

@@ -10,13 +10,12 @@ export interface ShiftShape {
   allowOvertime: boolean;
   /** Free-form working days, e.g. "Mon,Tue,Wed,Thu,Fri". Null/empty = every day. */
   workingDays?: string | null;
-}
-
-export interface ShiftShape {
-  startTime: string;   // "HH:mm"
-  endTime: string;     // "HH:mm"
-  breakDuration: number; // minutes
-  allowOvertime: boolean;
+  /** Minutes past end time before overtime kicks in (0 = immediate). */
+  overtimeThresholdMinutes?: number;
+  /** How overtime pay is calculated: "hourly" (multiplied by hourly rate) or "fixed" (flat amount per hour). */
+  overtimeRateType?: string;
+  /** The amount used for overtime pay. For "hourly" this is a multiplier (e.g. 1.5). For "fixed" this is KES per hour. */
+  overtimeRateAmount?: number;
 }
 
 export interface WorkedHours {
@@ -43,7 +42,9 @@ export interface WorkedHours {
  *  - `totalHours` = (checkOut - checkIn) in hours (breaks already absorbed
  *    because the worker was off the clock; only the *outer* session is used).
  *  - `expectedHours` = (shift end - shift start, overnight-wrapped) - break.
- *  - `overtimeHours` = max(0, totalHours - expectedHours) when shift.allowOvertime.
+ *  - `overtimeHours` = max(0, totalHours - expectedHours - overtimeThreshold)
+ *    when shift.allowOvertime. The threshold (in hours) is the grace period
+ *    past end time before overtime starts counting.
  *  - `lateMinutes` = minutes checkIn occurs after shift start (0 if on time,
  *    or if no shift / no checkIn).
  */
@@ -73,9 +74,10 @@ export function computeWorkedHours(
   const shiftNetMinutes = Math.max(0, shiftMinutes - shift.breakDuration);
   const expectedHours = shiftNetMinutes / 60;
 
+  const overtimeThresholdHours = (shift.overtimeThresholdMinutes || 0) / 60;
   const overtimeHours =
-    shift.allowOvertime && totalHours > expectedHours
-      ? totalHours - expectedHours
+    shift.allowOvertime && totalHours > expectedHours + overtimeThresholdHours
+      ? totalHours - expectedHours - overtimeThresholdHours
       : 0;
 
   // Lateness: compare the check-in time-of-day to the shift start.

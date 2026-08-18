@@ -154,19 +154,22 @@ model Worker {
 }
 
 model Shift {
-  id            String       @id @default(cuid())
-  contractorId  String
-  name          String
-  startTime     String
-  endTime       String
-  breakDuration Float        @default(0)
-  workingDays   String
-  allowOvertime Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  attendances   Attendance[]
-  contractor    Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
-  workers       Worker[]
+  id                     String       @id @default(cuid())
+  contractorId           String
+  name                   String
+  startTime              String
+  endTime                String
+  breakDuration          Float        @default(0)
+  workingDays            String
+  allowOvertime          Boolean      @default(true)
+  overtimeThresholdMinutes Float      @default(0)
+  overtimeRateType       String       @default("hourly")
+  overtimeRateAmount     Float        @default(0)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  attendances            Attendance[]
+  contractor             Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  workers                Worker[]
 
   @@index([contractorId])
 }

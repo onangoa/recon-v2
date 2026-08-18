@@ -40,7 +40,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, startTime, endTime, breakDuration, workingDays, allowOvertime } = body;
+    const { name, startTime, endTime, breakDuration, workingDays, allowOvertime, overtimeThresholdMinutes, overtimeRateType, overtimeRateAmount } = body;
 
     const existing = await prisma.shift.findFirst({
       where: { id, contractorId },
@@ -59,6 +59,9 @@ export async function PUT(
         breakDuration: breakDuration !== undefined ? parseFloat(breakDuration) : undefined,
         workingDays,
         allowOvertime,
+        overtimeThresholdMinutes: overtimeThresholdMinutes != null ? parseFloat(overtimeThresholdMinutes) : undefined,
+        overtimeRateType,
+        overtimeRateAmount: overtimeRateAmount != null ? parseFloat(overtimeRateAmount) : undefined,
       }
     });
 

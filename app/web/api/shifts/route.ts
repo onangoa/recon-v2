@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   try {
     const contractorId = permCheck.contractorId!;
     const body = await request.json();
-    const { name, startTime, endTime, breakDuration, workingDays, allowOvertime } = body;
+    const { name, startTime, endTime, breakDuration, workingDays, allowOvertime, overtimeThresholdMinutes, overtimeRateType, overtimeRateAmount } = body;
 
     if (!name || !startTime || !endTime || !workingDays) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
         breakDuration: parseFloat(breakDuration) || 0,
         workingDays,
         allowOvertime: allowOvertime ?? true,
+        overtimeThresholdMinutes: overtimeThresholdMinutes != null ? parseFloat(overtimeThresholdMinutes) : 0,
+        overtimeRateType: overtimeRateType || 'hourly',
+        overtimeRateAmount: overtimeRateAmount != null ? parseFloat(overtimeRateAmount) : 0,
       }
     });
 

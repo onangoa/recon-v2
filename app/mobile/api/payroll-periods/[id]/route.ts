@@ -168,6 +168,12 @@ export async function PUT(
             daysInPeriod,
             expectedDaysInPeriod: expectedDays,
           },
+          overtimeConfig: worker.shift
+            ? {
+                rateType: worker.shift.overtimeRateType,
+                rateAmount: worker.shift.overtimeRateAmount,
+              }
+            : undefined,
         });
 
         const slipDaysWorked = simpleMode ? expectedDays : agg.daysWorked;

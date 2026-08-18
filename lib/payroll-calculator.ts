@@ -28,11 +28,16 @@ export interface PayrollCalculationInput {
    * Attendance-derived figures for the period. When omitted, the calculator
    * pays the full basic salary with no overtime/late adjustment (legacy
    * behaviour). When provided, the basic salary is pro-rated by days worked
-   * according to `rate.paymentFrequency`, overtime is paid at 1x the derived
-   * hourly rate, and late hours are deducted as an unpaid post-tax deduction.
+   * according to `rate.paymentFrequency`, overtime is paid at the configured
+   * rate, and late hours are deducted as an unpaid post-tax deduction.
    */
   attendance?: AttendancePayrollInput;
   rate?: RateConfig;
+  /** Shift overtime configuration. When omitted, defaults to 1x hourly rate. */
+  overtimeConfig?: {
+    rateType: string;   // "hourly" or "fixed"
+    rateAmount: number; // multiplier for "hourly", KES/hour for "fixed"
+  };
 }
 
 export interface AttendancePayrollInput {
@@ -90,7 +95,7 @@ export interface PayrollCalculationResult {
   }[];
 }
 
-const OVERTIME_MULTIPLIER = 1; // 1x hourly rate per the chosen policy.
+const DEFAULT_OVERTIME_MULTIPLIER = 1; // 1x hourly rate when no shift config.
 
 export class PayrollCalculator {
   static calculate(input: PayrollCalculationInput): PayrollCalculationResult {
@@ -135,7 +140,7 @@ export class PayrollCalculator {
 
     // Derive rates and attendance-adjusted pay.
     const { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction } =
-      this.deriveRatesAndPay(basicSalary, attendance, rate);
+      this.deriveRatesAndPay(basicSalary, attendance, rate, input.overtimeConfig);
 
     // Add overtime as an earning and lateness as a deduction so they appear
     // as itemised lines on the payslip alongside configured components.
@@ -197,12 +202,13 @@ export class PayrollCalculator {
   /**
    * Derive hourly/daily rates from the flat basic salary using the payment
    * frequency and the period's day/hour expectations, then compute the
-   * pro-rated basic pay, overtime pay (1x hourly) and late-hour deduction.
+   * pro-rated basic pay, overtime pay (configurable rate) and late-hour deduction.
    */
   private static deriveRatesAndPay(
     basicSalary: number,
     attendance: AttendancePayrollInput | undefined,
     rate: RateConfig | undefined,
+    overtimeConfig?: { rateType: string; rateAmount: number },
   ) {
     // Legacy path — no attendance integration. Pay full basic, no overtime/late.
     if (!attendance || !rate) {
@@ -241,7 +247,15 @@ export class PayrollCalculator {
 
     const daysWorked = Math.max(0, attendance.daysWorked || 0);
     const payableBasic = Math.max(0, dailyRate * daysWorked);
-    const overtimePay = Math.max(0, attendance.overtimeHours || 0) * hourlyRate * OVERTIME_MULTIPLIER;
+
+    const otHours = Math.max(0, attendance.overtimeHours || 0);
+    let overtimePay: number;
+    if (overtimeConfig && overtimeConfig.rateType === 'fixed' && overtimeConfig.rateAmount > 0) {
+      overtimePay = otHours * overtimeConfig.rateAmount;
+    } else {
+      const multiplier = (overtimeConfig && overtimeConfig.rateAmount > 0) ? overtimeConfig.rateAmount : DEFAULT_OVERTIME_MULTIPLIER;
+      overtimePay = otHours * hourlyRate * multiplier;
+    }
     const lateDeduction = Math.max(0, attendance.lateHours || 0) * hourlyRate;
 
     return { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction };

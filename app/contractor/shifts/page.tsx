@@ -57,6 +57,9 @@ interface Shift {
   breakDuration: number;
   workingDays: string;
   allowOvertime: boolean;
+  overtimeThresholdMinutes: number;
+  overtimeRateType: string;
+  overtimeRateAmount: number;
   _count?: {
     workers: number;
   };
@@ -81,7 +84,10 @@ export default function ShiftsPage() {
     endTime: '17:00',
     breakDuration: 60,
     workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    allowOvertime: true
+    allowOvertime: true,
+    overtimeThresholdMinutes: 60,
+    overtimeRateType: 'hourly',
+    overtimeRateAmount: 1.5,
   });
 
   const daysOfWeek = [
@@ -120,7 +126,10 @@ export default function ShiftsPage() {
       endTime: '17:00',
       breakDuration: 60,
       workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      allowOvertime: true
+      allowOvertime: true,
+      overtimeThresholdMinutes: 60,
+      overtimeRateType: 'hourly',
+      overtimeRateAmount: 1.5,
     });
     setEditingShift(null);
   };
@@ -138,7 +147,10 @@ export default function ShiftsPage() {
       endTime: shift.endTime,
       breakDuration: shift.breakDuration,
       workingDays: shift.workingDays.split(','),
-      allowOvertime: shift.allowOvertime
+      allowOvertime: shift.allowOvertime,
+      overtimeThresholdMinutes: shift.overtimeThresholdMinutes ?? 0,
+      overtimeRateType: shift.overtimeRateType || 'hourly',
+      overtimeRateAmount: shift.overtimeRateAmount ?? 1,
     });
     setIsDialogOpen(true);
   };
@@ -311,6 +323,58 @@ export default function ShiftsPage() {
                   />
                   <label htmlFor="overtime" className="text-sm font-medium cursor-pointer">Allow Overtime Calculation</label>
                 </div>
+
+                {formData.allowOvertime && (
+                  <div className="ml-6 space-y-3 p-3 bg-muted/30 rounded-lg border border-muted">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-1.5">
+                        <label htmlFor="overtimeThreshold" className="text-xs font-medium text-muted-foreground">
+                          Overtime starts after (minutes past end time)
+                        </label>
+                        <Input 
+                          id="overtimeThreshold" 
+                          type="number" 
+                          min={0}
+                          value={formData.overtimeThresholdMinutes}
+                          onChange={e => setFormData({...formData, overtimeThresholdMinutes: parseInt(e.target.value) || 0})}
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">e.g. 60 = overtime starts 1 hour after shift end. 0 = immediate.</p>
+                      </div>
+                      <div className="grid gap-1.5">
+                        <label htmlFor="overtimeRateType" className="text-xs font-medium text-muted-foreground">
+                          Payment rate type
+                        </label>
+                        <select
+                          id="overtimeRateType"
+                          value={formData.overtimeRateType}
+                          onChange={e => setFormData({...formData, overtimeRateType: e.target.value})}
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="hourly">Hourly multiplier (× hourly rate)</option>
+                          <option value="fixed">Fixed amount (KES per hour)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <label htmlFor="overtimeRateAmount" className="text-xs font-medium text-muted-foreground">
+                        {formData.overtimeRateType === 'fixed' ? 'Amount per overtime hour (KES)' : 'Hourly rate multiplier'}
+                      </label>
+                      <Input 
+                        id="overtimeRateAmount" 
+                        type="number" 
+                        step="0.01"
+                        min={0}
+                        value={formData.overtimeRateAmount}
+                        onChange={e => setFormData({...formData, overtimeRateAmount: parseFloat(e.target.value) || 0})}
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">
+                        {formData.overtimeRateType === 'fixed' 
+                          ? 'e.g. 200 means each overtime hour is paid KES 200.' 
+                          : 'e.g. 1.5 means overtime is paid at 1.5× the normal hourly rate.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -400,6 +464,22 @@ export default function ShiftsPage() {
                         </span>
                         <Badge variant="secondary">{shift._count?.workers || 0}</Badge>
                       </div>
+
+                      {shift.allowOvertime && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground flex items-center gap-1.5">
+                            <Clock className="size-3.5" /> Overtime
+                          </span>
+                          <span className="font-medium text-xs">
+                            {shift.overtimeThresholdMinutes > 0
+                              ? `After ${shift.overtimeThresholdMinutes}m · `
+                              : 'Immediate · '}
+                            {shift.overtimeRateType === 'fixed'
+                              ? `KES ${shift.overtimeRateAmount}/hr`
+                              : `${shift.overtimeRateAmount}× rate`}
+                          </span>
+                        </div>
+                      )}
                       
                       <div className="pt-3 border-t">
                         <div className="flex flex-wrap gap-1">
