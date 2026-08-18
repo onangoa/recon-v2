@@ -69,7 +69,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { exportToCSV, exportToPDF } from '@/lib/export';
 import { useRouter } from 'next/navigation';
@@ -154,7 +153,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   
   const [viewingSlip, setViewingSlip] = useState<SalarySlip | null>(null);
   const [showProcessDialog, setShowProcessDialog] = useState(false);
-  const [simpleMode, setSimpleMode] = useState(false);
+  const [payrollMode, setPayrollMode] = useState<'full' | 'simple' | 'simple_overtime'>('full');
   const [attendancePreview, setAttendancePreview] = useState<any[] | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -213,7 +212,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       const response = await fetch(`/web/api/payroll-periods/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'processing', simpleMode }),
+        body: JSON.stringify({ status: 'processing', payrollMode }),
       });
 
       if (!response.ok) throw new Error('Unable to process the payroll. Please try again.');
@@ -835,19 +834,57 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <div className="flex-shrink-0 border-t pt-4">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <Checkbox
-                checked={simpleMode}
-                onCheckedChange={(checked) => setSimpleMode(checked === true)}
-                className="mt-0.5"
-              />
-              <div>
-                <span className="text-sm font-bold">Simple Mode (Salary &times; Working Days)</span>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Ignores attendance, hours, overtime, and late penalties. Each worker is paid their daily rate multiplied by the expected working days in the period.
-                </p>
-              </div>
-            </label>
+            <div className="space-y-2">
+              <span className="text-sm font-bold">Calculation Mode</span>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-muted/30 transition-colors" data-mode="full">
+                <input
+                  type="radio"
+                  name="payrollMode"
+                  checked={payrollMode === 'full'}
+                  onChange={() => setPayrollMode('full')}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-semibold">Full Mode (Attendance-based)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Basic salary pro-rated by days worked. Overtime paid per shift config. Late hours deducted.
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-muted/30 transition-colors" data-mode="simple">
+                <input
+                  type="radio"
+                  name="payrollMode"
+                  checked={payrollMode === 'simple'}
+                  onChange={() => setPayrollMode('simple')}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-semibold">Simple Mode (Salary &times; Working Days)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Ignores attendance, hours, overtime, and late penalties. Each worker is paid daily rate &times; expected working days.
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-muted/30 transition-colors" data-mode="simple_overtime">
+                <input
+                  type="radio"
+                  name="payrollMode"
+                  checked={payrollMode === 'simple_overtime'}
+                  onChange={() => setPayrollMode('simple_overtime')}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-semibold">Simple + Overtime (Days + Shift Overtime)</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Full daily rate &times; expected working days, plus overtime from attendance records paid per shift config. Late penalties still ignored.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           <DialogFooter className="flex-shrink-0">

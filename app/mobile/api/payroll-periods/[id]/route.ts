@@ -71,7 +71,11 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, simpleMode, ...otherData } = body;
+    const { status, payrollMode, simpleMode, ...otherData } = body;
+
+    // Normalize mode: accept new payrollMode string or legacy simpleMode boolean
+    const mode: 'full' | 'simple' | 'simple_overtime' =
+      payrollMode || (simpleMode ? 'simple' : 'full');
 
     if (status === 'processing') {
       const period = await prisma.payrollPeriod.findFirst({
@@ -133,13 +137,19 @@ export async function PUT(
         );
         const expectedHours = expectedDays * hoursPerDay;
 
+        // In simple mode: pay salary * working days, ignore attendance,
+        // overtime, late penalties, and hours.
+        // In simple_overtime mode: pay salary * working days, but still
+        // pay overtime from real attendance per shift config. Late ignored.
+        const isSimple = mode !== 'full';
+        const includeOvertime = mode === 'simple_overtime';
         const calc = PayrollCalculator.calculate({
           basicSalary: worker.designation.salary || 0,
           components: components as unknown as SalaryComponentData[],
           includePersonalRelief: true,
-          attendance: simpleMode
+          attendance: isSimple
             ? {
-                overtimeHours: 0,
+                overtimeHours: includeOvertime ? agg.overtimeHours : 0,
                 lateHours: 0,
                 lateDays: 0,
                 daysWorked: expectedDays,
@@ -176,11 +186,11 @@ export async function PUT(
             : undefined,
         });
 
-        const slipDaysWorked = simpleMode ? expectedDays : agg.daysWorked;
-        const slipOvertimeHours = simpleMode ? 0 : agg.overtimeHours;
-        const slipLateDays = simpleMode ? 0 : agg.lateDays;
-        const slipLateHours = simpleMode ? 0 : agg.lateHours;
-        const slipAttainedHours = simpleMode ? expectedHours : agg.attainedHours;
+        const slipDaysWorked = isSimple ? expectedDays : agg.daysWorked;
+        const slipOvertimeHours = isSimple && !includeOvertime ? 0 : agg.overtimeHours;
+        const slipLateDays = isSimple ? 0 : agg.lateDays;
+        const slipLateHours = isSimple ? 0 : agg.lateHours;
+        const slipAttainedHours = isSimple ? expectedHours : agg.attainedHours;
 
         await prisma.salarySlip.upsert({
           where: {
