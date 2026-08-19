@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         });
         userId = newUser.id;
 
-        const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3010';
+        const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3010').replace(/\/$/, '');
         await EmailService.send({
           to: body.email,
           subject: 'Welcome to ReconSMI – Your Account Has Been Created',
