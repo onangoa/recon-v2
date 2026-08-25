@@ -113,6 +113,11 @@ export async function PUT(
       let totalGross = 0;
       let totalNet = 0;
       let totalDeductions = 0;
+      let slipCount = 0;
+
+      // Delete existing slips so re-processing starts clean — workers who
+      // now have 0 days won't keep stale slips from a previous run.
+      await prisma.salarySlip.deleteMany({ where: { payrollPeriodId: id } });
 
       for (const worker of workers) {
         if (!worker.designation) continue;
@@ -145,6 +150,10 @@ export async function PUT(
         });
 
         const agg = aggregateAttendance(recomputedRecords as any);
+
+        // Skip workers with no attendance — they shouldn't receive payslips.
+        if (agg.daysWorked === 0) continue;
+
         const hoursPerDay = shiftNetHours(worker.shift);
         const expectedDays = countExpectedDays(
           period.startDate,
@@ -288,13 +297,14 @@ export async function PUT(
         totalGross += calc.grossPay;
         totalNet += calc.netPay;
         totalDeductions += calc.totalDeductions;
+        slipCount++;
       }
 
       const updatedPeriod = await prisma.payrollPeriod.update({
         where: { id },
         data: {
           status: 'completed',
-          totalEmployees: workers.length,
+          totalEmployees: slipCount,
           totalGrossPay: totalGross,
           totalNetPay: totalNet,
           totalDeductions: totalDeductions,
