@@ -245,7 +245,6 @@ model PayrollPeriod {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   createdByWorkerId String?
-  paymentFrequency  String?
   createdBy         Worker?      @relation("CreatedBy", fields: [createdByWorkerId], references: [id])
   contractor        Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   salarySlips       SalarySlip[]

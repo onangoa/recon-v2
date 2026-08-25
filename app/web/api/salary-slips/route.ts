@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
         leaveHours: leaveHours || 0,
       };
       rateInput = {
-        paymentFrequency: period?.paymentFrequency || 'monthly',
+        paymentFrequency: designation.paymentFrequency || 'monthly',
         hoursPerDay,
         daysInPeriod,
         expectedDaysInPeriod: expectedDays,

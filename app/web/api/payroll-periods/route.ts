@@ -35,16 +35,9 @@ export async function GET(request: NextRequest) {
       let workerCount = period.totalEmployees;
       
       if (period.status === 'draft') {
-        const workerWhere: any = { 
-          contractorId: period.contractorId, 
-          status: 'Active' 
-        };
-        if (period.paymentFrequency && period.paymentFrequency !== 'all') {
-          workerWhere.designation = {
-            paymentFrequency: period.paymentFrequency
-          };
-        }
-        workerCount = await prisma.worker.count({ where: workerWhere });
+        workerCount = await prisma.worker.count({ 
+          where: { contractorId: period.contractorId, status: 'Active' } 
+        });
       } else if (period._count.salarySlips > 0) {
         workerCount = period._count.salarySlips;
       }
@@ -81,7 +74,6 @@ export async function POST(request: NextRequest) {
         name: body.name,
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
-        paymentFrequency: body.paymentFrequency || 'monthly',
         description: body.description,
         contractorId: contractorId,
         createdByWorkerId: body.createdByWorkerId,
@@ -96,7 +88,7 @@ export async function POST(request: NextRequest) {
       module: 'PAYROLL',
       description: `Created payroll period: ${period.name}`,
       targetId: period.id,
-      details: { name: period.name, paymentFrequency: period.paymentFrequency, status: period.status }
+      details: { name: period.name, status: period.status }
     });
 
     return NextResponse.json(period, { status: 201 });

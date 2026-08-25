@@ -38,16 +38,9 @@ export async function GET(
 
     let workerCount = period.totalEmployees;
     if (period.status === 'draft') {
-      const workerWhere: any = {
-        contractorId: period.contractorId,
-        status: 'Active'
-      };
-      if (period.paymentFrequency && period.paymentFrequency !== 'all') {
-        workerWhere.designation = {
-          paymentFrequency: period.paymentFrequency
-        };
-      }
-      workerCount = await prisma.worker.count({ where: workerWhere });
+      workerCount = await prisma.worker.count({
+        where: { contractorId: period.contractorId, status: 'Active' }
+      });
     } else if (period.salarySlips.length > 0) {
       workerCount = period.salarySlips.length;
     }
@@ -89,12 +82,6 @@ export async function PUT(
         contractorId: period.contractorId,
         status: 'Active'
       };
-
-      if (period.paymentFrequency && period.paymentFrequency !== 'all') {
-        workerWhere.designation = {
-          paymentFrequency: period.paymentFrequency
-        };
-      }
 
       const workers = await prisma.worker.findMany({
         where: workerWhere,
@@ -202,7 +189,7 @@ export async function PUT(
                 leaveHours: agg.leaveHours,
               },
           rate: {
-            paymentFrequency: worker.designation.paymentFrequency || period.paymentFrequency || 'monthly',
+            paymentFrequency: worker.designation.paymentFrequency || 'monthly',
             hoursPerDay,
             daysInPeriod,
             expectedDaysInPeriod: expectedDays,
@@ -318,7 +305,6 @@ export async function PUT(
       name: body.name,
       startDate: body.startDate ? new Date(body.startDate) : undefined,
       endDate: body.endDate ? new Date(body.endDate) : undefined,
-      paymentFrequency: body.paymentFrequency,
       status: status,
       description: body.description,
     };
