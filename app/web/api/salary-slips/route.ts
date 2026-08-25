@@ -137,6 +137,12 @@ export async function POST(request: NextRequest) {
       includePersonalRelief: true,
       attendance: attendanceInput,
       rate: rateInput,
+      overtimeConfig: worker.shift
+        ? {
+            rateType: worker.shift.overtimeRateType,
+            rateAmount: worker.shift.overtimeRateAmount,
+          }
+        : undefined,
     });
 
     // Create salary slip

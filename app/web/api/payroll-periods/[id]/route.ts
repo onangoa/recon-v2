@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
 import { requireContractorPermission } from '@/lib/require-permission';
-import { shiftNetHours, countExpectedDays, aggregateAttendance } from '@/lib/attendance-utils';
+import { shiftNetHours, countExpectedDays, aggregateAttendance, computeWorkedHours } from '@/lib/attendance-utils';
 import { syncBiometricToDatabase } from '@/lib/biometric-attendance';
 import { startOfDay, endOfDay } from 'date-fns';
 
@@ -136,7 +136,27 @@ export async function PUT(
           },
         });
 
-        const agg = aggregateAttendance(attendanceRecords);
+        // Re-compute hours on the fly so stale DB values (from an old
+        // formula or a failed biometric sync) don't corrupt the payroll.
+        const recomputedRecords = attendanceRecords.map((a) => {
+          if (a.checkIn && a.checkOut && worker.shift) {
+            const w = computeWorkedHours(
+              new Date(a.checkIn),
+              new Date(a.checkOut),
+              worker.shift as any,
+            );
+            return {
+              ...a,
+              totalHours: w.totalHours,
+              overtimeHours: w.overtimeHours,
+              lateHours: w.lateHours,
+              lateDays: w.lateDays,
+            };
+          }
+          return a;
+        });
+
+        const agg = aggregateAttendance(recomputedRecords as any);
         const hoursPerDay = shiftNetHours(worker.shift);
         const expectedDays = countExpectedDays(
           period.startDate,
@@ -149,10 +169,10 @@ export async function PUT(
         );
         const expectedHours = expectedDays * hoursPerDay;
 
-        // In simple mode: pay salary * working days, ignore attendance,
-        // overtime, late penalties, and hours.
-        // In simple_overtime mode: pay salary * working days, but still
-        // pay overtime from real attendance per shift config. Late ignored.
+        // All three modes pro-rate basic pay by actual days worked.
+        //  - simple:            daily rate × days worked, no OT, no late.
+        //  - simple_overtime:   daily rate × days worked + OT per shift, no late.
+        //  - full:              daily rate × days worked + OT per shift − late.
         const isSimple = mode !== 'full';
         const includeOvertime = mode === 'simple_overtime';
         const calc = PayrollCalculator.calculate({
@@ -164,11 +184,11 @@ export async function PUT(
                 overtimeHours: includeOvertime ? agg.overtimeHours : 0,
                 lateHours: 0,
                 lateDays: 0,
-                daysWorked: expectedDays,
+                daysWorked: agg.daysWorked,
                 workingDays: expectedDays,
-                attainedDays: expectedDays,
+                attainedDays: agg.daysWorked,
                 workingHours: expectedHours,
-                attainedHours: expectedHours,
+                attainedHours: agg.attainedHours,
                 leaveDays: 0,
                 leaveHours: 0,
               }
@@ -185,7 +205,7 @@ export async function PUT(
                 leaveHours: agg.leaveHours,
               },
           rate: {
-            paymentFrequency: 'daily',
+            paymentFrequency: worker.designation.paymentFrequency || period.paymentFrequency || 'monthly',
             hoursPerDay,
             daysInPeriod,
             expectedDaysInPeriod: expectedDays,
@@ -199,11 +219,11 @@ export async function PUT(
         });
 
         // Upsert Salary Slip (prevent duplicates for same period/worker)
-        const slipDaysWorked = isSimple ? expectedDays : agg.daysWorked;
+        const slipDaysWorked = agg.daysWorked;
         const slipOvertimeHours = isSimple && !includeOvertime ? 0 : agg.overtimeHours;
         const slipLateDays = isSimple ? 0 : agg.lateDays;
         const slipLateHours = isSimple ? 0 : agg.lateHours;
-        const slipAttainedHours = isSimple ? expectedHours : agg.attainedHours;
+        const slipAttainedHours = agg.attainedHours;
 
         await prisma.salarySlip.upsert({
           where: {

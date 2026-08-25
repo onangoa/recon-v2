@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET;
+
+if (!ACCESS_TOKEN_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required.');
+}
+
+function extractBearer(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  return authHeader.slice(7);
+}
 
 const PUBLIC_PATHS = [
   '/',
@@ -97,48 +106,8 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (!isAuthenticated) {
-    const refreshToken = request.cookies.get('refreshToken')?.value;
-    if (refreshToken) {
-      try {
-        const refreshResponse = await fetch(new URL('/web/api/auth/refresh', request.url), {
-          method: 'POST',
-          headers: { cookie: request.headers.get('cookie') || '' },
-        });
-        if (refreshResponse.ok) {
-          const data = await refreshResponse.json();
-          if (data.user) {
-            isAuthenticated = true;
-            tokenPayload = {
-              userId: data.user.id,
-              email: data.user.email,
-              role: data.user.role,
-              contractorId: data.contractor?.id || null,
-            };
-
-            const response = NextResponse.next();
-            if (data.accessToken) {
-              response.cookies.set('accessToken', data.accessToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 15 * 60,
-                path: '/',
-              });
-            }
-            const setCookieHeader = refreshResponse.headers.get('set-cookie');
-            if (setCookieHeader) {
-              response.headers.set('set-cookie', setCookieHeader);
-            }
-            return response;
-          }
-        }
-      } catch {}
-    }
-  }
-
   if (pathname.startsWith('/web/api/')) {
-    if (!isAuthenticated && !isAuthApiPath(pathname)) {
+    if (!isAuthenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.next();
@@ -147,7 +116,7 @@ export async function proxy(request: NextRequest) {
   // Mobile API routes use Bearer token auth – check Authorization header
   if (pathname.startsWith('/mobile/api/')) {
     if (!isAuthApiPath(pathname)) {
-      const bearerToken = request.headers.get('authorization')?.replace('Bearer ', '');
+      const bearerToken = extractBearer(request.headers.get('authorization'));
       if (!bearerToken) {
         return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
       }
@@ -162,7 +131,7 @@ export async function proxy(request: NextRequest) {
   // Legacy API routes use Bearer token auth – check Authorization header
   if (pathname.startsWith('/api/')) {
     if (!isAuthApiPath(pathname)) {
-      const bearerToken = request.headers.get('authorization')?.replace('Bearer ', '');
+      const bearerToken = extractBearer(request.headers.get('authorization'));
       if (!bearerToken && !accessToken) {
         return NextResponse.json({ message: 'Unauthenticated.', error: 'Unauthenticated' }, { status: 401 });
       }

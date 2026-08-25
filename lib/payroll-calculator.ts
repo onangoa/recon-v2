@@ -238,8 +238,12 @@ export class PayrollCalculator {
       case 'monthly':
       case 'all':
       default:
-        // Conventional monthly → divide by the calendar days in the period.
-        dailyRate = basicSalary / daysInPeriod;
+        // Monthly salary is pro-rated by working days, not calendar days,
+        // so a worker who works all expected days receives their full
+        // salary. Falls back to calendar days when expected days is 0.
+        dailyRate = expectedDays > 0
+          ? basicSalary / expectedDays
+          : basicSalary / daysInPeriod;
         break;
     }
 

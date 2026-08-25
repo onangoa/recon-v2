@@ -114,7 +114,28 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' }
     });
 
-    return mobileSuccess(attendances);
+    // Re-compute hours/overtime on the fly using the current shift config
+    // so records stored with a previous (possibly outdated) formula
+    // display correct values without requiring a biometric re-sync.
+    const recomputed = attendances.map((a) => {
+      if (a.checkIn && a.checkOut && a.shift) {
+        const worked = computeWorkedHours(
+          new Date(a.checkIn),
+          new Date(a.checkOut),
+          a.shift as any,
+        );
+        return {
+          ...a,
+          totalHours: worked.totalHours,
+          overtimeHours: worked.overtimeHours,
+          lateHours: worked.lateHours,
+          lateDays: worked.lateDays,
+        };
+      }
+      return a;
+    });
+
+    return mobileSuccess(recomputed);
   } catch (error) {
     console.error('Failed to fetch attendance:', error);
     return mobileError('Failed to fetch attendance', 500);

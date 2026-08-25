@@ -39,12 +39,13 @@ export interface WorkedHours {
  * clock route and payroll aggregation all share identical rules.
  *
  * Rules:
- *  - `totalHours` = (checkOut - checkIn) in hours (breaks already absorbed
- *    because the worker was off the clock; only the *outer* session is used).
+ *  - `totalHours` = (checkOut - checkIn) in hours (wall-clock; includes any
+ *    break the worker took while on the clock).
  *  - `expectedHours` = (shift end - shift start, overnight-wrapped) - break.
- *  - `overtimeHours` = max(0, totalHours - expectedHours - overtimeThreshold)
- *    when shift.allowOvertime. The threshold (in hours) is the grace period
- *    past end time before overtime starts counting.
+ *  - `overtimeHours` = hours the worker stayed past (shift end + threshold)
+ *    when shift.allowOvertime. The threshold is the grace period past the
+ *    scheduled end time before overtime starts counting. 0 if the worker
+ *    left before the threshold boundary.
  *  - `lateMinutes` = minutes checkIn occurs after shift start (0 if on time,
  *    or if no shift / no checkIn).
  */
@@ -74,11 +75,29 @@ export function computeWorkedHours(
   const shiftNetMinutes = Math.max(0, shiftMinutes - shift.breakDuration);
   const expectedHours = shiftNetMinutes / 60;
 
-  const overtimeThresholdHours = (shift.overtimeThresholdMinutes || 0) / 60;
-  const overtimeHours =
-    shift.allowOvertime && totalHours > expectedHours + overtimeThresholdHours
-      ? totalHours - expectedHours - overtimeThresholdHours
-      : 0;
+  // Overtime: the threshold defines a grace period past the shift's
+  // scheduled END TIME. We compute the actual shift-end DateTime on the
+  // check-in day, add the threshold, and measure how far past that the
+  // worker checked out. This avoids mixing break-inclusive wall-clock
+  // hours with break-exclusive net hours (which produced false positives
+  // when totalHours included a 60-min break but expectedHours didn't).
+  const thresholdMin = shift.overtimeThresholdMinutes || 0;
+
+  let overtimeHours = 0;
+  if (shift.allowOvertime && shiftMinutes > 0) {
+    // Anchor shift start to the check-in calendar day at midnight, then
+    // offset by the shift start minutes-from-midnight. setMinutes handles
+    // overflow (>59) by rolling into hours/date automatically.
+    const midnight = new Date(checkIn);
+    midnight.setHours(0, 0, 0, 0);
+
+    const shiftEnd = new Date(midnight.getTime() + (start + shiftMinutes) * 60 * 1000);
+    const overtimeStart = new Date(shiftEnd.getTime() + thresholdMin * 60 * 1000);
+
+    if (checkOut > overtimeStart) {
+      overtimeHours = (checkOut.getTime() - overtimeStart.getTime()) / (1000 * 60 * 60);
+    }
+  }
 
   // Lateness: compare the check-in time-of-day to the shift start.
   const checkInMinutes = checkIn.getHours() * 60 + checkIn.getMinutes();

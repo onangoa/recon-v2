@@ -848,7 +848,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                 <div>
                   <span className="text-sm font-semibold">Full Mode (Attendance-based)</span>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Basic salary pro-rated by days worked. Overtime paid per shift config. Late hours deducted.
+                    Basic salary pro-rated by actual days worked. Overtime paid per shift config. Late hours deducted.
                   </p>
                 </div>
               </label>
@@ -862,9 +862,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                   className="mt-0.5 size-4 accent-primary"
                 />
                 <div>
-                  <span className="text-sm font-semibold">Simple Mode (Salary &times; Working Days)</span>
+                  <span className="text-sm font-semibold">Simple Mode (Salary &times; Days Worked)</span>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Ignores attendance, hours, overtime, and late penalties. Each worker is paid daily rate &times; expected working days.
+                    Basic salary pro-rated by actual days worked. Ignores overtime and late penalties.
                   </p>
                 </div>
               </label>
@@ -878,9 +878,9 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                   className="mt-0.5 size-4 accent-primary"
                 />
                 <div>
-                  <span className="text-sm font-semibold">Simple + Overtime (Days + Shift Overtime)</span>
+                  <span className="text-sm font-semibold">Simple + Overtime (Days Worked + Shift Overtime)</span>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Full daily rate &times; expected working days, plus overtime from attendance records paid per shift config. Late penalties still ignored.
+                    Basic salary pro-rated by actual days worked, plus overtime from attendance records paid per shift config. Late penalties ignored.
                   </p>
                 </div>
               </label>
