@@ -5,7 +5,7 @@ import { hashPassword } from '@/lib/jwt';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name, role } = body;
+    const { email, password, name } = body;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        role,
+        role: 'contractor',
       },
     });
 

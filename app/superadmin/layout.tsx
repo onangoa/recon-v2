@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Users, 
@@ -51,16 +51,11 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from '@/context/auth-context';
 
 function SidebarNav({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-
-  const handleLogout = async () => {
-    await fetch('/web/api/auth/logout', { method: 'POST' });
-    localStorage.removeItem('user');
-    router.push('/');
-  };
+  const { logout } = useAuth();
 
   const navItems = [
     { label: 'Dashboard', href: '/superadmin', icon: LayoutDashboard },
@@ -169,7 +164,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 text-destructive" onClick={handleLogout}>
+                  <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logout()}>
                     <LogOut className="size-4" /> Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

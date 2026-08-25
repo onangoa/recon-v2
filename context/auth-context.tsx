@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { apiFetch, refreshOnce, setAuthCallbacks, type AuthRefreshData } from '@/lib/api-client';
 
 interface User {
   id: string;
@@ -53,6 +54,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/docs'];
 
+const IDLE_TIMEOUT = 30 * 60 * 1000;
+const PROACTIVE_REFRESH_INTERVAL = 13 * 60 * 1000;
+const IDLE_EVENTS = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,9 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isRefreshingRef = useRef(false);
   const userRef = useRef<User | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   useEffect(() => {
     userRef.current = user;
@@ -82,116 +87,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('selectedSiteId');
   }, []);
 
+  const applyAuthData = useCallback((data: AuthRefreshData) => {
+    setUser(data.user);
+    setContractor(data.contractor);
+    setSites(data.sites || []);
+    setSelectedSiteId(data.selectedSiteId || null);
+    setNeedsOnboarding(data.needsOnboarding || false);
+
+    localStorage.setItem('user', JSON.stringify(data.user));
+    if (data.contractor) {
+      localStorage.setItem('contractor', JSON.stringify(data.contractor));
+    } else {
+      localStorage.removeItem('contractor');
+    }
+    localStorage.setItem('sites', JSON.stringify(data.sites || []));
+    if (data.selectedSiteId) {
+      localStorage.setItem('selectedSiteId', data.selectedSiteId);
+    } else {
+      localStorage.removeItem('selectedSiteId');
+    }
+  }, []);
+
+  useEffect(() => {
+    setAuthCallbacks(applyAuthData, () => {
+      clearAllState();
+      router.push('/login');
+    });
+    return () => setAuthCallbacks(null, null);
+  }, [applyAuthData, clearAllState, router]);
+
   const refreshSession = useCallback(async () => {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
 
     try {
-      const response = await fetch('/web/api/auth/me');
+      const response = await apiFetch('/web/api/auth/me');
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
-        setContractor(data.contractor);
-        setSites(data.sites || []);
-        setSelectedSiteId(data.selectedSiteId || null);
-        setNeedsOnboarding(data.needsOnboarding || false);
-
-        localStorage.setItem('user', JSON.stringify(data.user));
-        if (data.contractor) {
-          localStorage.setItem('contractor', JSON.stringify(data.contractor));
-        } else {
-          localStorage.removeItem('contractor');
-        }
-        localStorage.setItem('sites', JSON.stringify(data.sites || []));
-        if (data.selectedSiteId) {
-          localStorage.setItem('selectedSiteId', data.selectedSiteId);
-        }
+        applyAuthData(data);
       } else {
-        const refreshResponse = await fetch('/web/api/auth/refresh', { method: 'POST' });
-
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
-          setUser(refreshData.user);
-          setContractor(refreshData.contractor);
-          setSites(refreshData.sites || []);
-          setSelectedSiteId(refreshData.selectedSiteId || null);
-          setNeedsOnboarding(refreshData.needsOnboarding || false);
-
-          localStorage.setItem('user', JSON.stringify(refreshData.user));
-          if (refreshData.contractor) {
-            localStorage.setItem('contractor', JSON.stringify(refreshData.contractor));
-          } else {
-            localStorage.removeItem('contractor');
-          }
-          localStorage.setItem('sites', JSON.stringify(refreshData.sites || []));
-          if (refreshData.selectedSiteId) {
-            localStorage.setItem('selectedSiteId', refreshData.selectedSiteId);
-          }
-        } else {
-          if (!userRef.current) {
-            clearAllState();
-          }
+        if (!userRef.current) {
+          clearAllState();
         }
       }
-    } catch (error) {
-      console.error('Failed to refresh session:', error);
+    } catch {
       if (!userRef.current) {
         clearAllState();
-      }
-      const storedUser = localStorage.getItem('user');
-      const storedContractor = localStorage.getItem('contractor');
-      const storedSites = localStorage.getItem('sites');
-      const storedSelectedSiteId = localStorage.getItem('selectedSiteId');
-
-      if (storedUser) {
-        try { setUser(JSON.parse(storedUser)); } catch {}
-      }
-      if (storedContractor) {
-        try { setContractor(JSON.parse(storedContractor)); } catch {}
-      }
-      if (storedSites) {
-        try { setSites(JSON.parse(storedSites)); } catch {}
-      }
-      if (storedSelectedSiteId) {
-        setSelectedSiteId(storedSelectedSiteId);
       }
     } finally {
       setIsLoading(false);
       isRefreshingRef.current = false;
     }
-  }, [clearAllState]);
+  }, [applyAuthData, clearAllState]);
 
   useEffect(() => {
     refreshSession();
   }, [refreshSession]);
 
+  const logout = useCallback(async () => {
+    try {
+      await fetch('/web/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      clearAllState();
+      router.push('/login');
+    }
+  }, [clearAllState, router]);
+
   const proactiveRefresh = useCallback(async () => {
+    if (Date.now() - lastActivityRef.current > IDLE_TIMEOUT) {
+      return;
+    }
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
 
     try {
-      const refreshResponse = await fetch('/web/api/auth/refresh', { method: 'POST' });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        setUser(refreshData.user);
-        setContractor(refreshData.contractor);
-        setSites(refreshData.sites || []);
-        setSelectedSiteId(refreshData.selectedSiteId || null);
-        setNeedsOnboarding(refreshData.needsOnboarding || false);
-
-        localStorage.setItem('user', JSON.stringify(refreshData.user));
-        if (refreshData.contractor) {
-          localStorage.setItem('contractor', JSON.stringify(refreshData.contractor));
-        } else {
-          localStorage.removeItem('contractor');
-        }
-        localStorage.setItem('sites', JSON.stringify(refreshData.sites || []));
-        if (refreshData.selectedSiteId) {
-          localStorage.setItem('selectedSiteId', refreshData.selectedSiteId);
-        }
-      }
+      await refreshOnce();
     } catch (error) {
       console.error('Proactive refresh failed:', error);
     } finally {
@@ -200,21 +173,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-    }
-    if (user) {
-      refreshTimerRef.current = setInterval(() => {
-        proactiveRefresh();
-      }, 10 * 60 * 1000);
+    if (!user) return;
 
-      return () => {
-        if (refreshTimerRef.current) {
-          clearInterval(refreshTimerRef.current);
-        }
-      };
-    }
+    const interval = setInterval(() => {
+      proactiveRefresh();
+    }, PROACTIVE_REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
   }, [user, proactiveRefresh]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let idleTimer: ReturnType<typeof setTimeout>;
+
+    const resetIdle = () => {
+      lastActivityRef.current = Date.now();
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        logout();
+      }, IDLE_TIMEOUT);
+    };
+
+    IDLE_EVENTS.forEach((e) => window.addEventListener(e, resetIdle, { passive: true }));
+    resetIdle();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastActivityRef.current > IDLE_TIMEOUT) {
+        logout();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      IDLE_EVENTS.forEach((e) => window.removeEventListener(e, resetIdle));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      clearTimeout(idleTimer);
+    };
+  }, [user, logout]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -231,7 +227,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/contractor/sites/create');
     }
 
-    // Role-based route protection
     if (user && pathname.startsWith('/superadmin') && user.role !== 'superadmin') {
       router.push('/contractor');
     }
@@ -239,17 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/superadmin');
     }
   }, [user, contractor, isLoading, needsOnboarding, pathname, router]);
-
-  const logout = useCallback(async () => {
-    try {
-      await fetch('/web/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      clearAllState();
-      router.push('/login');
-    }
-  }, [clearAllState, router]);
 
   const setSelectedSite = useCallback(async (siteId: string) => {
     setSelectedSiteId(siteId);

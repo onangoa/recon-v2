@@ -2,8 +2,16 @@ import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-me';
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-change-me';
+function requireSecret(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} environment variable is required. Set it in your .env file.`);
+  }
+  return value;
+}
+
+const ACCESS_TOKEN_SECRET = requireSecret('JWT_SECRET');
+const REFRESH_TOKEN_SECRET = requireSecret('JWT_REFRESH_SECRET');
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 

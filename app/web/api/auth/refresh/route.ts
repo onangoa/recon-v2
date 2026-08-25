@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyRefreshToken, isRefreshTokenValid, isRefreshTokenExpiredOrMissing, getLatestValidRefreshTokenForUser, generateAccessToken, generateRefreshToken, saveRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from '@/lib/jwt';
+import { verifyRefreshToken, isRefreshTokenValid, isRefreshTokenExpiredOrMissing, getLatestValidRefreshTokenForUser, generateAccessToken, generateRefreshToken, saveRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens, deleteExpiredRefreshTokens } from '@/lib/jwt';
 import { prisma } from '@/lib/prisma';
 import { getPermissions } from '@/lib/rbac';
 import { resolveContractorForUser } from '@/lib/auth';
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     await revokeRefreshToken(activeRefreshToken);
     await saveRefreshToken(user.id, newRefreshToken);
+    await deleteExpiredRefreshTokens();
 
     const permissions = await getPermissions(user.id);
 

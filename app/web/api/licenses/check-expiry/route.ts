@@ -13,9 +13,13 @@ export async function GET(request: NextRequest) {
   if (!isCronAuthorized) {
     const accessToken = request.cookies.get('accessToken')?.value;
     if (accessToken) {
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+      }
       try {
         const { jwtVerify } = await import('jose');
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-change-me');
+        const secret = new TextEncoder().encode(jwtSecret);
         const { payload } = await jwtVerify(accessToken, secret);
         isSuperAdmin = (payload as any).role === 'superadmin';
       } catch {
