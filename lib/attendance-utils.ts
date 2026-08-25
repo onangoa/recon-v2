@@ -54,7 +54,14 @@ export function computeWorkedHours(
   checkOut: Date,
   shift: ShiftShape | null | undefined,
 ): WorkedHours {
-  const totalMinutes = Math.max(0, differenceInMinutes(checkOut, checkIn));
+  // Truncate sub-minute precision so overtime/lateness match the displayed
+  // clock times (which only show hours:minutes, not seconds).
+  const ci = new Date(checkIn);
+  ci.setSeconds(0, 0);
+  const co = new Date(checkOut);
+  co.setSeconds(0, 0);
+
+  const totalMinutes = Math.max(0, differenceInMinutes(co, ci));
   const totalHours = totalMinutes / 60;
 
   if (!shift) {
@@ -88,19 +95,19 @@ export function computeWorkedHours(
     // Anchor shift start to the check-in calendar day at midnight, then
     // offset by the shift start minutes-from-midnight. setMinutes handles
     // overflow (>59) by rolling into hours/date automatically.
-    const midnight = new Date(checkIn);
+    const midnight = new Date(ci);
     midnight.setHours(0, 0, 0, 0);
 
     const shiftEnd = new Date(midnight.getTime() + (start + shiftMinutes) * 60 * 1000);
     const overtimeStart = new Date(shiftEnd.getTime() + thresholdMin * 60 * 1000);
 
-    if (checkOut > overtimeStart) {
-      overtimeHours = (checkOut.getTime() - overtimeStart.getTime()) / (1000 * 60 * 60);
+    if (co > overtimeStart) {
+      overtimeHours = (co.getTime() - overtimeStart.getTime()) / (1000 * 60 * 60);
     }
   }
 
   // Lateness: compare the check-in time-of-day to the shift start.
-  const checkInMinutes = checkIn.getHours() * 60 + checkIn.getMinutes();
+  const checkInMinutes = ci.getHours() * 60 + ci.getMinutes();
   let lateMinutes = checkInMinutes - start;
   // If the shift wraps past midnight and the worker checked in before the
   // late-night start, treat relative to the wrapped start.
