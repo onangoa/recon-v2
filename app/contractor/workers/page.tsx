@@ -253,8 +253,8 @@ export default function WorkersPage() {
       if (!res.ok) return;
       const data: WorkerStats = await res.json();
       setStats(data);
-      // Use attendance-based byDesignation from stats API for the Total view
-      if (Array.isArray(data.byDesignation) && data.byDesignation.length > 0) {
+      // Always use attendance-based byDesignation from stats API for the Total view
+      if (Array.isArray(data.byDesignation)) {
         setByDesignation(data.byDesignation);
       }
       if (data.byDesignationForDate) {
