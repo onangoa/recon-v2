@@ -75,7 +75,7 @@ export async function PATCH(
               minStock: transfer.inventory.minStock,
               location: transfer.inventory.location,
               status: 'in-stock',
-              sku: `${transfer.inventory.sku}-transfer-${Date.now()}`,
+              productId: `${transfer.inventory.productId}-transfer-${Date.now()}`,
             },
           });
         }

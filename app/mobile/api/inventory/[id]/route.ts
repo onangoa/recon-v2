@@ -65,7 +65,7 @@ export async function PATCH(
     const updateData: any = {
       name: body.name,
       description: body.description,
-      sku: body.sku,
+      productId: body.productId,
       categoryId: body.categoryId,
       unit: body.unit,
       unitCost: body.unitCost !== undefined ? parseFloat(body.unitCost) : undefined,

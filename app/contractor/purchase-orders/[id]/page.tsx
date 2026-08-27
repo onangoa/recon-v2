@@ -21,6 +21,9 @@ import {
   AlertTriangle,
   MinusCircle,
   PlusCircle,
+  Upload,
+  Paperclip,
+  X,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -85,6 +88,10 @@ interface PurchaseOrder {
   status: string;
   orderDate: string;
   expectedDeliveryDate?: string;
+  partiallyReceivedDate?: string;
+  receivedInFullDate?: string;
+  deliveryNoteUrl?: string;
+  deliveryNoteFileName?: string;
   notes?: string;
   items: Array<{
     id: string;
@@ -94,6 +101,13 @@ interface PurchaseOrder {
     unitPrice: number;
     totalPrice: number;
     materialId?: string;
+  }>;
+  files?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    fileType?: string | null;
+    uploadedAt: string;
   }>;
 }
 
@@ -118,7 +132,12 @@ export default function PurchaseOrderView() {
   const [deliverQuantities, setDeliverQuantities] = useState<Record<string, number>>({});
   const [deliverNote, setDeliverNote] = useState('');
   const [itemStatuses, setItemStatuses] = useState<Record<string, 'not_delivered' | 'partial' | 'full' | 'excess'>>({});
-
+  const [deliveryNoteFiles, setDeliveryNoteFiles] = useState<File[]>([]);
+  const [isUploadingNote, setIsUploadingNote] = useState(false);
+  const [receivePartialDate, setReceivePartialDate] = useState('');
+  const [receiveFullDate, setReceiveFullDate] = useState('');
+  const [deliverPartialDate, setDeliverPartialDate] = useState('');
+  const [deliverFullDate, setDeliverFullDate] = useState('');
   const fetchOrder = async () => {
     setIsLoading(true);
     setError(null);
@@ -138,6 +157,29 @@ export default function PurchaseOrderView() {
     if (id) fetchOrder();
   }, [id]);
 
+  const uploadDeliveryNotes = async (): Promise<Array<{ fileName: string; fileUrl: string; fileType?: string }>> => {
+    if (deliveryNoteFiles.length === 0) return [];
+    setIsUploadingNote(true);
+    try {
+      const uploaded: Array<{ fileName: string; fileUrl: string; fileType?: string }> = [];
+      for (const file of deliveryNoteFiles) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/web/api/upload', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('Failed to upload delivery note');
+        const data = await res.json();
+        uploaded.push({
+          fileName: data.fileName || file.name,
+          fileUrl: data.url || data.fileData || '',
+          fileType: data.fileType || file.type || undefined,
+        });
+      }
+      return uploaded;
+    } finally {
+      setIsUploadingNote(false);
+    }
+  };
+
   const markAsDelivered = async () => {
     if (!order) return;
     // Pre-fill each item with the ordered quantity (assume full delivery by default).
@@ -148,6 +190,9 @@ export default function PurchaseOrderView() {
     });
     setDeliverQuantities(initial);
     setDeliverNote('');
+    setDeliveryNoteFiles([]);
+    setDeliverPartialDate('');
+    setDeliverFullDate('');
     const statuses: Record<string, 'not_delivered' | 'partial' | 'full' | 'excess'> = {};
     order.items.forEach((item) => {
       statuses[item.id] = 'full';
@@ -173,8 +218,12 @@ export default function PurchaseOrderView() {
     if (!order) return;
     setIsDelivering(true);
     try {
+      const uploadedFiles = await uploadDeliveryNotes();
       const payload = {
         note: deliverNote,
+        files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+        partiallyReceivedDate: deliverPartialDate || undefined,
+        receivedInFullDate: deliverFullDate || undefined,
         items: order.items.map((item) => ({
           id: item.id,
           receivedQuantity: Number(deliverQuantities[item.id] ?? 0) || 0,
@@ -229,6 +278,9 @@ export default function PurchaseOrderView() {
     });
     setReceiveQuantities(initial);
     setReceiveNote('');
+    setDeliveryNoteFiles([]);
+    setReceivePartialDate('');
+    setReceiveFullDate('');
     setIsReceiveDialogOpen(true);
   };
 
@@ -236,8 +288,12 @@ export default function PurchaseOrderView() {
     if (!order) return;
     setIsReceiving(true);
     try {
+      const uploadedFiles = await uploadDeliveryNotes();
       const payload = {
         note: receiveNote,
+        files: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+        partiallyReceivedDate: receivePartialDate || undefined,
+        receivedInFullDate: receiveFullDate || undefined,
         items: order.items.map((item) => ({
           id: item.id,
           receivedQuantity: Number(receiveQuantities[item.id] ?? 0) || 0,
@@ -554,6 +610,47 @@ export default function PurchaseOrderView() {
                   <p className="text-sm font-bold">{new Date(order.expectedDeliveryDate).toLocaleDateString()}</p>
                 </div>
               )}
+              {order.receivedInFullDate ? (
+                <div className="flex justify-between items-center border-t pt-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <label className="text-xs font-bold uppercase tracking-widest">Received In Full</label>
+                  </div>
+                  <p className="text-sm font-bold text-green-600">{new Date(order.receivedInFullDate).toLocaleDateString()}</p>
+                </div>
+              ) : order.partiallyReceivedDate ? (
+                <div className="flex justify-between items-center border-t pt-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <label className="text-xs font-bold uppercase tracking-widest">Partially Received</label>
+                  </div>
+                  <p className="text-sm font-bold text-amber-600">{new Date(order.partiallyReceivedDate).toLocaleDateString()}</p>
+                </div>
+              ) : null}
+              {((order.files && order.files.length > 0) || order.deliveryNoteUrl) && (
+                <div className="border-t pt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Paperclip className="w-4 h-4" />
+                    <label className="text-xs font-bold uppercase tracking-widest">Delivery Note Files</label>
+                  </div>
+                  {order.files && order.files.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {order.files.map((f) => (
+                        <a key={f.id} href={f.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border border-muted bg-muted/20 px-3 py-2 hover:bg-muted/40 transition">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm font-medium truncate flex-1">{f.fileName}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(f.uploadedAt).toLocaleDateString()}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : order.deliveryNoteUrl ? (
+                    <a href={order.deliveryNoteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md border border-muted bg-muted/20 px-3 py-2 hover:bg-muted/40 transition">
+                      <FileText className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm font-medium truncate flex-1">{order.deliveryNoteFileName || 'View file'}</span>
+                    </a>
+                  ) : null}
+                </div>
+              )}
               <div className="pt-4 border-t">
                 <Button variant="outline" className="w-full gap-2 h-10 border-primary/20 hover:bg-primary/5 text-primary transition-colors" onClick={downloadPdf} disabled={isDownloading}>
                   {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -661,12 +758,53 @@ export default function PurchaseOrderView() {
             />
           </div>
 
+          {(() => {
+            const allFull = order.items.every(item => (Number(receiveQuantities[item.id] ?? 0)) >= item.quantity);
+            const anyReceived = order.items.some(item => (Number(receiveQuantities[item.id] ?? 0)) > 0);
+            if (!anyReceived) return null;
+            return (
+              <div className="space-y-1.5">
+                <Label htmlFor={allFull ? "receive-full-date" : "receive-partial-date"} className="text-xs uppercase tracking-wider">
+                  {allFull ? 'Received In Full Date' : 'Partially Received Date'}
+                </Label>
+                <Input
+                  id={allFull ? "receive-full-date" : "receive-partial-date"}
+                  type="date"
+                  value={allFull ? receiveFullDate : receivePartialDate}
+                  onChange={(e) => allFull ? setReceiveFullDate(e.target.value) : setReceivePartialDate(e.target.value)}
+                  className="bg-muted/30 border-none h-10"
+                />
+              </div>
+            );
+          })()}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider">Delivery Note Document(s)</Label>
+            {deliveryNoteFiles.length > 0 && (
+              <div className="space-y-2">
+                {deliveryNoteFiles.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm truncate flex-1">{f.name}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setDeliveryNoteFiles(deliveryNoteFiles.filter((_, i) => i !== idx))}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+              <Upload className="w-4 h-4" /> Click to upload delivery note (multiple allowed)
+              <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => setDeliveryNoteFiles(Array.from(e.target.files || []))} />
+            </label>
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReceiveDialogOpen(false)} disabled={isReceiving}>
               Cancel
             </Button>
-            <Button onClick={submitReceive} disabled={isReceiving} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-              {isReceiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
+            <Button onClick={submitReceive} disabled={isReceiving || isUploadingNote} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              {isReceiving || isUploadingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
               Save Received Stock
             </Button>
           </DialogFooter>
@@ -785,12 +923,53 @@ export default function PurchaseOrderView() {
             />
           </div>
 
+          {(() => {
+            const allFull = order.items.every(item => (Number(deliverQuantities[item.id] ?? 0)) >= item.quantity);
+            const anyReceived = order.items.some(item => (Number(deliverQuantities[item.id] ?? 0)) > 0);
+            if (!anyReceived) return null;
+            return (
+              <div className="space-y-1.5">
+                <Label htmlFor={allFull ? "deliver-full-date" : "deliver-partial-date"} className="text-xs uppercase tracking-wider">
+                  {allFull ? 'Received In Full Date' : 'Partially Received Date'}
+                </Label>
+                <Input
+                  id={allFull ? "deliver-full-date" : "deliver-partial-date"}
+                  type="date"
+                  value={allFull ? deliverFullDate : deliverPartialDate}
+                  onChange={(e) => allFull ? setDeliverFullDate(e.target.value) : setDeliverPartialDate(e.target.value)}
+                  className="bg-muted/30 border-none h-10"
+                />
+              </div>
+            );
+          })()}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider">Upload Delivery Note Document(s)</Label>
+            {deliveryNoteFiles.length > 0 && (
+              <div className="space-y-2">
+                {deliveryNoteFiles.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm truncate flex-1">{f.name}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setDeliveryNoteFiles(deliveryNoteFiles.filter((_, i) => i !== idx))}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+              <Upload className="w-4 h-4" /> Click to upload delivery note (multiple allowed)
+              <input type="file" accept="image/*,.pdf" multiple className="hidden" onChange={(e) => setDeliveryNoteFiles(Array.from(e.target.files || []))} />
+            </label>
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeliverDialogOpen(false)} disabled={isDelivering}>
               Cancel
             </Button>
-            <Button onClick={submitDelivery} disabled={isDelivering} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-              {isDelivering ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
+            <Button onClick={submitDelivery} disabled={isDelivering || isUploadingNote} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+              {isDelivering || isUploadingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackageCheck className="w-4 h-4" />}
               Confirm Delivery
             </Button>
           </DialogFooter>

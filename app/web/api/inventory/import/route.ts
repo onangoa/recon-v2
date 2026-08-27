@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
             siteId,
             name: item.name,
             description: item.description || null,
-            sku: item.sku || null,
+            productId: item.productId || null,
             categoryId: item.categoryId || null,
             quantity: parseFloat(item.quantity) || 0,
             unitCost: parseFloat(item.unitCost) || 0,

@@ -463,7 +463,7 @@ const adminRole = await prisma.role.create({
             minStock: item.minStock,
             description: item.description,
             status: 'in-stock',
-            sku: `${item.name.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 8)}`,
+            productId: `${item.name.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 8)}`,
           },
         });
       }

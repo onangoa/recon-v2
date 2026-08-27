@@ -42,7 +42,7 @@ export default function CreateInventoryItemPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sku: '',
+    productId: '',
     barcode: '',
     categoryId: '',
     unit: '',
@@ -284,15 +284,15 @@ export default function CreateInventoryItemPage() {
             </div>
           </div>
 
-          {/* SKU and Barcode Row */}
+          {/* Product ID and Barcode Row */}
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">SKU</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Product ID</label>
               <input
                 type="text"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="Enter SKU"
+                value={formData.productId}
+                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                placeholder="Enter Product ID"
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />

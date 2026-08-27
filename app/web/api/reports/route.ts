@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
         status: t.status,
         createdAt: t.createdAt,
         walletName: t.wallet.name,
+        recipientName: t.recipientName,
       })),
     });
   } catch (error) {

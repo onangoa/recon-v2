@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { name: { contains: search } },
-        { sku: { contains: search } },
+        { productId: { contains: search } },
         { category: { name: { contains: search } } },
       ];
     }
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         siteId: body.siteId,
         name: body.name,
         description: body.description || null,
-        sku: body.sku || null,
+        productId: body.productId || null,
         categoryId: body.categoryId || null,
         quantity: quantity,
         unitCost: parseFloat(body.unitCost) || 0,

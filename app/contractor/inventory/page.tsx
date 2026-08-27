@@ -90,7 +90,7 @@ interface InventoryItem {
   minStock: number;
   description: string | null;
   status: string;
-  sku: string | null;
+  productId: string | null;
   category: {
     id: string;
     name: string;
@@ -266,7 +266,7 @@ export default function InventoryPage() {
       'Quantity': String(item.quantity),
       'Unit': item.unit,
       'Min Stock': String(item.minStock),
-      'SKU': item.sku || '',
+      'Product ID': item.productId || '',
       'Status': item.status,
       'Site': item.site.name,
     }));
@@ -275,14 +275,14 @@ export default function InventoryPage() {
   };
 
   const handleExportPDF = () => {
-    const headers = ['Name', 'Category', 'Qty', 'Unit', 'Min Stock', 'SKU', 'Status', 'Site'];
+    const headers = ['Name', 'Category', 'Qty', 'Unit', 'Min Stock', 'Product ID', 'Status', 'Site'];
     const rows = inventory.map(item => [
       item.name,
       item.category?.name || 'N/A',
       String(item.quantity),
       item.unit,
       String(item.minStock),
-      item.sku || 'N/A',
+      item.productId || 'N/A',
       item.status,
       item.site.name,
     ]);
@@ -631,14 +631,14 @@ export default function InventoryPage() {
           { key: 'quantity', label: 'Quantity', required: true },
           { key: 'unit', label: 'Unit', required: true },
           { key: 'minStock', label: 'Min Stock', required: false },
-          { key: 'sku', label: 'SKU', required: false },
+          { key: 'productId', label: 'Product ID', required: false },
           { key: 'description', label: 'Description', required: false },
           { key: 'status', label: 'Status', required: false },
           { key: 'categoryId', label: 'Category ID', required: false },
         ]}
         templateRows={[
-          { name: 'Cement Bags', quantity: '500', unit: 'bags', minStock: '100', sku: 'CMT-001', description: 'Portland cement', status: 'In Stock', categoryId: '' },
-          { name: 'Steel Rods', quantity: '200', unit: 'pieces', minStock: '50', sku: 'STL-002', description: 'Reinforcement steel', status: 'In Stock', categoryId: '' },
+          { name: 'Cement Bags', quantity: '500', unit: 'bags', minStock: '100', productId: 'CMT-001', description: 'Portland cement', status: 'In Stock', categoryId: '' },
+          { name: 'Steel Rods', quantity: '200', unit: 'pieces', minStock: '50', productId: 'STL-002', description: 'Reinforcement steel', status: 'In Stock', categoryId: '' },
         ]}
         endpoint="/web/api/inventory/import"
         requestBodyKey="items"

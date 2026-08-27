@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     totalWorkers,
     onSiteToday,
     currentPeriod,
-    byDesigGroup,
+    attendanceWithDesignation,
   ] = await Promise.all([
     prisma.worker.count({ where: { contractorId } }),
     prisma.attendance.count({
@@ -39,47 +39,43 @@ export async function GET(request: NextRequest) {
       orderBy: { startDate: 'desc' },
       select: { id: true, name: true, startDate: true, endDate: true },
     }),
-    prisma.worker.groupBy({
-      by: ['designationId'],
-      where: { contractorId },
-      _count: { _all: true },
+    // Fetch all attendance records (non-Absent) with worker designation for attendance-based stats
+    prisma.attendance.findMany({
+      where: {
+        contractorId,
+        status: { notIn: ['Absent'] },
+      },
+      select: {
+        workerId: true,
+        worker: {
+          select: {
+            designationId: true,
+            designation: { select: { title: true } },
+          },
+        },
+      },
+      distinct: ['workerId'],
     }),
   ]);
 
-  let activeInPeriod = 0;
-  if (currentPeriod) {
-    const periodStart = startOfDay(currentPeriod.startDate);
-    const activeRecords = await prisma.attendance.groupBy({
-      by: ['workerId'],
-      where: {
-        contractorId,
-        date: { gte: periodStart, lte: todayEnd },
-        status: { notIn: ['Absent'] },
-      },
-      _count: { _all: true },
-    });
-    activeInPeriod = activeRecords.length;
-  } else {
-    activeInPeriod = await prisma.worker.count({
-      where: { contractorId, status: 'Active' },
-    });
-  }
+  // "Active" = distinct workers with at least one attendance record
+  const activeInPeriod = attendanceWithDesignation.length;
 
-  const desigIds = byDesigGroup
-    .map((g) => g.designationId)
-    .filter((d): d is string => d !== null);
-  const desigs = desigIds.length
-    ? await prisma.designation.findMany({
-        where: { id: { in: desigIds } },
-        select: { id: true, title: true },
-      })
-    : [];
-  const titleMap = new Map(desigs.map((d) => [d.id, d.title]));
-  const byDesignation = byDesigGroup
-    .map((g) => ({
-      designationId: g.designationId,
-      title: g.designationId ? titleMap.get(g.designationId) || 'Unknown' : 'Unassigned',
-      count: g._count._all,
+  // "Workers per Category" (Total view) = attendance-based: distinct workers grouped by designation
+  const desigCounts = new Map<string | null, { title: string; count: number }>();
+  for (const r of attendanceWithDesignation) {
+    const desigId = r.worker.designationId;
+    const title = r.worker.designation?.title || 'Unassigned';
+    if (!desigCounts.has(desigId)) {
+      desigCounts.set(desigId, { title, count: 0 });
+    }
+    desigCounts.get(desigId)!.count++;
+  }
+  const byDesignation = Array.from(desigCounts.entries())
+    .map(([designationId, { title, count }]) => ({
+      designationId,
+      title,
+      count,
     }))
     .sort((a, b) => b.count - a.count);
 

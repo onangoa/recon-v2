@@ -306,6 +306,9 @@ export async function initiateBankTopup(data: {
   bankCode?: string;
   description?: string;
   referenceNumber?: string;
+  recipientName?: string;
+  proofDocumentUrl?: string;
+  proofDocumentName?: string;
 }) {
   const wallet = await prisma.wallet.findUnique({ where: { id: data.walletId } });
   if (!wallet) throw new Error(`Wallet ${data.walletId} not found`);
@@ -330,6 +333,9 @@ export async function initiateBankTopup(data: {
       accountReference: data.accountNumber,
       remarks: data.bankCode || 'BANK',
       status: 'pending',
+      recipientName: data.recipientName || null,
+      proofDocumentUrl: data.proofDocumentUrl || null,
+      proofDocumentName: data.proofDocumentName || null,
       metadata: JSON.stringify({
         bankTransfer: true,
         senderAccount: data.accountNumber,
@@ -361,6 +367,9 @@ export async function createBankPayout(data: {
   payoutChannel: 'pesalink' | 'ift' | 'mpesa';
   description?: string;
   referenceNumber?: string;
+  recipientName?: string;
+  proofDocumentUrl?: string;
+  proofDocumentName?: string;
 }) {
   const wallet = await prisma.wallet.findUnique({ where: { id: data.walletId } });
   if (!wallet) throw new Error(`Wallet ${data.walletId} not found`);
@@ -386,6 +395,9 @@ export async function createBankPayout(data: {
       remarks: data.payoutChannel,
       phoneNumber: data.mobileNumber,
       status: 'pending_approval',
+      recipientName: data.recipientName || null,
+      proofDocumentUrl: data.proofDocumentUrl || null,
+      proofDocumentName: data.proofDocumentName || null,
       metadata: JSON.stringify({
         bankPayout: true,
         destinationAccount: data.destinationAccount,

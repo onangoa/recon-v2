@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   ShieldAlert, 
   Plus, 
@@ -16,7 +17,11 @@ import {
   MapPin,
   Pencil,
   Trash2,
-  FileText
+  FileText,
+  Eye,
+  Upload,
+  X,
+  Paperclip
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -98,6 +103,8 @@ export default function SafetyIncidentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     siteId: '',
@@ -108,6 +115,7 @@ export default function SafetyIncidentsPage() {
     status: 'Reported',
     incidentDate: new Date().toISOString().split('T')[0],
     reportedBy: '',
+    attachments: '',
   });
 
   const fetchIncidents = async () => {
@@ -144,13 +152,25 @@ export default function SafetyIncidentsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
+      let attachments = formData.attachments;
+      if (attachmentFile) {
+        setIsUploading(true);
+        const fd = new FormData();
+        fd.append('file', attachmentFile);
+        const uploadRes = await fetch('/web/api/upload', { method: 'POST', body: fd });
+        if (!uploadRes.ok) throw new Error('Failed to upload attachment');
+        const uploadData = await uploadRes.json();
+        attachments = uploadData.url || uploadData.fileData || '';
+        setIsUploading(false);
+      }
+
       const url = editingIncident ? `/web/api/safety-incidents/${editingIncident.id}` : '/web/api/safety-incidents';
       const method = editingIncident ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, attachments }),
       });
 
       if (!response.ok) throw new Error('Failed to save incident');
@@ -163,6 +183,7 @@ export default function SafetyIncidentsPage() {
       resetForm();
       fetchIncidents();
     } catch (err: any) {
+      setIsUploading(false);
       toast({ title: "Error", description: getErrorMessage(err, editingIncident ? "Unable to update the safety report. Please verify the details and try again." : "Unable to report the safety incident. Please verify the details and try again."), variant: "destructive" });
     } finally {
       setIsSaving(false);
@@ -171,6 +192,7 @@ export default function SafetyIncidentsPage() {
 
   const handleEdit = (incident: Incident) => {
     setEditingIncident(incident);
+    setAttachmentFile(null);
     setFormData({
       siteId: incident.siteId,
       title: incident.title,
@@ -180,6 +202,7 @@ export default function SafetyIncidentsPage() {
       status: incident.status,
       incidentDate: new Date(incident.incidentDate).toISOString().split('T')[0],
       reportedBy: incident.reportedBy,
+      attachments: incident.attachments || '',
     });
     setIsDialogOpen(true);
   };
@@ -198,6 +221,7 @@ export default function SafetyIncidentsPage() {
 
   const resetForm = () => {
     setEditingIncident(null);
+    setAttachmentFile(null);
     setFormData({
       siteId: '',
       title: '',
@@ -207,6 +231,7 @@ export default function SafetyIncidentsPage() {
       status: 'Reported',
       incidentDate: new Date().toISOString().split('T')[0],
       reportedBy: '',
+      attachments: '',
     });
   };
 
@@ -357,6 +382,9 @@ export default function SafetyIncidentsPage() {
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/contractor/safety/${incident.id}`}><Eye className="w-4 h-4 mr-2" /> View Incident</Link>
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEdit(incident)}><Pencil className="w-4 h-4 mr-2" /> Edit Report</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(incident.id)}><Trash2 className="w-4 h-4 mr-2" /> Delete Report</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -494,11 +522,49 @@ export default function SafetyIncidentsPage() {
                 required 
               />
             </div>
+            <div className="space-y-2">
+              <Label>Upload Image or Document</Label>
+              {attachmentFile || formData.attachments ? (
+                <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                  <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-sm truncate flex-1">
+                    {attachmentFile ? attachmentFile.name : (formData.attachments?.split('/').pop() || 'Attached file')}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => { setAttachmentFile(null); setFormData({ ...formData, attachments: '' }); }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="incident-attachment"
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-6 text-sm text-muted-foreground transition hover:bg-muted/40"
+                >
+                  <Upload className="w-4 h-4" />
+                  Click to upload an image or document
+                  <input
+                    id="incident-attachment"
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0] || null;
+                      setAttachmentFile(f);
+                    }}
+                  />
+                </label>
+              )}
+            </div>
             <DialogFooter className="border-t pt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-muted hover:bg-muted/50">Cancel</Button>
-              <Button type="submit" disabled={isSaving} className="min-w-[120px]">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
-                {editingIncident ? 'Update Report' : 'Submit Report'}
+              <Button type="submit" disabled={isSaving || isUploading} className="min-w-[120px]">
+                {isSaving || isUploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+                {isUploading ? 'Uploading...' : editingIncident ? 'Update Report' : 'Submit Report'}
               </Button>
             </DialogFooter>
           </form>

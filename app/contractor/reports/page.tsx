@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   BarChart3,
   Users,
@@ -90,6 +91,7 @@ interface ReportData {
     status: string;
     createdAt: string;
     walletName: string;
+    recipientName?: string | null;
   }[];
 }
 
@@ -202,6 +204,12 @@ export default function ReportsPage() {
           <p className="text-muted-foreground mt-1 text-sm italic">Comprehensive overview of your construction operations.</p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline" className="gap-2">
+            <Link href="/contractor/reports/transactions">
+              <CreditCard className="w-4 h-4" />
+              <span>Transactions Report</span>
+            </Link>
+          </Button>
           <Button variant="outline" onClick={fetchReport} size="icon">
             <Calendar className="w-4 h-4" />
           </Button>
@@ -455,6 +463,7 @@ export default function ReportsPage() {
                   <TableHead className="font-bold text-xs uppercase">Date</TableHead>
                   <TableHead className="font-bold text-xs uppercase">Wallet</TableHead>
                   <TableHead className="font-bold text-xs uppercase">Description</TableHead>
+                  <TableHead className="font-bold text-xs uppercase">Recipient</TableHead>
                   <TableHead className="font-bold text-xs uppercase">Type</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-right">Amount</TableHead>
                   <TableHead className="font-bold text-xs uppercase text-center">Status</TableHead>
@@ -468,6 +477,7 @@ export default function ReportsPage() {
                     </TableCell>
                     <TableCell className="text-xs font-medium">{tx.walletName}</TableCell>
                     <TableCell className="text-xs max-w-[200px] truncate">{tx.description || '-'}</TableCell>
+                    <TableCell className="text-xs font-medium">{tx.recipientName || '-'}</TableCell>
                     <TableCell>
                       <Badge className={`text-[9px] font-bold uppercase px-1.5 py-0 border-none ${tx.type === 'credit' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                         {tx.type}

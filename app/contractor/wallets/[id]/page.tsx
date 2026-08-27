@@ -30,7 +30,10 @@ import {
   ShoppingBag,
   ChevronLeft,
   Landmark,
-  Building2
+  Building2,
+  Upload,
+  Paperclip,
+  X
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -145,6 +148,32 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [bankPayoutMemo, setBankPayoutMemo] = useState('');
   const [isBankPaying, setIsBankPaying] = useState(false);
 
+  // Recipient name + proof document fields shared across all 4 payment forms
+  const [depositRecipientName, setDepositRecipientName] = useState('');
+  const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
+  const [paymentRecipientName, setPaymentRecipientName] = useState('');
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [bankDepositRecipientName, setBankDepositRecipientName] = useState('');
+  const [bankDepositProofFile, setBankDepositProofFile] = useState<File | null>(null);
+  const [bankPayoutRecipientName, setBankPayoutRecipientName] = useState('');
+  const [bankPayoutProofFile, setBankPayoutProofFile] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+
+  const uploadProofDocument = async (file: File | null): Promise<{ url: string; fileName: string } | null> => {
+    if (!file) return null;
+    setIsUploadingProof(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/web/api/upload', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Failed to upload document');
+      const data = await res.json();
+      return { url: data.url || data.fileData || '', fileName: data.fileName || file.name };
+    } finally {
+      setIsUploadingProof(false);
+    }
+  };
+
   // Transaction pagination states
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
@@ -215,6 +244,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
     setIsDepositing(true);
     try {
+      const proof = await uploadProofDocument(depositProofFile);
       const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -224,6 +254,9 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           amount: parseFloat(depositAmount),
           description: depositMemo || `Deposit to Wallet`,
           referenceNumber: depositSource, // Phone for STK Push
+          recipientName: depositRecipientName || undefined,
+          proofDocumentUrl: proof?.url || undefined,
+          proofDocumentName: proof?.fileName || undefined,
         }),
       });
 
@@ -239,6 +272,8 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setDepositAmount('');
       setDepositSource('');
       setDepositMemo('');
+      setDepositRecipientName('');
+      setDepositProofFile(null);
       setShowAddFunds(false);
       fetchTransactions(); // Show the pending transaction
       fetchWalletData(); // Update wallet balance
@@ -274,6 +309,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
     setIsMakingPayment(true);
     try {
+      const proof = await uploadProofDocument(paymentProofFile);
       const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,6 +321,9 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           description: paymentMemo || `Payment to ${paymentRecipient}`,
           referenceNumber: paymentRecipient,
           accountNumber: payoutType === 'paybill' && paymentAccountNumber ? paymentAccountNumber : undefined,
+          recipientName: paymentRecipientName || undefined,
+          proofDocumentUrl: proof?.url || undefined,
+          proofDocumentName: proof?.fileName || undefined,
         }),
       });
 
@@ -301,6 +340,8 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setPaymentRecipient('');
       setPaymentAccountNumber('');
       setPaymentMemo('');
+      setPaymentRecipientName('');
+      setPaymentProofFile(null);
       setShowMakePayment(false);
       fetchTransactions(); // Show pending transaction
       fetchWalletData(); // Update wallet balance
@@ -327,6 +368,7 @@ const handleBankDeposit = async () => {
 
     setIsBankDepositing(true);
     try {
+      const proof = await uploadProofDocument(bankDepositProofFile);
       const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -337,6 +379,9 @@ const handleBankDeposit = async () => {
           accountNumber: bankDepositAccount,
           bankCode: bankDepositBankCode || undefined,
           description: bankDepositMemo || `Bank top-up from ${bankDepositAccount}`,
+          recipientName: bankDepositRecipientName || undefined,
+          proofDocumentUrl: proof?.url || undefined,
+          proofDocumentName: proof?.fileName || undefined,
         }),
       });
 
@@ -353,6 +398,8 @@ const handleBankDeposit = async () => {
       setBankDepositAccount('');
       setBankDepositBankCode('');
       setBankDepositMemo('');
+      setBankDepositRecipientName('');
+      setBankDepositProofFile(null);
       setShowBankDeposit(false);
       fetchTransactions();
       fetchWalletData();
@@ -387,6 +434,7 @@ const handleBankDeposit = async () => {
 
     setIsBankPaying(true);
     try {
+      const proof = await uploadProofDocument(bankPayoutProofFile);
       const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -399,6 +447,9 @@ const handleBankDeposit = async () => {
           bankCode: bankPayoutChannel !== 'mpesa' ? (bankPayoutBankCode || undefined) : undefined,
           mobileNumber: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : undefined,
           description: bankPayoutMemo || `Bank payout (${bankPayoutChannel.toUpperCase()})`,
+          recipientName: bankPayoutRecipientName || undefined,
+          proofDocumentUrl: proof?.url || undefined,
+          proofDocumentName: proof?.fileName || undefined,
         }),
       });
 
@@ -416,6 +467,8 @@ const handleBankDeposit = async () => {
       setBankPayoutBankCode('');
       setBankPayoutMobile('');
       setBankPayoutMemo('');
+      setBankPayoutRecipientName('');
+      setBankPayoutProofFile(null);
       setShowBankPayout(false);
       fetchTransactions();
       fetchWalletData();
@@ -747,13 +800,38 @@ const handleBankDeposit = async () => {
                         className="bg-muted/30 border-none" 
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Payment Recipient Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter recipient name"
+                        value={depositRecipientName}
+                        onChange={(e) => setDepositRecipientName(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Upload Payment Document</Label>
+                      {depositProofFile ? (
+                        <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{depositProofFile.name}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setDepositProofFile(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+                          <Upload className="w-4 h-4" /> Click to upload
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setDepositProofFile(e.target.files?.[0] || null)} />
+                        </label>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowAddFunds(false)}>Cancel</Button>
                     <Button 
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                       onClick={handleDeposit}
-                      disabled={isDepositing}
+                      disabled={isDepositing || isUploadingProof}
                     >
                       {isDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Push STK
@@ -815,13 +893,38 @@ const handleBankDeposit = async () => {
                         className="bg-muted/30 border-none"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Payment Recipient Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter recipient name"
+                        value={bankDepositRecipientName}
+                        onChange={(e) => setBankDepositRecipientName(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Upload Payment Document</Label>
+                      {bankDepositProofFile ? (
+                        <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{bankDepositProofFile.name}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setBankDepositProofFile(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+                          <Upload className="w-4 h-4" /> Click to upload
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setBankDepositProofFile(e.target.files?.[0] || null)} />
+                        </label>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowBankDeposit(false)}>Cancel</Button>
                     <Button
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                       onClick={handleBankDeposit}
-                      disabled={isBankDepositing}
+                      disabled={isBankDepositing || isUploadingProof}
                     >
                       {isBankDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Validate & Top Up
@@ -940,6 +1043,31 @@ const handleBankDeposit = async () => {
                         maxLength={15}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Payment Recipient Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter recipient name"
+                        value={bankPayoutRecipientName}
+                        onChange={(e) => setBankPayoutRecipientName(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Upload Payment Document</Label>
+                      {bankPayoutProofFile ? (
+                        <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{bankPayoutProofFile.name}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setBankPayoutProofFile(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+                          <Upload className="w-4 h-4" /> Click to upload
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setBankPayoutProofFile(e.target.files?.[0] || null)} />
+                        </label>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">
                     {wallet.balance < parseFloat(bankPayoutAmount || '0') && (
@@ -950,7 +1078,7 @@ const handleBankDeposit = async () => {
                       <Button
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                         onClick={handleBankPayout}
-                        disabled={isBankPaying || wallet.balance < parseFloat(bankPayoutAmount || '0')}
+                        disabled={isBankPaying || isUploadingProof || wallet.balance < parseFloat(bankPayoutAmount || '0')}
                       >
                         {isBankPaying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Create Bank Payout
@@ -1050,6 +1178,31 @@ const handleBankDeposit = async () => {
                         className="bg-muted/30 border-none" 
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Payment Recipient Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="Enter recipient name"
+                        value={paymentRecipientName}
+                        onChange={(e) => setPaymentRecipientName(e.target.value)}
+                        className="bg-muted/30 border-none h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Upload Payment Document</Label>
+                      {paymentProofFile ? (
+                        <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
+                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm truncate flex-1">{paymentProofFile.name}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setPaymentProofFile(null)}><X className="w-4 h-4" /></Button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
+                          <Upload className="w-4 h-4" /> Click to upload
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
+                        </label>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">
                     {wallet.balance < parseFloat(paymentAmount || '0') && (
@@ -1060,7 +1213,7 @@ const handleBankDeposit = async () => {
                       <Button 
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                         onClick={handlePayment}
-                        disabled={isMakingPayment || wallet.balance < parseFloat(paymentAmount || '0')}
+                        disabled={isMakingPayment || isUploadingProof || wallet.balance < parseFloat(paymentAmount || '0')}
                       >
                         {isMakingPayment && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Execute Payment

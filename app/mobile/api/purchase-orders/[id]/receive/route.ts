@@ -23,9 +23,14 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { items, note } = body as {
+    const { items, note, deliveryNoteUrl, deliveryNoteFileName, files, partiallyReceivedDate, receivedInFullDate } = body as {
       items: Array<{ id: string; receivedQuantity: number }>;
       note?: string;
+      deliveryNoteUrl?: string;
+      deliveryNoteFileName?: string;
+      files?: Array<{ fileName: string; fileUrl: string; fileType?: string }>;
+      partiallyReceivedDate?: string;
+      receivedInFullDate?: string;
     };
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -120,10 +125,32 @@ export async function POST(
         newStatus = 'partially_received';
       }
 
+      const poUpdateData: any = { status: newStatus };
+      if (deliveryNoteUrl) {
+        poUpdateData.deliveryNoteUrl = deliveryNoteUrl;
+        poUpdateData.deliveryNoteFileName = deliveryNoteFileName || null;
+      }
+      if (newStatus === 'delivered') {
+        poUpdateData.receivedInFullDate = receivedInFullDate ? new Date(receivedInFullDate) : new Date();
+      } else if (newStatus === 'partially_received') {
+        poUpdateData.partiallyReceivedDate = partiallyReceivedDate ? new Date(partiallyReceivedDate) : (refreshed!.partiallyReceivedDate || new Date());
+      }
+
+      if (Array.isArray(files) && files.length > 0) {
+        await tx.purchaseOrderFile.createMany({
+          data: files.map((f) => ({
+            purchaseOrderId: id,
+            fileName: f.fileName,
+            fileUrl: f.fileUrl,
+            fileType: f.fileType || null,
+          })),
+        });
+      }
+
       const updatedPO = await tx.purchaseOrder.update({
         where: { id },
-        data: { status: newStatus },
-        include: { items: true, supplier: true, site: true },
+        data: poUpdateData,
+        include: { items: true, supplier: true, site: true, files: { orderBy: { uploadedAt: 'desc' } } },
       });
 
       return { updatedPO, updatedItemIds };

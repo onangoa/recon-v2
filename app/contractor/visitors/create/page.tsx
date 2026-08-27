@@ -222,18 +222,14 @@ export default function CreateVisitorPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 uppercase tracking-wider">Purpose *</label>
-            <select
+            <input
+              type="text"
               value={formData.purpose}
               onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+              placeholder="Enter purpose of visit"
               disabled={isSubmitting}
               className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            >
-              <option value="">Select Purpose</option>
-              <option value="inspection">Inspection</option>
-              <option value="meeting">Meeting</option>
-              <option value="delivery">Delivery</option>
-              <option value="other">Other</option>
-            </select>
+            />
           </div>
 
           <div>

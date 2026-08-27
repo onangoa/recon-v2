@@ -31,6 +31,7 @@ export async function GET(
         supplier: true,
         items: true,
         site: true,
+        files: { orderBy: { uploadedAt: 'desc' } },
       },
     });
 

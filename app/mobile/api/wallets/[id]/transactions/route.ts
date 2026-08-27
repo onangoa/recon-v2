@@ -73,7 +73,7 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const body = await request.json();
-    const { type, amount, description, referenceNumber, method, payoutType, accountNumber, requiresApproval, bankCode, destinationAccount, mobileNumber, payoutChannel } = body;
+    const { type, amount, description, referenceNumber, method, payoutType, accountNumber, requiresApproval, bankCode, destinationAccount, mobileNumber, payoutChannel, recipientName, proofDocumentUrl, proofDocumentName } = body;
 
     if (!type || !amount) {
       return mobileError('Type and amount are required', 400);
@@ -101,6 +101,9 @@ export async function POST(
             bankCode,
             description: description || 'Bank top-up to wallet',
             referenceNumber,
+            recipientName,
+            proofDocumentUrl,
+            proofDocumentName,
           });
           return mobileSuccess(result, 'Bank top-up initiated and pending confirmation');
         } else {
@@ -123,6 +126,9 @@ export async function POST(
             payoutChannel: channel,
             description: description || `Bank payout to ${destinationAccount || accountNumber || mobileNumber || referenceNumber}`,
             referenceNumber,
+            recipientName,
+            proofDocumentUrl,
+            proofDocumentName,
           });
           return mobileSuccess(result, 'Bank payout created and pending approval');
         }
@@ -147,6 +153,9 @@ export async function POST(
           description,
           reference: referenceNumber,
           status: 'completed',
+          recipientName: recipientName || null,
+          proofDocumentUrl: proofDocumentUrl || null,
+          proofDocumentName: proofDocumentName || null,
         },
       });
 
@@ -189,6 +198,9 @@ export async function POST(
           transactionDesc: description || `${transactionType} Payment to ${referenceNumber}`,
           remarks: payoutType,
           phoneNumber: payoutType === 'phone' || payoutType === 'pochi' ? referenceNumber : undefined,
+          recipientName: recipientName || null,
+          proofDocumentUrl: proofDocumentUrl || null,
+          proofDocumentName: proofDocumentName || null,
         },
       });
 

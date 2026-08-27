@@ -519,7 +519,7 @@ model Inventory {
   contractorId String?
   name         String
   description  String?
-  sku          String?            @unique
+  productId    String?            @unique
   categoryId   String?
   quantity     Float              @default(0)
   unitCost     Float              @default(0)
@@ -688,17 +688,34 @@ model PurchaseOrder {
   subtotal             Float               @default(0)
   tax                  Float               @default(0)
   total                Float               @default(0)
-  orderDate            DateTime            @default(now())
-  expectedDeliveryDate DateTime?
-  notes                String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  supplier             Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  orderDate             DateTime            @default(now())
+  expectedDeliveryDate  DateTime?
+  partiallyReceivedDate DateTime?
+  receivedInFullDate    DateTime?
+  deliveryNoteUrl       String?
+  deliveryNoteFileName  String?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  supplier              Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   site                 Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
   items                PurchaseOrderItem[]
+  files                PurchaseOrderFile[]
 
   @@index([siteId])
   @@index([supplierId])
+}
+
+model PurchaseOrderFile {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  fileName        String
+  fileUrl         String
+  fileType        String?
+  uploadedAt      DateTime      @default(now())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
 }
 
 model PurchaseOrderItem {
@@ -822,6 +839,10 @@ model Transaction {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
   wallet                    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  recipientName            String?
+  proofDocumentUrl         String?
+  proofDocumentName        String?
 
   // M-Pesa specific fields
   mpesaTransactionId        String?

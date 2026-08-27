@@ -111,11 +111,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
-    if (categoryWithMaterials._count.inventory > 0) {
-      return NextResponse.json({ 
-        error: 'Cannot delete category with associated materials' 
-      }, { status: 400 });
-    }
+    // Unlink any inventory items referencing this category, then delete the category.
+    await prisma.inventory.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: null },
+    });
+
+    // Detach any subcategories so they become top-level instead of orphaning the relation.
+    await prisma.inventoryCategory.updateMany({
+      where: { parentId: id },
+      data: { parentId: null },
+    });
 
     await prisma.inventoryCategory.delete({
       where: { id }

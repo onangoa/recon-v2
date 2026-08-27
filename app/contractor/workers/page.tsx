@@ -253,6 +253,10 @@ export default function WorkersPage() {
       if (!res.ok) return;
       const data: WorkerStats = await res.json();
       setStats(data);
+      // Use attendance-based byDesignation from stats API for the Total view
+      if (Array.isArray(data.byDesignation) && data.byDesignation.length > 0) {
+        setByDesignation(data.byDesignation);
+      }
       if (data.byDesignationForDate) {
         setByDesignationForDate(data.byDesignationForDate);
       }
@@ -504,7 +508,7 @@ export default function WorkersPage() {
                 <BadgeCheck className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Active</p>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Active (with attendance)</p>
                 <h3 className="text-2xl font-bold">{stats?.activeInPeriod ?? '—'}</h3>
               </div>
             </div>
@@ -532,7 +536,7 @@ export default function WorkersPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary" />
-                Workers per Category
+                Workers per Category <span className="text-[10px] normal-case text-muted-foreground/60">(attendance-based)</span>
               </CardTitle>
               <div className="flex items-center gap-1">
                 <Popover open={categoryPickerOpen} onOpenChange={setCategoryPickerOpen}>

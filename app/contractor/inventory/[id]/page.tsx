@@ -99,7 +99,7 @@ interface InventoryItem {
   minStock: number;
   description: string | null;
   status: string;
-  sku: string | null;
+  productId: string | null;
   createdAt: string;
   updatedAt: string;
   category: {
@@ -532,8 +532,8 @@ export default function InventoryItemView() {
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">SKU</label>
-                  <p className="text-sm font-mono mt-1">{item.sku || 'N/A'}</p>
+                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Product ID</label>
+                  <p className="text-sm font-mono mt-1">{item.productId || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Site</label>
