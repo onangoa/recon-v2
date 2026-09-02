@@ -694,21 +694,35 @@ export async function handleBankIPN(ipnData: any) {
 
     // 3b. Strategy B – match by amount + sender account for pending top-ups
     if (pendingTransaction === null) {
-      const senderAccountStr = String(CustMemoLine2 || '').split('~').map((p) => p.trim()).filter(Boolean)[1]
-        || narrationParts[3]
-        || '';
-      const matchAccount = senderAccountStr || String(AcctNo || '');
+      const memo2Parts = String(CustMemoLine2 || '')
+        .split('~').map((p) => p.trim()).filter(Boolean);
 
-      if (matchAccount) {
-        pendingTransaction = await prisma.transaction.findFirst({
+      const candidateAccounts = Array.from(new Set(
+        [narrationParts[3], memo2Parts[1], String(AcctNo || '')]
+          .map((s) => (s || '').trim())
+          .filter(Boolean)
+          .map((s) => s.replace(/\D/g, '')),
+      )).filter(Boolean);
+
+      if (candidateAccounts.length) {
+        const recentPending = await prisma.transaction.findMany({
           where: {
             status: 'pending',
             amount,
-            accountReference: matchAccount,
+            transactionType: 'BANK_TOPUP',
           },
           orderBy: { createdAt: 'desc' },
+          take: 50,
           include: { wallet: true },
         });
+
+        pendingTransaction = recentPending.find((t) => {
+          const stored = String(t.accountReference || '').replace(/\D/g, '');
+          if (!stored || stored.length < 6) return false;
+          return candidateAccounts.some(
+            (c) => c.length >= 6 && (stored === c || stored.includes(c) || c.includes(stored)),
+          );
+        }) || null;
       }
     }
 
