@@ -164,8 +164,6 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
   const [paymentRecipientName, setPaymentRecipientName] = useState('');
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-  const [bankDepositRecipientName, setBankDepositRecipientName] = useState('');
-  const [bankDepositProofFile, setBankDepositProofFile] = useState<File | null>(null);
   const [bankPayoutRecipientName, setBankPayoutRecipientName] = useState('');
   const [bankPayoutProofFile, setBankPayoutProofFile] = useState<File | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
@@ -393,7 +391,6 @@ const handleBankDeposit = async () => {
 
     setIsBankDepositing(true);
     try {
-      const proof = await uploadProofDocument(bankDepositProofFile);
       const response = await fetch(`/web/api/wallets/${walletId}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -403,9 +400,6 @@ const handleBankDeposit = async () => {
           amount: parseFloat(bankDepositAmount),
           accountNumber: bankDepositAccount,
           description: bankDepositMemo || `Bank top-up from ${bankDepositAccount}`,
-          recipientName: bankDepositRecipientName || undefined,
-          proofDocumentUrl: proof?.url || undefined,
-          proofDocumentName: proof?.fileName || undefined,
         }),
       });
 
@@ -423,8 +417,6 @@ const handleBankDeposit = async () => {
       setBankDepositAmount('');
       setBankDepositAccount('');
       setBankDepositMemo('');
-      setBankDepositRecipientName('');
-      setBankDepositProofFile(null);
       setBankDepositConfirming(false);
       setShowBankDeposit(false);
       fetchTransactions();
@@ -926,31 +918,6 @@ const handleBankDeposit = async () => {
                         className="bg-muted/30 border-none"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Payment Recipient Name</Label>
-                      <Input
-                        type="text"
-                        placeholder="Enter recipient name"
-                        value={bankDepositRecipientName}
-                        onChange={(e) => setBankDepositRecipientName(e.target.value)}
-                        className="bg-muted/30 border-none h-11"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Upload Payment Document</Label>
-                      {bankDepositProofFile ? (
-                        <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/30 px-3 py-2">
-                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
-                          <span className="text-sm truncate flex-1">{bankDepositProofFile.name}</span>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setBankDepositProofFile(null)}><X className="w-4 h-4" /></Button>
-                        </div>
-                      ) : (
-                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition hover:bg-muted/40">
-                          <Upload className="w-4 h-4" /> Click to upload
-                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setBankDepositProofFile(e.target.files?.[0] || null)} />
-                        </label>
-                      )}
-                    </div>
                   </div>
                   )}
                   {bankDepositConfirming && (
@@ -958,9 +925,7 @@ const handleBankDeposit = async () => {
                     <div className="rounded-md border border-muted bg-muted/20 divide-y divide-border/60">
                       <BankDepositSummaryRow label="Amount" value={`KES ${Number(bankDepositAmount).toLocaleString()}`} strong />
                       <BankDepositSummaryRow label="Sender Account" value={bankDepositAccount} />
-                      {bankDepositRecipientName && <BankDepositSummaryRow label="Recipient Name" value={bankDepositRecipientName} />}
                       {bankDepositMemo && <BankDepositSummaryRow label="Description" value={bankDepositMemo} />}
-                      {bankDepositProofFile && <BankDepositSummaryRow label="Payment Document" value={bankDepositProofFile.name} />}
                     </div>
 
                     <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 p-4 space-y-3">

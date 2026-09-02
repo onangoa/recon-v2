@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   if (!permCheck.authorized) return permCheck.error;
 
   return NextResponse.json({
-    bankName: 'Co-operative Bank of Kenya',
+    bankName: 'Co-operative Bank of Kenya (RECON ENGINEERING ..)',
     sourceAccount: process.env.COOP_BANK_SOURCE_ACCOUNT || '',
   });
 }
