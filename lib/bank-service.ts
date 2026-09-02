@@ -6,6 +6,7 @@ const AUTH_TOKEN = process.env.COOP_BANK_AUTH_TOKEN || '';
 const DEFAULT_USER_ID = process.env.COOP_BANK_USER_ID || 'RECON';
 const DEFAULT_SOURCE_ACCOUNT = process.env.COOP_BANK_SOURCE_ACCOUNT || '';
 const FUNDS_TRANSFER_CALLBACK = process.env.COOP_BANK_CALLBACK_URL || 'https://reconsmi.com/v1/ext/ipn';
+const BANK_IPN_DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // In-memory token cache (refreshes ~5min before expiry)
 let cachedToken: string | null = null;
@@ -692,38 +693,40 @@ export async function handleBankIPN(ipnData: any) {
       });
     }
 
+    const memo2Parts = String(CustMemoLine2 || '')
+      .split('~').map((p) => p.trim()).filter(Boolean);
+
+    const candidateAccounts = Array.from(new Set(
+      [narrationParts[3], memo2Parts[1]]
+        .map((s) => (s || '').trim())
+        .filter(Boolean)
+        .map((s) => s.replace(/\D/g, '')),
+    )).filter(Boolean);
+
+    const matchesCandidateAccount = (storedRaw: string | null | undefined): boolean => {
+      const stored = String(storedRaw || '').replace(/\D/g, '');
+      if (!stored || stored.length < 6) return false;
+      return candidateAccounts.some(
+        (c) => c.length >= 6 && (stored === c || stored.includes(c) || c.includes(stored)),
+      );
+    };
+
     // 3b. Strategy B – match by amount + sender account for pending top-ups
-    if (pendingTransaction === null) {
-      const memo2Parts = String(CustMemoLine2 || '')
-        .split('~').map((p) => p.trim()).filter(Boolean);
+    if (pendingTransaction === null && candidateAccounts.length) {
+      const recentPending = await prisma.transaction.findMany({
+        where: {
+          status: 'pending',
+          amount,
+          transactionType: 'BANK_TOPUP',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: { wallet: true },
+      });
 
-      const candidateAccounts = Array.from(new Set(
-        [narrationParts[3], memo2Parts[1], String(AcctNo || '')]
-          .map((s) => (s || '').trim())
-          .filter(Boolean)
-          .map((s) => s.replace(/\D/g, '')),
-      )).filter(Boolean);
-
-      if (candidateAccounts.length) {
-        const recentPending = await prisma.transaction.findMany({
-          where: {
-            status: 'pending',
-            amount,
-            transactionType: 'BANK_TOPUP',
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-          include: { wallet: true },
-        });
-
-        pendingTransaction = recentPending.find((t) => {
-          const stored = String(t.accountReference || '').replace(/\D/g, '');
-          if (!stored || stored.length < 6) return false;
-          return candidateAccounts.some(
-            (c) => c.length >= 6 && (stored === c || stored.includes(c) || c.includes(stored)),
-          );
-        }) || null;
-      }
+      pendingTransaction = recentPending.find(
+        (t) => matchesCandidateAccount(t.accountReference),
+      ) || null;
     }
 
     const isCredit = eventType === 'CREDIT';
@@ -754,6 +757,13 @@ export async function handleBankIPN(ipnData: any) {
     // 4. Complete the matched pending transaction
     // ----------------------------------------------------------------
     if (pendingTransaction) {
+      let existingMeta: any = {};
+      try {
+        existingMeta = pendingTransaction.metadata ? JSON.parse(pendingTransaction.metadata) : {};
+      } catch {
+        existingMeta = {};
+      }
+
       const completedTx = await prisma.$transaction(async (tx) => {
         const updated = await tx.transaction.update({
           where: { id: pendingTransaction.id },
@@ -764,7 +774,7 @@ export async function handleBankIPN(ipnData: any) {
             rawCallbackData: JSON.stringify(ipnData),
             callbackReceivedAt: new Date(),
             resultDesc: `Bank IPN: ${narrationStr}`,
-            metadata: JSON.stringify({ ...ipnMetadata, matchedPendingTransaction: true }),
+            metadata: JSON.stringify({ ...existingMeta, ...ipnMetadata, matchedPendingTransaction: true }),
           },
         });
 
@@ -790,6 +800,66 @@ export async function handleBankIPN(ipnData: any) {
         `for wallet ${pendingTransaction.walletId} (${eventType} ${amount})`,
       );
       return { success: true, transactionId: completedTx.id, status: 'completed', matched: 'pending' };
+    }
+
+    // ----------------------------------------------------------------
+    // 4b. Suspected duplicate payment – same sender account and amount
+    //     as a recently completed credit, but no pending top-up left to
+    //     match. Hold it for manual review instead of crediting the
+    //     wallet a second time.
+    // ----------------------------------------------------------------
+    if (isCredit && candidateAccounts.length) {
+      const recentCompletedCredits = await prisma.transaction.findMany({
+        where: {
+          status: 'completed',
+          type: 'credit',
+          amount,
+          transactionType: { in: ['BANK_TOPUP', 'BANK_IPN'] },
+          callbackReceivedAt: { gte: new Date(Date.now() - BANK_IPN_DUPLICATE_WINDOW_MS) },
+        },
+        orderBy: { callbackReceivedAt: 'desc' },
+        take: 50,
+      });
+
+      const duplicateOf = recentCompletedCredits.find(
+        (t) => matchesCandidateAccount(t.accountReference),
+      );
+
+      if (duplicateOf) {
+        const reviewTxn = await prisma.transaction.create({
+          data: {
+            walletId: duplicateOf.walletId,
+            amount,
+            type: 'credit',
+            status: 'pending_review',
+            reference: PaymentRef || bankTransactionId,
+            receiptNumber: bankTransactionId,
+            externalId: bankTransactionId,
+            transactionType: 'BANK_IPN_DUPLICATE',
+            accountReference: AcctNo,
+            transactionDesc: narrationStr || `Bank ${eventType} via ${channel}`,
+            remarks: channel || 'BANK_IPN_DUPLICATE',
+            rawCallbackData: JSON.stringify(ipnData),
+            callbackReceivedAt: new Date(),
+            metadata: JSON.stringify({
+              ...ipnMetadata,
+              duplicateOfTransactionId: duplicateOf.id,
+              reviewReason: 'duplicate_payment',
+            }),
+          },
+        });
+
+        console.warn(
+          `Bank IPN: suspected duplicate payment held for review ` +
+          `(txn ${reviewTxn.id}, original ${duplicateOf.id})`,
+        );
+        return {
+          success: true,
+          transactionId: reviewTxn.id,
+          status: 'pending_review',
+          matched: 'duplicate_review',
+        };
+      }
     }
 
     // ----------------------------------------------------------------
