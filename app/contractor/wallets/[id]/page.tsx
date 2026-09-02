@@ -33,6 +33,7 @@ import {
   Building2,
   Upload,
   Paperclip,
+  Copy,
   X
 } from 'lucide-react';
 import { 
@@ -107,6 +108,15 @@ interface Transaction {
   createdAt: Date;
 }
 
+function BankDepositSummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-2.5 px-4">
+      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`text-sm ${strong ? 'font-bold' : 'font-medium'}`}>{value}</span>
+    </div>
+  );
+}
+
 export default function WalletDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -135,7 +145,8 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [showBankDeposit, setShowBankDeposit] = useState(false);
   const [bankDepositAmount, setBankDepositAmount] = useState('');
   const [bankDepositAccount, setBankDepositAccount] = useState('');
-  const [bankDepositBankCode, setBankDepositBankCode] = useState('');
+  const [bankDepositConfirming, setBankDepositConfirming] = useState(false);
+  const [bankSourceAccount, setBankSourceAccount] = useState('');
   const [bankDepositMemo, setBankDepositMemo] = useState('');
   const [isBankDepositing, setIsBankDepositing] = useState(false);
 
@@ -186,6 +197,20 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     fetchWalletData();
     fetchTransactions();
   }, [walletId]);
+
+  useEffect(() => {
+    const fetchBankConfig = async () => {
+      try {
+        const response = await fetch('/web/api/bank/config');
+        if (!response.ok) return;
+        const data = await response.json();
+        setBankSourceAccount(data.sourceAccount || '');
+      } catch {
+        return;
+      }
+    };
+    fetchBankConfig();
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -377,7 +402,6 @@ const handleBankDeposit = async () => {
           method: 'bank',
           amount: parseFloat(bankDepositAmount),
           accountNumber: bankDepositAccount,
-          bankCode: bankDepositBankCode || undefined,
           description: bankDepositMemo || `Bank top-up from ${bankDepositAccount}`,
           recipientName: bankDepositRecipientName || undefined,
           proofDocumentUrl: proof?.url || undefined,
@@ -390,16 +414,18 @@ const handleBankDeposit = async () => {
 
       toast({
         title: "Bank Top-up Initiated",
-        description: "Sender account validated. Top-up will be confirmed on receipt.",
+        description: bankSourceAccount
+          ? `Sender account validated. Send KES ${Number(bankDepositAmount).toLocaleString()} to Co-op Bank A/C ${bankSourceAccount} to complete the top-up.`
+          : 'Sender account validated. Top-up will be confirmed on receipt.',
         variant: "success",
       });
 
       setBankDepositAmount('');
       setBankDepositAccount('');
-      setBankDepositBankCode('');
       setBankDepositMemo('');
       setBankDepositRecipientName('');
       setBankDepositProofFile(null);
+      setBankDepositConfirming(false);
       setShowBankDeposit(false);
       fetchTransactions();
       fetchWalletData();
@@ -408,6 +434,18 @@ const handleBankDeposit = async () => {
     } finally {
       setIsBankDepositing(false);
     }
+  };
+
+  const handleStartBankDepositConfirm = () => {
+    if (!bankDepositAmount || !bankDepositAccount) {
+      toast({
+        title: "Validation Error",
+        description: "Amount and sender account number are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBankDepositConfirming(true);
   };
 
   const handleBankPayout = async () => {
@@ -840,7 +878,7 @@ const handleBankDeposit = async () => {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={showBankDeposit} onOpenChange={setShowBankDeposit}>
+              <Dialog open={showBankDeposit} onOpenChange={(open) => { setShowBankDeposit(open); if (!open) setBankDepositConfirming(false); }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5 gap-2 h-11 shadow-sm">
                     <Landmark className="w-4 h-4" /> Deposit via Bank
@@ -851,8 +889,13 @@ const handleBankDeposit = async () => {
                     <DialogTitle className="text-emerald-700 flex items-center gap-2">
                       <Landmark className="w-5 h-5" /> Add Funds (Bank Transfer)
                     </DialogTitle>
-                    <DialogDescription>Top up your wallet from a bank account via Co-op Bank validation.</DialogDescription>
+                    <DialogDescription>
+                      {bankDepositConfirming
+                        ? 'Confirm the details below, then send the amount to the Co-op Bank account shown.'
+                        : 'Top up your wallet from a bank account via Co-op Bank validation.'}
+                    </DialogDescription>
                   </DialogHeader>
+                  {!bankDepositConfirming && (
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label>Amount ({wallet.currency}) *</Label>
@@ -871,16 +914,6 @@ const handleBankDeposit = async () => {
                         placeholder="e.g. 01192588813000"
                         value={bankDepositAccount}
                         onChange={(e) => setBankDepositAccount(e.target.value)}
-                        className="bg-muted/30 border-none h-11"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Sender Bank Code (Optional)</Label>
-                      <Input
-                        type="text"
-                        placeholder="e.g. 0011"
-                        value={bankDepositBankCode}
-                        onChange={(e) => setBankDepositBankCode(e.target.value)}
                         className="bg-muted/30 border-none h-11"
                       />
                     </div>
@@ -919,16 +952,79 @@ const handleBankDeposit = async () => {
                       )}
                     </div>
                   </div>
+                  )}
+                  {bankDepositConfirming && (
+                  <div className="space-y-4 py-4">
+                    <div className="rounded-md border border-muted bg-muted/20 divide-y divide-border/60">
+                      <BankDepositSummaryRow label="Amount" value={`KES ${Number(bankDepositAmount).toLocaleString()}`} strong />
+                      <BankDepositSummaryRow label="Sender Account" value={bankDepositAccount} />
+                      {bankDepositRecipientName && <BankDepositSummaryRow label="Recipient Name" value={bankDepositRecipientName} />}
+                      {bankDepositMemo && <BankDepositSummaryRow label="Description" value={bankDepositMemo} />}
+                      {bankDepositProofFile && <BankDepositSummaryRow label="Payment Document" value={bankDepositProofFile.name} />}
+                    </div>
+
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                        <Landmark className="w-4 h-4" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Transfer Instructions</span>
+                      </div>
+                      <p className="text-sm text-foreground">
+                        Send exactly <span className="font-bold">KES {Number(bankDepositAmount).toLocaleString()}</span> from account{' '}
+                        <span className="font-mono text-xs">{bankDepositAccount}</span> to:
+                      </p>
+                      <div className="flex items-center justify-between gap-3 rounded-md border border-emerald-200 bg-background/80 px-3 py-2.5">
+                        <div className="min-w-0">
+                          <div className="text-xs text-muted-foreground">Co-operative Bank of Kenya</div>
+                          <div className="font-mono font-bold tracking-wide">{bankSourceAccount || 'Contact support for the account number'}</div>
+                        </div>
+                        {bankSourceAccount && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(bankSourceAccount);
+                              toast({ title: 'Copied', description: 'Account number copied to clipboard.', variant: 'success' });
+                            }}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your wallet will be credited automatically once the bank confirms receipt of your payment.
+                      </p>
+                    </div>
+                  </div>
+                  )}
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowBankDeposit(false)}>Cancel</Button>
-                    <Button
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                      onClick={handleBankDeposit}
-                      disabled={isBankDepositing || isUploadingProof}
-                    >
-                      {isBankDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Validate & Top Up
-                    </Button>
+                    {bankDepositConfirming ? (
+                      <>
+                        <Button variant="outline" onClick={() => setBankDepositConfirming(false)} disabled={isBankDepositing || isUploadingProof}>
+                          <ChevronLeft className="w-4 h-4 mr-1" /> Back
+                        </Button>
+                        <Button
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                          onClick={handleBankDeposit}
+                          disabled={isBankDepositing || isUploadingProof}
+                        >
+                          {isBankDepositing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Proceed with Top-Up
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={() => setShowBankDeposit(false)}>Cancel</Button>
+                        <Button
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                          onClick={handleStartBankDepositConfirm}
+                          disabled={isBankDepositing || isUploadingProof}
+                        >
+                          Validate & Top Up
+                        </Button>
+                      </>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
