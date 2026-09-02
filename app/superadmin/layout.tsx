@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Construction,
   MapPin,
-  UserCircle
+  UserCircle,
+  SearchCheck
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -63,13 +64,20 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Plans', href: '/superadmin/plans', icon: ClipboardList },
     { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
+    { label: 'Payment Review', href: '/superadmin/transactions/review', icon: SearchCheck },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
     { label: 'Profile', href: '/superadmin/profile', icon: UserCircle },
     { label: 'Settings', href: '/superadmin/settings', icon: Settings },
   ];
 
   const isActive = (href: string) => {
-    return pathname === href || (href !== '/superadmin' && pathname.startsWith(href + '/'));
+    const matched = navItems.filter(
+      (item) => pathname === item.href || pathname.startsWith(item.href + '/')
+    );
+    return (
+      matched.some((item) => item.href === href) &&
+      matched.every((item) => item.href.length <= href.length)
+    );
   };
 
   return (
