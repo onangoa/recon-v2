@@ -190,8 +190,10 @@ export interface AttendanceAggregate {
 
 /**
  * Aggregate a worker's attendance rows for a period into the figures the
- * payroll calculator expects. A "day worked" is any attendance row that has
- * a check-in recorded (status !== 'Absent'). Leave is not modelled yet, so
+ * payroll calculator expects. A "day worked" is an attendance row that has
+ * BOTH a check-in and a check-out recorded (status !== 'Absent'). Rows
+ * missing either punch are excluded entirely — their hours, overtime and
+ * lateness do not count toward payroll. Leave is not modelled yet, so
  * leaveDays/leaveHours are left at 0.
  */
 export function aggregateAttendance(records: Attendance[]): AttendanceAggregate {
@@ -202,8 +204,9 @@ export function aggregateAttendance(records: Attendance[]): AttendanceAggregate 
   let lateDays = 0;
 
   for (const r of records) {
-    const present = r.status !== 'Absent' && r.checkIn != null;
-    if (present) daysWorked++;
+    const complete = r.status !== 'Absent' && r.checkIn != null && r.checkOut != null;
+    if (!complete) continue;
+    daysWorked++;
     attainedHours += r.totalHours || 0;
     overtimeHours += r.overtimeHours || 0;
     lateHours += r.lateHours || 0;

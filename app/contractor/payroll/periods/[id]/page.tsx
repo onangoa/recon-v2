@@ -184,8 +184,10 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
       const data = await res.json();
       const byWorker = new Map<string, { name: string; days: number; hours: number; overtime: number; lateDays: number }>();
       for (const a of data) {
+        const complete = a.status !== 'Absent' && a.checkIn && a.checkOut;
+        if (!complete) continue;
         const existing = byWorker.get(a.worker.id) || { name: a.worker.name, days: 0, hours: 0, overtime: 0, lateDays: 0 };
-        if (a.status !== 'Absent' && a.checkIn) existing.days++;
+        existing.days++;
         existing.hours += a.totalHours || 0;
         existing.overtime += a.overtimeHours || 0;
         existing.lateDays += a.lateDays || 0;

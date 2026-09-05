@@ -138,7 +138,8 @@ export async function PUT(
 
         const agg = aggregateAttendance(recomputedRecords as any);
 
-        // Skip workers with no attendance — they shouldn't receive payslips.
+        // Skip workers with no complete attendance (log in + log out) —
+        // they shouldn't receive payslips.
         if (agg.daysWorked === 0) continue;
 
         const hoursPerDay = shiftNetHours(worker.shift);
