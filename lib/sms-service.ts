@@ -62,20 +62,25 @@ function getSmsConfig(): SmsConfig {
 }
 
 /** Normalize a Kenyan mobile number to the 2547XXXXXXXX / 2541XXXXXXXX format
- *  required by the gateway. Accepts 07.., +2547.., 2547.. and 7.. forms. */
-export function normalizeKenyanMobile(input: string): string {
-  const digits = input.replace(/[\s\-()+]/g, '');
+ *  required by the gateway. Accepts 07.., +2547.., 2547.. and 7.. forms.
+ *  Numbers (e.g. Daraja callback metadata phones) are coerced to strings. */
+export function normalizeKenyanMobile(input: string | number): string {
+  const digits = String(input).replace(/[\s\-()+]/g, '');
   if (/^254[17]\d{8}$/.test(digits)) return digits;
   if (/^0[17]\d{8}$/.test(digits)) return `254${digits.slice(1)}`;
   if (/^[17]\d{8}$/.test(digits)) return `254${digits}`;
   throw new Error(`Invalid Kenyan mobile number: ${input}`);
 }
 
-/** Send an SMS to one or many mobile numbers (comma-separated string or array). */
-export async function sendSms(mobile: string | string[], message: string): Promise<SendSmsResponse> {
+/** Send an SMS to one or many mobile numbers (comma-separated string or
+ *  array; numeric values, e.g. from payment callbacks, are coerced). */
+export async function sendSms(
+  mobile: string | number | (string | number)[],
+  message: string
+): Promise<SendSmsResponse> {
   const config = getSmsConfig();
 
-  const recipients = (Array.isArray(mobile) ? mobile : mobile.split(','))
+  const recipients = (Array.isArray(mobile) ? mobile.map(String) : String(mobile).split(','))
     .map((m) => m.trim())
     .filter(Boolean)
     .map(normalizeKenyanMobile);
@@ -146,7 +151,7 @@ export async function sendSms(mobile: string | string[], message: string): Promi
 
 /** Never-throwing variant for fire-and-forget notifications. */
 export async function sendSmsSafe(
-  mobile: string | string[],
+  mobile: string | number | (string | number)[],
   message: string
 ): Promise<SendSmsResponse & { error?: string }> {
   try {

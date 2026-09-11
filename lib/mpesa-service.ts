@@ -394,7 +394,7 @@ export const handleSTKPushCallback = async (callbackData: any) => {
         }
         if (!skipTopupSms) {
           await notifyWalletTopupConfirmed(
-            (phoneNumber as string) || transaction.phoneNumber,
+            phoneNumber != null ? String(phoneNumber) : transaction.phoneNumber,
             {
               amount: numericAmount,
               balance: wallet.balance,

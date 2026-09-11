@@ -15,12 +15,12 @@ const formatKes = (amount: number) =>
   `KES ${new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 }).format(amount)}`;
 
 /** 2547XXXXXXXX -> 07XXXXXXXX for display in messages. */
-const displayPhone = (phone: string): string => {
+const displayPhone = (phone: string | number): string => {
   try {
     const normalized = normalizeKenyanMobile(phone);
     return `0${normalized.slice(3)}`;
   } catch {
-    return phone;
+    return String(phone);
   }
 };
 
@@ -72,7 +72,10 @@ function describePayoutDestination(transaction: {
   }
 }
 
-async function deliver(phone: string | null | undefined, message: string): Promise<boolean> {
+async function deliver(
+  phone: string | number | null | undefined,
+  message: string
+): Promise<boolean> {
   if (!phone) return false;
   const result = await sendSmsSafe(phone, message);
   if (!result.success) {
@@ -86,7 +89,7 @@ async function deliver(phone: string | null | undefined, message: string): Promi
  * Used by the M-Pesa STK Push callback where the payer's phone is known.
  */
 export async function notifyWalletTopupConfirmed(
-  phone: string | null | undefined,
+  phone: string | number | null | undefined,
   options: { amount: number; balance: number; receiptRef?: string | null }
 ): Promise<void> {
   try {
