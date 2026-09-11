@@ -124,16 +124,25 @@ export async function sendSms(
 
   const json = (await res.json()) as CelcomSendResponse;
   const items = json.responses || [];
+  console.log(`[SMS] gateway response: ${JSON.stringify(json)}`);
 
   const results: SmsSendResult[] = recipients.map((dest, i) => {
     const item = items[i];
     const code = item?.rescode !== undefined ? String(item.rescode) : undefined;
+    const status = item?.['response-status'];
+    const description = item?.['response-description'];
+    // Some gateway accounts omit rescode entirely; when absent, an
+    // explicit success status/description means the message was sent.
+    const success =
+      code !== undefined
+        ? code === '200'
+        : /success/i.test(String(status ?? '')) || /success/i.test(String(description ?? ''));
     return {
       mobile: item?.mobile || dest,
-      success: code === '200',
+      success,
       code,
-      status: item?.['response-status'],
-      description: item?.['response-description'],
+      status,
+      description,
       messageId: item?.messageid,
     };
   });

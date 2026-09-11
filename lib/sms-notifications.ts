@@ -79,7 +79,14 @@ async function deliver(
   if (!phone) return false;
   const result = await sendSmsSafe(phone, message);
   if (!result.success) {
-    console.warn(`SMS not sent to ${phone}: ${result.error}`);
+    const reason =
+      result.error ||
+      result.results
+        .map((r) =>
+          `${r.mobile} code=${r.code ?? 'n/a'} status=${r.status ?? 'n/a'} "${r.description ?? ''}"`.trim()
+        )
+        .join('; ');
+    console.warn(`SMS not sent to ${phone}: ${reason}`);
   }
   return result.success;
 }
