@@ -101,7 +101,7 @@ export async function notifyWalletTopupConfirmed(
 ): Promise<void> {
   try {
     const ref = options.receiptRef ? ` Ref ${options.receiptRef}.` : '';
-    await deliver(phone, `ReconSMI: Wallet top-up of ${formatKes(options.amount)} confirmed. New balance ${formatKes(options.balance)}.${ref}`);
+    await deliver(phone, `Wallet top-up of ${formatKes(options.amount)} confirmed. New balance ${formatKes(options.balance)}.${ref}`);
   } catch (error) {
     console.error('Top-up confirmation SMS error:', error);
   }
@@ -164,7 +164,7 @@ export async function notifyPayoutApproved(transactionId: string): Promise<void>
     if (!ctx?.phone) return;
     await deliver(
       ctx.phone,
-      `ReconSMI: Payout of ${ctx.amount}${ctx.recipient} via ${ctx.destination} approved and processing.`
+      `Payout of ${ctx.amount}${ctx.recipient} via ${ctx.destination} approved and processing.`
     );
   } catch (error) {
     console.error('Payout approval SMS error:', error);
@@ -185,7 +185,7 @@ export async function notifyPayoutRejected(
     const why = reason ? ` Reason: ${reason}.` : '';
     await deliver(
       ctx.phone,
-      `ReconSMI: Payout of ${ctx.amount}${ctx.recipient} via ${ctx.destination} was rejected.${why}`
+      `Payout of ${ctx.amount}${ctx.recipient} via ${ctx.destination} was rejected.${why}`
     );
   } catch (error) {
     console.error('Payout rejection SMS error:', error);
