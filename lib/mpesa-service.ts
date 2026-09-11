@@ -2,6 +2,7 @@ import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
 import { EmailService } from '@/lib/notification-service';
 import { hashPassword } from '@/lib/jwt';
+import { notifyWalletTopupConfirmed } from '@/lib/sms-notifications';
 
 // M-Pesa Configuration
 export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
@@ -378,6 +379,28 @@ export const handleSTKPushCallback = async (callbackData: any) => {
           } catch (error) {
             console.error('Failed to parse transaction metadata for registration/subscription:', error);
           }
+        }
+
+        // SMS: confirm the wallet top-up to the payer
+        // (registration / subscription payments are not wallet top-ups)
+        let skipTopupSms = false;
+        if (transaction.metadata) {
+          try {
+            const smsMeta = JSON.parse(transaction.metadata);
+            skipTopupSms = !!(smsMeta.isRegistration || smsMeta.isSubscription);
+          } catch {
+            skipTopupSms = false;
+          }
+        }
+        if (!skipTopupSms) {
+          await notifyWalletTopupConfirmed(
+            (phoneNumber as string) || transaction.phoneNumber,
+            {
+              amount: numericAmount,
+              balance: wallet.balance,
+              receiptRef: updateData.mpesaReceiptNumber,
+            }
+          );
         }
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {

@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { notifyBankTopupConfirmedForWallet } from './sms-notifications';
 
 // ============ Co-op Bank OpenAPI Configuration ============
 const COOP_BASE_URL = process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opbank.co.ke';
@@ -576,6 +577,15 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
         },
       });
 
+      // SMS: confirm the bank-funded top-up to the wallet owner
+      if (transaction.type === 'credit') {
+        await notifyBankTopupConfirmedForWallet(
+          transaction.walletId,
+          transaction.amount,
+          callbackData?.TransactionReference || callbackData?.TransactionID || messageReference
+        );
+      }
+
       return { success: true, transactionId: transaction.id, status: 'completed' };
     } else {
       await prisma.transaction.update({
@@ -799,6 +809,16 @@ export async function handleBankIPN(ipnData: any) {
         `Bank IPN: completed pending transaction ${completedTx.id} ` +
         `for wallet ${pendingTransaction.walletId} (${eventType} ${amount})`,
       );
+
+      // SMS: confirm the bank top-up to the wallet owner
+      if (pendingTransaction.type === 'credit') {
+        await notifyBankTopupConfirmedForWallet(
+          pendingTransaction.walletId,
+          pendingTransaction.amount,
+          bankTransactionId,
+        );
+      }
+
       return { success: true, transactionId: completedTx.id, status: 'completed', matched: 'pending' };
     }
 
@@ -936,6 +956,12 @@ export async function handleBankIPN(ipnData: any) {
       `Bank IPN: created new transaction ${newTransaction.id} ` +
       `for wallet ${wallet.id} (${eventType} ${amount})`,
     );
+
+    // SMS: confirm the credited wallet top-up to the wallet owner
+    if (isCredit) {
+      await notifyBankTopupConfirmedForWallet(wallet.id, amount, bankTransactionId);
+    }
+
     return { success: true, transactionId: newTransaction.id, status: 'completed', matched: 'new' };
   } catch (error: any) {
     console.error('Bank IPN processing error:', error);

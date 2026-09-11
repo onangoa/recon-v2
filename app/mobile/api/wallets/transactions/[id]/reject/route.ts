@@ -5,6 +5,7 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
+import { notifyPayoutRejected } from '@/lib/sms-notifications';
 
 export async function POST(
   request: NextRequest,
@@ -36,6 +37,8 @@ export async function POST(
         resultDesc: reason || 'Transaction rejected by admin'
       }
     });
+
+    await notifyPayoutRejected(resolvedParams.id, reason || 'Rejected by admin');
 
     return mobileSuccess(null, 'Transaction rejected successfully');
   } catch (error: any) {

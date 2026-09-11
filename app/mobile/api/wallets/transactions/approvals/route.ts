@@ -7,6 +7,7 @@ import {
   mobileError,
   mobileList,
 } from '@/lib/mobile-auth';
+import { notifyPayoutApproved, notifyPayoutRejected } from '@/lib/sms-notifications';
 
 export async function GET(
   request: NextRequest
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
               resultDesc: 'Insufficient balance at time of approval'
             }
           });
+          await notifyPayoutRejected(transactionId, 'Insufficient balance at time of approval');
           errors.push({ transactionId, error: 'Insufficient balance' });
           continue;
         }
@@ -146,6 +148,8 @@ export async function POST(request: NextRequest) {
           success: true,
           mpesaResponse: payoutResponse
         });
+
+        await notifyPayoutApproved(transactionId);
 
       } catch (error: any) {
         console.error(`Failed to approve transaction ${transactionId}:`, error);

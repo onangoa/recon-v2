@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { initiateB2C, initiateB2B, initiateB2Pochi, TransactionStatus } from '@/lib/mpesa';
 import { executeBankPayout } from '@/lib/bank-service';
 import { requirePermission } from '@/lib/require-permission';
+import { notifyPayoutApproved, notifyPayoutRejected } from '@/lib/sms-notifications';
 
 export async function GET(
   request: NextRequest
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
               resultDesc: 'Insufficient balance at time of approval'
             }
           });
+          await notifyPayoutRejected(transactionId, 'Insufficient balance at time of approval');
           errors.push({ transactionId, error: 'Insufficient balance' });
           continue;
         }
@@ -153,6 +155,8 @@ export async function POST(request: NextRequest) {
           success: true,
           mpesaResponse: payoutResponse
         });
+
+        await notifyPayoutApproved(transactionId);
 
       } catch (error: any) {
         console.error(`Failed to approve transaction ${transactionId}:`, error);

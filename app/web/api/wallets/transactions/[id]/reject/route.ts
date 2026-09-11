@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requirePermission } from '@/lib/require-permission';
+import { notifyPayoutRejected } from '@/lib/sms-notifications';
 
 export async function POST(
   request: NextRequest,
@@ -35,6 +36,8 @@ export async function POST(
         resultDesc: reason || 'Transaction rejected by admin'
       }
     });
+
+    await notifyPayoutRejected(resolvedParams.id, reason || 'Rejected by admin');
 
     return NextResponse.json({ 
       success: true,
