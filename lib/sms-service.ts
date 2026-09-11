@@ -88,6 +88,8 @@ export async function sendSms(mobile: string | string[], message: string): Promi
     throw new Error('Message body is empty.');
   }
 
+  console.log(`[SMS] OUT -> to=${recipients.join(',')} from=${config.shortcode}: ${message}`);
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   let res: Response;
@@ -130,6 +132,14 @@ export async function sendSms(mobile: string | string[], message: string): Promi
       messageId: item?.messageid,
     };
   });
+
+  for (const r of results) {
+    console.log(
+      `[SMS] RESULT ${r.success ? 'OK' : 'FAIL'} to=${r.mobile} code=${r.code ?? 'n/a'}` +
+        `${r.status ? ` status=${r.status}` : ''}${r.description ? ` desc="${r.description}"` : ''}` +
+        `${r.messageId ? ` id=${r.messageId}` : ''}`
+    );
+  }
 
   return { success: results.every((r) => r.success), results };
 }
