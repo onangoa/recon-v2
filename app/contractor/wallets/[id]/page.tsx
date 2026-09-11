@@ -34,7 +34,9 @@ import {
   Upload,
   Paperclip,
   Copy,
-  X
+  X,
+  Star,
+  Trash2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -84,6 +86,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { KENYAN_BANKS } from '@/lib/bank-codes';
 
 interface Wallet {
@@ -107,6 +110,41 @@ interface Transaction {
   receiptNumber: string | null;
   createdAt: Date;
 }
+
+interface PayoutBeneficiary {
+  id: string;
+  label: string;
+  channel: string;
+  destination: string;
+  accountRef: string | null;
+  bankCode: string | null;
+  recipientName: string | null;
+  isFavorite: boolean;
+  usageCount: number;
+}
+
+interface RecentRecipient {
+  channel: string;
+  destination: string;
+  accountRef: string | null;
+  bankCode: string | null;
+  recipientName: string | null;
+  usageCount: number;
+  saved: boolean;
+}
+
+const MPESA_PAYOUT_CHANNELS = ['phone', 'pochi', 'paybill', 'till'];
+const BANK_PAYOUT_CHANNELS = ['pesalink', 'ift', 'mpesa'];
+
+const CHANNEL_LABELS: Record<string, string> = {
+  phone: 'M-Pesa',
+  pochi: 'Pochi',
+  paybill: 'Paybill',
+  till: 'Till',
+  pesalink: 'PesaLink',
+  ift: 'Co-op IFT',
+  mpesa: 'Bank to M-Pesa',
+};
 
 function BankDepositSummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -167,6 +205,141 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [bankPayoutRecipientName, setBankPayoutRecipientName] = useState('');
   const [bankPayoutProofFile, setBankPayoutProofFile] = useState<File | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
+
+  // Saved payout beneficiaries + recent recipients (see saved-payments.md)
+  const [beneficiaries, setBeneficiaries] = useState<PayoutBeneficiary[]>([]);
+  const [recentRecipients, setRecentRecipients] = useState<RecentRecipient[]>([]);
+  const [selectedMpesaBeneficiary, setSelectedMpesaBeneficiary] = useState('');
+  const [selectedBankBeneficiary, setSelectedBankBeneficiary] = useState('');
+  const [saveMpesaAsBeneficiary, setSaveMpesaAsBeneficiary] = useState(false);
+  const [saveBankAsBeneficiary, setSaveBankAsBeneficiary] = useState(false);
+  const [beneficiaryLabel, setBeneficiaryLabel] = useState('');
+
+  const mpesaBeneficiaries = beneficiaries.filter((b) => MPESA_PAYOUT_CHANNELS.includes(b.channel));
+  const bankBeneficiaries = beneficiaries.filter((b) => BANK_PAYOUT_CHANNELS.includes(b.channel));
+  const mpesaRecent = recentRecipients.filter((r) => MPESA_PAYOUT_CHANNELS.includes(r.channel) && !r.saved);
+  const bankRecent = recentRecipients.filter((r) => BANK_PAYOUT_CHANNELS.includes(r.channel) && !r.saved);
+
+  const fetchBeneficiaries = async () => {
+    try {
+      const response = await fetch('/web/api/payout-beneficiaries');
+      if (!response.ok) return;
+      const data = await response.json();
+      setBeneficiaries(data.beneficiaries || []);
+      setRecentRecipients(data.recent || []);
+    } catch {
+      return;
+    }
+  };
+
+  useEffect(() => {
+    fetchBeneficiaries();
+  }, []);
+
+  const persistBeneficiary = async (payload: {
+    channel: string;
+    destination: string;
+    accountRef?: string;
+    bankCode?: string;
+    recipientName?: string;
+  }) => {
+    try {
+      const response = await fetch('/web/api/payout-beneficiaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          label: beneficiaryLabel || payload.recipientName || payload.destination,
+        }),
+      });
+      if (!response.ok) return;
+      await fetchBeneficiaries();
+    } catch {
+      return;
+    }
+  };
+
+  const toggleFavorite = async (beneficiary: PayoutBeneficiary) => {
+    try {
+      const response = await fetch(`/web/api/payout-beneficiaries/${beneficiary.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: !beneficiary.isFavorite }),
+      });
+      if (response.ok) await fetchBeneficiaries();
+    } catch {
+      return;
+    }
+  };
+
+  const deleteBeneficiary = async (beneficiary: PayoutBeneficiary) => {
+    try {
+      const response = await fetch(`/web/api/payout-beneficiaries/${beneficiary.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) return;
+      if (selectedMpesaBeneficiary === beneficiary.id) setSelectedMpesaBeneficiary('');
+      if (selectedBankBeneficiary === beneficiary.id) setSelectedBankBeneficiary('');
+      await fetchBeneficiaries();
+    } catch {
+      return;
+    }
+  };
+
+  const applyMpesaBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; recipientName?: string | null }) => {
+    setPayoutType(b.channel);
+    setPaymentRecipient(b.destination);
+    setPaymentAccountNumber(b.channel === 'paybill' ? (b.accountRef || '') : '');
+    setPaymentRecipientName(b.recipientName || '');
+  };
+
+  const applyBankBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; bankCode?: string | null; recipientName?: string | null }) => {
+    setBankPayoutChannel(b.channel);
+    if (b.channel === 'mpesa') {
+      setBankPayoutMobile(b.destination);
+      setBankPayoutAccount('');
+      setBankPayoutBankCode('');
+    } else {
+      setBankPayoutAccount(b.destination);
+      setBankPayoutBankCode(b.bankCode || '');
+      setBankPayoutMobile('');
+    }
+    setBankPayoutRecipientName(b.recipientName || '');
+  };
+
+  const handleMpesaPick = (value: string) => {
+    if (!value) {
+      setSelectedMpesaBeneficiary('');
+      return;
+    }
+    if (value.startsWith('recent:')) {
+      const index = parseInt(value.slice(7), 10);
+      const recent = mpesaRecent[index];
+      if (recent) applyMpesaBeneficiary(recent);
+      setSelectedMpesaBeneficiary('');
+      return;
+    }
+    const beneficiary = mpesaBeneficiaries.find((b) => b.id === value);
+    if (beneficiary) applyMpesaBeneficiary(beneficiary);
+    setSelectedMpesaBeneficiary(value);
+  };
+
+  const handleBankPick = (value: string) => {
+    if (!value) {
+      setSelectedBankBeneficiary('');
+      return;
+    }
+    if (value.startsWith('recent:')) {
+      const index = parseInt(value.slice(7), 10);
+      const recent = bankRecent[index];
+      if (recent) applyBankBeneficiary(recent);
+      setSelectedBankBeneficiary('');
+      return;
+    }
+    const beneficiary = bankBeneficiaries.find((b) => b.id === value);
+    if (beneficiary) applyBankBeneficiary(beneficiary);
+    setSelectedBankBeneficiary(value);
+  };
 
   const uploadProofDocument = async (file: File | null): Promise<{ url: string; fileName: string } | null> => {
     if (!file) return null;
@@ -359,12 +532,24 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
         variant: "success",
       });
 
+      if (saveMpesaAsBeneficiary || selectedMpesaBeneficiary) {
+        await persistBeneficiary({
+          channel: payoutType,
+          destination: paymentRecipient,
+          accountRef: payoutType === 'paybill' && paymentAccountNumber ? paymentAccountNumber : undefined,
+          recipientName: paymentRecipientName || undefined,
+        });
+      }
+
       setPaymentAmount('');
       setPaymentRecipient('');
       setPaymentAccountNumber('');
       setPaymentMemo('');
       setPaymentRecipientName('');
       setPaymentProofFile(null);
+      setSelectedMpesaBeneficiary('');
+      setSaveMpesaAsBeneficiary(false);
+      setBeneficiaryLabel('');
       setShowMakePayment(false);
       fetchTransactions(); // Show pending transaction
       fetchWalletData(); // Update wallet balance
@@ -492,6 +677,15 @@ const handleBankDeposit = async () => {
         variant: "success",
       });
 
+      if (saveBankAsBeneficiary || selectedBankBeneficiary) {
+        await persistBeneficiary({
+          channel: bankPayoutChannel,
+          destination: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : bankPayoutAccount,
+          bankCode: bankPayoutChannel === 'pesalink' && bankPayoutBankCode ? bankPayoutBankCode : undefined,
+          recipientName: bankPayoutRecipientName || undefined,
+        });
+      }
+
       setBankPayoutAmount('');
       setBankPayoutAccount('');
       setBankPayoutBankCode('');
@@ -499,6 +693,9 @@ const handleBankDeposit = async () => {
       setBankPayoutMemo('');
       setBankPayoutRecipientName('');
       setBankPayoutProofFile(null);
+      setSelectedBankBeneficiary('');
+      setSaveBankAsBeneficiary(false);
+      setBeneficiaryLabel('');
       setShowBankPayout(false);
       fetchTransactions();
       fetchWalletData();
@@ -994,7 +1191,7 @@ const handleBankDeposit = async () => {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={showBankPayout} onOpenChange={setShowBankPayout}>
+              <Dialog open={showBankPayout} onOpenChange={(open) => { setShowBankPayout(open); if (!open) { setSelectedBankBeneficiary(''); setSaveBankAsBeneficiary(false); setBeneficiaryLabel(''); } }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full border-blue-600/40 text-blue-700 hover:bg-blue-50 gap-2 h-11 shadow-sm">
                     <Building2 className="w-4 h-4" /> Send Bank Payout
@@ -1033,6 +1230,59 @@ const handleBankDeposit = async () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {(bankBeneficiaries.length > 0 || bankRecent.length > 0) && (
+                      <div className="space-y-2">
+                        <Label>Saved Recipient</Label>
+                        <div className="flex items-center gap-1.5">
+                          <Select value={selectedBankBeneficiary} onValueChange={handleBankPick}>
+                            <SelectTrigger className="bg-muted/30 border-none h-11">
+                              <SelectValue placeholder="Pick a saved or recent recipient" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankBeneficiaries.length > 0 && (
+                                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Saved</div>
+                              )}
+                              {bankBeneficiaries.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  <span className="flex items-center gap-2">
+                                    {b.isFavorite && <Star className="w-3 h-3 fill-amber-400 text-amber-400" />}
+                                    <span className="truncate">{b.label}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">{CHANNEL_LABELS[b.channel] || b.channel}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                              {bankRecent.length > 0 && (
+                                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recent</div>
+                              )}
+                              {bankRecent.map((r, i) => (
+                                <SelectItem key={`recent-${i}`} value={`recent:${i}`}>
+                                  <span className="flex items-center gap-2">
+                                    <History className="w-3 h-3 text-muted-foreground" />
+                                    <span className="truncate">{r.recipientName || r.destination}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">{CHANNEL_LABELS[r.channel] || r.channel}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedBankBeneficiary && (() => {
+                            const b = bankBeneficiaries.find((x) => x.id === selectedBankBeneficiary);
+                            if (!b) return null;
+                            return (
+                              <>
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => toggleFavorite(b)} title={b.isFavorite ? 'Unfavorite' : 'Favorite'}>
+                                  <Star className={`w-4 h-4 ${b.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+                                </Button>
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-600 hover:text-red-700" onClick={() => deleteBeneficiary(b)} title="Remove saved recipient">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label>Amount ({wallet.currency}) *</Label>
@@ -1129,6 +1379,28 @@ const handleBankDeposit = async () => {
                         </label>
                       )}
                     </div>
+                    <div className="flex items-start gap-2.5 rounded-md bg-muted/20 px-3 py-2.5">
+                      <Checkbox
+                        id="save-bank-beneficiary"
+                        checked={saveBankAsBeneficiary}
+                        onCheckedChange={(checked) => setSaveBankAsBeneficiary(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 space-y-1.5">
+                        <label htmlFor="save-bank-beneficiary" className="text-xs font-bold cursor-pointer">
+                          Save as beneficiary
+                        </label>
+                        <p className="text-[10px] italic text-muted-foreground">Keep this recipient for quick future payouts.</p>
+                        {saveBankAsBeneficiary && (
+                          <Input
+                            placeholder="Label (e.g. KCB Rent, Supplier A/C)"
+                            value={beneficiaryLabel}
+                            onChange={(e) => setBeneficiaryLabel(e.target.value)}
+                            className="bg-muted/30 border-none h-9 text-xs"
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">
                     {wallet.balance < parseFloat(bankPayoutAmount || '0') && (
@@ -1149,7 +1421,7 @@ const handleBankDeposit = async () => {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={showMakePayment} onOpenChange={setShowMakePayment}>
+              <Dialog open={showMakePayment} onOpenChange={(open) => { setShowMakePayment(open); if (!open) { setSelectedMpesaBeneficiary(''); setSaveMpesaAsBeneficiary(false); setBeneficiaryLabel(''); } }}>
                 <DialogTrigger asChild>
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white gap-2 h-11 shadow-sm border-none">
                     <Smartphone className="w-4 h-4" /> Send M-Pesa Payment
@@ -1160,10 +1432,63 @@ const handleBankDeposit = async () => {
                     <DialogTitle className="text-blue-700 flex items-center gap-2">
                       <ArrowDownLeft className="w-5 h-5" /> Outward M-Pesa Payout
                     </DialogTitle>
-                    <DialogDescription>Pay suppliers or staff via M-Pesa services.</DialogDescription>
-                  </DialogHeader>
-                  
+                  <DialogDescription>Pay suppliers or staff via M-Pesa services.</DialogDescription>
+                </DialogHeader>
+                
                   <div className="space-y-4 py-4">
+                    {(mpesaBeneficiaries.length > 0 || mpesaRecent.length > 0) && (
+                      <div className="space-y-2">
+                        <Label>Saved Recipient</Label>
+                        <div className="flex items-center gap-1.5">
+                          <Select value={selectedMpesaBeneficiary} onValueChange={handleMpesaPick}>
+                            <SelectTrigger className="bg-muted/30 border-none h-11">
+                              <SelectValue placeholder="Pick a saved or recent recipient" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {mpesaBeneficiaries.length > 0 && (
+                                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Saved</div>
+                              )}
+                              {mpesaBeneficiaries.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  <span className="flex items-center gap-2">
+                                    {b.isFavorite && <Star className="w-3 h-3 fill-amber-400 text-amber-400" />}
+                                    <span className="truncate">{b.label}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">{CHANNEL_LABELS[b.channel] || b.channel}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                              {mpesaRecent.length > 0 && (
+                                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Recent</div>
+                              )}
+                              {mpesaRecent.map((r, i) => (
+                                <SelectItem key={`recent-${i}`} value={`recent:${i}`}>
+                                  <span className="flex items-center gap-2">
+                                    <History className="w-3 h-3 text-muted-foreground" />
+                                    <span className="truncate">{r.recipientName || r.destination}</span>
+                                    <span className="text-[10px] uppercase text-muted-foreground">{CHANNEL_LABELS[r.channel] || r.channel}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {selectedMpesaBeneficiary && (() => {
+                            const b = mpesaBeneficiaries.find((x) => x.id === selectedMpesaBeneficiary);
+                            if (!b) return null;
+                            return (
+                              <>
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => toggleFavorite(b)} title={b.isFavorite ? 'Unfavorite' : 'Favorite'}>
+                                  <Star className={`w-4 h-4 ${b.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+                                </Button>
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-red-600 hover:text-red-700" onClick={() => deleteBeneficiary(b)} title="Remove saved recipient">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label>Payment Type</Label>
                       <Select value={payoutType} onValueChange={setPayoutType}>
@@ -1263,6 +1588,28 @@ const handleBankDeposit = async () => {
                           <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
                         </label>
                       )}
+                    </div>
+                    <div className="flex items-start gap-2.5 rounded-md bg-muted/20 px-3 py-2.5">
+                      <Checkbox
+                        id="save-mpesa-beneficiary"
+                        checked={saveMpesaAsBeneficiary}
+                        onCheckedChange={(checked) => setSaveMpesaAsBeneficiary(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 space-y-1.5">
+                        <label htmlFor="save-mpesa-beneficiary" className="text-xs font-bold cursor-pointer">
+                          Save as beneficiary
+                        </label>
+                        <p className="text-[10px] italic text-muted-foreground">Keep this recipient for quick future payouts.</p>
+                        {saveMpesaAsBeneficiary && (
+                          <Input
+                            placeholder="Label (e.g. KPLC, John - Foreman)"
+                            value={beneficiaryLabel}
+                            onChange={(e) => setBeneficiaryLabel(e.target.value)}
+                            className="bg-muted/30 border-none h-9 text-xs"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">

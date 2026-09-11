@@ -96,7 +96,9 @@ model Contractor {
   suppliers               Supplier[]
   team                    TeamMember[]
   wallets                 Wallet[]
-  workers                 Worker[]
+  workers                Worker[]
+
+  payoutBeneficiaries    PayoutBeneficiary[]
 
   @@index([subscriptionPlanId])
 }
@@ -809,6 +811,29 @@ model Wallet {
   updatedAt               DateTime      @updatedAt
   transactions            Transaction[]
   contractor              Contractor?   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@index([contractorId])
+}
+
+/// A saved payout destination (address book entry) for frequent payouts.
+/// channel: phone | pochi | paybill | till | pesalink | ift | mpesa (bank-to-M-Pesa).
+/// destination: the mobile number / shortcode / till number / bank account.
+/// accountRef: secondary reference (e.g. the account number for a paybill).
+model PayoutBeneficiary {
+  id            String     @id @default(cuid())
+  contractorId  String
+  label         String
+  channel       String
+  destination   String
+  accountRef    String?
+  bankCode      String?
+  recipientName String?
+  isFavorite    Boolean    @default(false)
+  usageCount    Int        @default(0)
+  lastUsedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  contractor    Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
 }
