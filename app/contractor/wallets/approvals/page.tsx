@@ -339,7 +339,7 @@ function ApprovalsContent() {
     }
   };
 
-  const getTransactionIcon = (transactionType: string) => {
+  const getTransactionIcon = (transactionType: string, remarks: string | null) => {
     switch (transactionType) {
       case 'B2C':
         return <Smartphone className="w-4 h-4" />;
@@ -558,7 +558,7 @@ function ApprovalsContent() {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center gap-2">
-                          {getTransactionIcon(tx.transactionType)}
+                          {getTransactionIcon(tx.transactionType, tx.remarks)}
                           <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary border-primary/20">
                             {getTransactionTypeLabel(tx.transactionType, tx.remarks)}
                           </Badge>
