@@ -28,7 +28,6 @@ import {
   Timer,
   TrendingUp,
   Table2,
-  Filter,
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -46,7 +45,6 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableFooter,
   TableRow
 } from '@/components/ui/table';
 import { 
@@ -165,39 +163,6 @@ interface PayrollPeriod {
   salarySlips: SalarySlip[];
 }
 
-interface DetailedViewDay {
-  key: string;
-  dayOfMonth: number;
-  weekday: number;
-}
-
-interface DetailedViewRow {
-  workerId: string;
-  workerName: string;
-  designation: string;
-  salary: number;
-  overtimeRatePerHour: number;
-  attendance: Record<string, { present: 0 | 1; overtimeHours: number }>;
-  totalOvertimeHours: number;
-  daysWorked: number;
-  grossSalary: number;
-  grossOt: number;
-  grossSalaryPlusOt: number;
-  payeTax: number;
-  netPay: number;
-  status: string;
-}
-
-interface DetailedViewData {
-  period: { name: string; startDate: string; endDate: string };
-  days: DetailedViewDay[];
-  rows: DetailedViewRow[];
-}
-
-const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-const fmtHalf = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-
 export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -221,11 +186,6 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
   const [payrollMode, setPayrollMode] = useState<'full' | 'simple' | 'simple_overtime'>('full');
   const [attendancePreview, setAttendancePreview] = useState<any[] | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-
-  const [showDetailedView, setShowDetailedView] = useState(false);
-  const [detailedView, setDetailedView] = useState<DetailedViewData | null>(null);
-  const [loadingDetailed, setLoadingDetailed] = useState(false);
-  const [detailedFilter, setDetailedFilter] = useState('');
 
   const fetchPeriod = async () => {
     setIsLoading(true);
@@ -386,78 +346,6 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
     toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
   };
 
-  const fetchDetailedView = async () => {
-    setLoadingDetailed(true);
-    try {
-      const res = await fetch(`/web/api/payroll-periods/${id}/detailed-view`);
-      if (!res.ok) throw new Error('Failed to fetch detailed view');
-      const data = await res.json();
-      setDetailedView(data);
-    } catch (err: any) {
-      toast({ title: "Error", description: getErrorMessage(err, "Unable to load the detailed view. Please try again."), variant: "destructive" });
-      setDetailedView(null);
-    } finally {
-      setLoadingDetailed(false);
-    }
-  };
-
-  const handleOpenDetailedView = () => {
-    setDetailedFilter('');
-    setShowDetailedView(true);
-    fetchDetailedView();
-  };
-
-  const detailedExportRows = (rows: DetailedViewRow[]) => {
-    if (!detailedView) return { headers: [] as string[], body: [] as (string | number)[][] };
-    const dayLabel = (d: DetailedViewDay) => `${new Date(d.key + 'T00:00:00').toLocaleString('en', { month: 'short' })} ${d.dayOfMonth}`;
-    const headers = [
-      'Worker', 'Designation', 'Salary', 'OT/hr',
-      ...detailedView.days.flatMap(d => [dayLabel(d), `${dayLabel(d)} OT`]),
-      'Total OT Hours', 'Days', 'GROSS SALARY', 'GROSS OT', 'GROSS SALARY + OT', 'PAYE TAX', 'NET PAY', 'STATUS',
-    ];
-    const body = rows.map(r => [
-      r.workerName,
-      r.designation,
-      r.salary,
-      r.overtimeRatePerHour,
-      ...detailedView.days.flatMap(d => {
-        const cell = r.attendance[d.key];
-        return [cell ? cell.present : 0, cell ? fmtHalf(cell.overtimeHours) : '0'];
-      }),
-      fmtHalf(r.totalOvertimeHours),
-      r.daysWorked,
-      r.grossSalary.toFixed(2),
-      r.grossOt.toFixed(2),
-      r.grossSalaryPlusOt.toFixed(2),
-      r.payeTax.toFixed(2),
-      r.netPay.toFixed(2),
-      r.status,
-    ]);
-    return { headers, body };
-  };
-
-  const handleDetailedExportCSV = () => {
-    if (!period || !detailedView || filteredDetailedRows.length === 0) return;
-    const { headers, body } = detailedExportRows(filteredDetailedRows);
-    const records = body.map(row => Object.fromEntries(headers.map((h, i) => [h, row[i]])));
-    exportToCSV(records, `detailed-view-${period.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`);
-    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
-  };
-
-  const handleDetailedExportPDF = () => {
-    if (!period || !detailedView || filteredDetailedRows.length === 0) return;
-    const { headers, body } = detailedExportRows(filteredDetailedRows);
-    exportToPDF(
-      `Detailed View - ${period.name}`,
-      headers,
-      body.map(row => row.map(String)),
-      `detailed-view-${period.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
-      undefined,
-      { orientation: 'landscape', fontSize: 6, horizontalPageBreak: true, horizontalPageBreakRepeat: ['0', '1'] },
-    );
-    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
-  };
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -475,25 +363,6 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
 
   const totalPages = Math.ceil(filteredSlips.length / limit);
   const paginatedSlips = filteredSlips.slice((currentPage - 1) * limit, currentPage * limit);
-
-  const detailedDesignations = detailedView
-    ? Array.from(new Set(detailedView.rows.map(r => r.designation))).sort()
-    : [];
-  const filteredDetailedRows = detailedView
-    ? (detailedFilter ? detailedView.rows.filter(r => r.designation === detailedFilter) : detailedView.rows)
-    : [];
-  const detailedTotals = filteredDetailedRows.reduce(
-    (acc, r) => ({
-      totalOvertimeHours: acc.totalOvertimeHours + r.totalOvertimeHours,
-      daysWorked: acc.daysWorked + r.daysWorked,
-      grossSalary: acc.grossSalary + r.grossSalary,
-      grossOt: acc.grossOt + r.grossOt,
-      grossSalaryPlusOt: acc.grossSalaryPlusOt + r.grossSalaryPlusOt,
-      payeTax: acc.payeTax + r.payeTax,
-      netPay: acc.netPay + r.netPay,
-    }),
-    { totalOvertimeHours: 0, daysWorked: 0, grossSalary: 0, grossOt: 0, grossSalaryPlusOt: 0, payeTax: 0, netPay: 0 },
-  );
 
   return (
     <div className="space-y-6 text-foreground">
@@ -546,7 +415,7 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={handleOpenDetailedView}
+                onClick={() => router.push(`/contractor/payroll/periods/${id}/detailed`)}
                 disabled={period.salarySlips.length === 0}
               >
                 <Table2 className="w-4 h-4" /> Detailed View
@@ -910,151 +779,6 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                 This is a computer generated document. Signature is not required.
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Detailed View Dialog: per-day attendance (1/0) + overtime hours matrix */}
-      <Dialog open={showDetailedView} onOpenChange={setShowDetailedView}>
-        <DialogContent className="sm:max-w-[95vw] w-[95vw] max-h-[90vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Table2 className="w-5 h-5" /> Detailed View — {period.name}
-            </DialogTitle>
-            <DialogDescription>
-              Per-day attendance (1 = present, 0 = absent) and overtime hours (rounded to the nearest 0.5) from biometric attendance, with payroll totals per worker.
-            </DialogDescription>
-          </DialogHeader>
-
-          {loadingDetailed ? (
-            <div className="flex-1 flex items-center justify-center py-16">
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm">Building detailed view from biometric attendance…</p>
-              </div>
-            </div>
-          ) : !detailedView || detailedView.rows.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center py-16 text-muted-foreground text-sm">
-              No detailed view data available for this period.
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2 flex-shrink-0 pb-2">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <select
-                    value={detailedFilter}
-                    onChange={(e) => setDetailedFilter(e.target.value)}
-                    className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs"
-                  >
-                    <option value="">All designations ({detailedView.rows.length} workers)</option>
-                    {detailedDesignations.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleDetailedExportCSV} disabled={filteredDetailedRows.length === 0}>
-                    <FileSpreadsheet className="w-4 h-4" /> Excel (CSV)
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleDetailedExportPDF} disabled={filteredDetailedRows.length === 0}>
-                    <FileDown className="w-4 h-4" /> PDF
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-auto border rounded-lg">
-                <Table className="text-xs">
-                  <TableHeader className="sticky top-0 z-20">
-                    <TableRow className="bg-muted hover:bg-muted">
-                      <TableHead rowSpan={2} className="sticky left-0 bg-muted z-30 min-w-[140px]">Worker</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 min-w-[110px] border-l">Designation</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l">Salary</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l">OT/hr</TableHead>
-                      {detailedView.days.map(d => (
-                        <TableHead key={d.key} colSpan={2} className="text-center border-l px-1">
-                          <div className="font-mono">{d.dayOfMonth}</div>
-                          <div className="text-[8px] font-normal text-muted-foreground">{WEEKDAY_LETTERS[d.weekday]}</div>
-                        </TableHead>
-                      ))}
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-center border-l whitespace-nowrap">Total OT</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-center border-l">Days</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l whitespace-nowrap">Gross Salary</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l whitespace-nowrap">Gross OT</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l whitespace-nowrap">Gross + OT</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l whitespace-nowrap">PAYE</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-right border-l whitespace-nowrap">Net Pay</TableHead>
-                      <TableHead rowSpan={2} className="sticky bg-muted z-20 text-center border-l">Status</TableHead>
-                    </TableRow>
-                    <TableRow className="bg-muted hover:bg-muted">
-                      {detailedView.days.map(d => (
-                        <TableHead key={d.key} colSpan={2} className="h-6 text-center px-0 text-[9px] font-normal border-l">
-                          <div className="grid grid-cols-2 divide-x">
-                            <span>P</span>
-                            <span>OT</span>
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDetailedRows.map(row => (
-                      <TableRow key={row.workerId}>
-                        <TableCell className="sticky left-0 bg-background z-10 font-medium whitespace-nowrap">{row.workerName}</TableCell>
-                        <TableCell className="whitespace-nowrap border-l">{row.designation}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(row.salary)}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap font-mono">{row.overtimeRatePerHour}</TableCell>
-                        {detailedView.days.map(d => {
-                          const cell = row.attendance[d.key];
-                          return (
-                            <TableCell key={d.key} colSpan={2} className="p-0 border-l">
-                              <div className="grid grid-cols-2 divide-x">
-                                <div className={`text-center font-mono ${cell?.present ? 'text-emerald-600 font-semibold' : 'text-red-400'}`}>
-                                  {cell?.present ?? 0}
-                                </div>
-                                <div className={`text-center font-mono ${cell && cell.overtimeHours > 0 ? 'text-amber-600 font-semibold' : 'text-muted-foreground/50'}`}>
-                                  {cell && cell.overtimeHours > 0 ? fmtHalf(cell.overtimeHours) : '·'}
-                                </div>
-                              </div>
-                            </TableCell>
-                          );
-                        })}
-                        <TableCell className="text-center border-l font-mono font-semibold text-amber-600 whitespace-nowrap">{fmtHalf(row.totalOvertimeHours)}</TableCell>
-                        <TableCell className="text-center border-l font-mono">{row.daysWorked}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(row.grossSalary)}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(row.grossOt)}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap font-medium">{formatCurrency(row.grossSalaryPlusOt)}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(row.payeTax)}</TableCell>
-                        <TableCell className="text-right border-l whitespace-nowrap font-semibold">{formatCurrency(row.netPay)}</TableCell>
-                        <TableCell className="text-center border-l">
-                          <Badge variant={row.status === 'paid' ? 'default' : 'secondary'} className={row.status === 'paid' ? 'bg-emerald-600' : ''}>
-                            {row.status?.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="bg-muted/60 hover:bg-muted/60 font-semibold">
-                      <TableCell colSpan={4} className="sticky left-0 bg-muted/60 z-10 whitespace-nowrap">
-                        TOTAL ({filteredDetailedRows.length} worker{filteredDetailedRows.length === 1 ? '' : 's'})
-                      </TableCell>
-                      <TableCell colSpan={detailedView.days.length * 2} className="text-center text-[10px] font-normal text-muted-foreground">
-                        {detailedView.days.length} day{detailedView.days.length === 1 ? '' : 's'} in period
-                      </TableCell>
-                      <TableCell className="text-center border-l font-mono whitespace-nowrap">{fmtHalf(detailedTotals.totalOvertimeHours)}</TableCell>
-                      <TableCell className="text-center border-l font-mono">{detailedTotals.daysWorked}</TableCell>
-                      <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(detailedTotals.grossSalary)}</TableCell>
-                      <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(detailedTotals.grossOt)}</TableCell>
-                      <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(detailedTotals.grossSalaryPlusOt)}</TableCell>
-                      <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(detailedTotals.payeTax)}</TableCell>
-                      <TableCell className="text-right border-l whitespace-nowrap">{formatCurrency(detailedTotals.netPay)}</TableCell>
-                      <TableCell className="border-l" />
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-            </>
           )}
         </DialogContent>
       </Dialog>
