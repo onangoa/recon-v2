@@ -19,10 +19,9 @@ A complete guide to the ReconSMI construction site management platform — cover
 
 ### Create an account
 
-1. Visit the landing page and click **Start Free Trial** (or go to `/register`).
-2. **Step 1 — Details:** Enter your name, email, password, company name, phone number, license number, location, and M-Pesa number.
-3. **Step 2 — Plan:** Choose a subscription plan (Basic, Professional, or Enterprise). Each plan includes one site slot and a maximum number of team members.
-4. **Step 3 — Payment:** An M-Pesa STK push prompt is sent to your phone. Enter your M-Pesa PIN to authorise the payment. Once payment is confirmed, your account is created automatically and a welcome email with your login credentials is sent to you.
+1. Visit the landing page and click **Get Started** (or go to `/register`).
+2. Fill in the registration form: your name, email, password, company name, phone number, license number, and location.
+3. Click **Create Account**. Your account (and a default wallet) is created immediately — no plan selection or payment required.
 
 > Your progress is auto-saved as a draft in your browser, so you can resume if you navigate away.
 
@@ -59,9 +58,9 @@ A complete guide to the ReconSMI construction site management platform — cover
 
 | Route | Purpose |
 |---|---|
-| `/` | Landing / marketing page with features, pricing, and mobile app sections. |
+| `/` | Landing / marketing page with features, free-access, and mobile app sections. |
 | `/login` | Sign-in form. |
-| `/register` | 3-step contractor self-registration wizard (Details → Plan → M-Pesa Payment). |
+| `/register` | Contractor self-registration form (free, no payment required). |
 | `/forgot-password` | Request a password reset link by email. |
 | `/reset-password` | Set a new password using a token from the reset email. |
 
@@ -400,7 +399,7 @@ Comprehensive overview of your construction operations.
 **Route:** `/contractor/settings`  
 **Permission:** `settings:read`
 
-Manage your professional profile, security, and preferences. The settings page has six tabs:
+Manage your professional profile, security, and preferences. The settings page has five tabs:
 
 #### 1. Profile
 Edit your name, email, and contact details.
@@ -411,15 +410,7 @@ Configure which notifications you receive (email, in-app, etc.).
 #### 3. Security
 Change your password and manage security settings.
 
-#### 4. Subscription
-View your current subscription plan, billing date, and site slot usage.
-
-- **Subscribe Again (Add Site Slot):** Pay for an additional site slot via M-Pesa STK push. Enter your M-Pesa number, click the button, and authorise the prompt on your phone.
-- **Upgrade Plan:** Switch to a different plan. Payment is initiated via M-Pesa STK push just like subscribing again.
-
-> When you reach your site slot limit, the **Add New Site** button on the Sites page is hidden and a **Subscribe Again** banner appears linking to this tab.
-
-#### 5. Roles & Permissions
+#### 4. Roles & Permissions
 Create and manage custom roles for your team members. Each role has a set of permissions that control which modules the user can access.
 
 **Sub-pages:**
@@ -429,7 +420,7 @@ Create and manage custom roles for your team members. Each role has a set of per
 | `/contractor/settings/roles/create` | Create a custom role with selected permissions. |
 | `/contractor/settings/roles/edit/[id]` | Edit an existing role's permissions. |
 
-#### 6. Devices (Biometric)
+#### 5. Devices (Biometric)
 Add and manage biometric attendance devices.
 
 - Add a device by name and serial number (SN).
@@ -445,16 +436,14 @@ Add and manage biometric attendance devices.
 
 Manage all your construction site locations. Accessed via the site switcher in the sidebar header or breadcrumbs (not in the sidebar menu).
 
-- Site list with slot usage indicator ({used} / {purchased} slots).
-- **Add New Site** button (hidden when you have reached your slot limit).
+- Site list with active/decommissioned status.
+- **Add New Site** button — you can create as many sites as you need.
 - Decommission (delete) sites.
 
 | Route | Purpose |
 |---|---|
 | `/contractor/sites/create` | Create a new site. |
 | `/contractor/sites/edit/[id]` | Edit a site. |
-
-> When you reach your site limit, a **Subscribe Again** banner links to the Subscription settings tab.
 
 ---
 
@@ -487,7 +476,7 @@ Manage all tasks across your projects.
 
 ## Super Admin Portal
 
-The Super Admin portal is the platform control panel for managing contractors, subscriptions, plans, transactions, and administrators.
+The Super Admin portal is the platform control panel for managing contractors, transactions, and administrators.
 
 ---
 
@@ -497,9 +486,8 @@ The Super Admin portal is the platform control panel for managing contractors, s
 
 A platform-wide overview.
 
-- **KPI cards:** Revenue, Contractors, Active Subscriptions, Plans (with trend percentages).
-- **Secondary stats:** Workers, Sites, Active Contractors, Plans Available.
-- **Plan Distribution:** Pie chart of active subscriptions by tier.
+- **KPI cards:** Revenue, Contractors, Sites (with trend percentages).
+- **Secondary stats:** Workers, Sites.
 - **Recent Transactions:** Table of recent financial activity with a "View All" link.
 
 ---
@@ -508,42 +496,17 @@ A platform-wide overview.
 
 **Route:** `/superadmin/contractors`
 
-Manage all registered contractors and their subscription tiers.
+Manage all registered contractors.
 
-- Searchable, paginated table (company, contact, plan, location, created date).
-- **Add Contractor** dialog: name, email, auto-generated password, company name, location, phone, license number, subscription plan.
+- Searchable, paginated table (company, contact, location, created date).
+- **Add Contractor** dialog: name, email, auto-generated password, company name, location, phone, license number.
 - Row actions: View details, Edit profile, Delete account.
 
 **Sub-page:**
 
 | Route | Purpose |
 |---|---|
-| `/superadmin/contractors/[id]` | Contractor details — company info, contact, stats (plan, employees, projects, wallet), account info, edit/delete. |
-
----
-
-### Plans
-
-**Route:** `/superadmin/plans`
-
-Define and manage pricing tiers available for contractors.
-
-- Card grid of plans (name, price/month, max sites, max team members, features checklist).
-- **Create New Plan** dialog: name, monthly price (KES), max team members, dynamic features list.
-- Per-card actions: Activate/Deactivate, Edit, Delete.
-- Inactive plans are dimmed.
-
----
-
-### Subscriptions
-
-**Route:** `/superadmin/subscriptions`
-
-Monitor and manage contractor subscription plans and billing status.
-
-- Stat cards: Active Subscriptions, Monthly Revenue, Expiring Soon.
-- Searchable table of contractor subscriptions (contractor, plan, status, amount, last updated).
-- **Update Plan** dialog to change a contractor's tier.
+| `/superadmin/contractors/[id]` | Contractor details — company info, contact, stats (employees, projects, wallet), account info, edit/delete. |
 
 ---
 
@@ -604,7 +567,7 @@ Configure global platform parameters, security, and integrations.
 
 - **General:** Platform name, global support email, base URL; regional settings (currency KES, timezone Africa/Nairobi).
 - **Security:** MFA toggle, session timeout (30 min), strict password policy toggles.
-- **Alerts:** Notifications for new subscriptions, security breaches, M-Pesa failures.
+- **Alerts:** Notifications for new registrations, security breaches, M-Pesa failures.
 
 ---
 
@@ -613,8 +576,7 @@ Configure global platform parameters, security, and integrations.
 | Term | Meaning |
 |---|---|
 | **Active Site** | The construction site currently selected in the sidebar header. Most data is scoped to this site. |
-| **Site Slot** | A purchased allowance to create one site. Each subscription includes one slot; additional slots can be bought via "Subscribe Again". |
-| **STK Push** | M-Pesa's Sim Toolkit prompt sent to a user's phone to authorise a payment. |
+| **STK Push** | M-Pesa's Sim Toolkit prompt sent to a user's phone to authorise a payment (used for wallet top-ups). |
 | **Biometric Device** | A hardware fingerprint/attendance scanner. Workers are enrolled to a device and attendance scans are recorded. |
 | **Contractor Admin** | A role that automatically grants all permissions within the contractor portal. |
 | **Onboarding** | The initial flow for a new contractor with no sites — forced to create their first site. |

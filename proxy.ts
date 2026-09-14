@@ -24,12 +24,9 @@ const PUBLIC_PATHS = [
 const AUTH_API_PATHS = [
   '/web/api/auth/login',
   '/web/api/auth/register',
-  '/web/api/auth/register-contractor',
   '/web/api/auth/refresh',
   '/web/api/auth/forgot-password',
   '/web/api/auth/reset-password',
-  '/web/api/subscription-plans',
-  '/web/api/payments',
   '/web/api/mpesa',
   '/web/api/callbacks',
   '/web/api/attendance/biometric',
@@ -38,13 +35,11 @@ const AUTH_API_PATHS = [
   '/api/users/authenticate',
   '/api/users/register',
   '/api/users/forgot-password',
-  '/api/subscriptions/plans',
   '/v1/ext/ipn',
   '/mobile/api/auth/login',
   '/mobile/api/auth/refresh',
   '/mobile/api/auth/forgot-password',
   '/mobile/api/auth/reset-password',
-  '/mobile/api/subscription-plans',
 ];
 
 async function verifyTokenEdge(token: string) {

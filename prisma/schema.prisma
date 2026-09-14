@@ -71,17 +71,12 @@ model Contractor {
   phoneNumber             String
   licenseNo               String
   logo                    String?
-  subscriptionPlanId      String
-  subscriptionStatus      String                   @default("active")
-  subscriptionEndDate     DateTime?
-  purchasedSiteSlots      Int                      @default(1)
   safetyScore             Float                    @default(0)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   activityLogs            ActivityLog[]
   attendances             Attendance[]
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscriptionPlan        SubscriptionPlan         @relation(fields: [subscriptionPlanId], references: [id])
   designations            Designation[]
   holidays                Holiday[]
   notificationPreferences NotificationPreference[]
@@ -100,8 +95,6 @@ model Contractor {
   workers                Worker[]
 
   payoutBeneficiaries    PayoutBeneficiary[]
-
-  @@index([subscriptionPlanId])
 }
 
 /// A biometric attendance device configured by a contractor.
@@ -821,22 +814,6 @@ model NotificationPreference {
 
   @@unique([contractorId, type])
   @@index([contractorId])
-}
-
-model SubscriptionPlan {
-  id             String       @id @default(cuid())
-  name           String       @unique
-  description    String?
-  price          Float
-  interval       String?
-  maxProjects    Int?
-  maxSites       Int?
-  maxTeamMembers Int
-  features       String
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  contractors    Contractor[]
 }
 
 model Wallet {

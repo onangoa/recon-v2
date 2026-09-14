@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           user: true,
-          subscriptionPlan: true,
           sites: true,
         },
         take: limit,
@@ -55,11 +54,9 @@ export async function POST(request: NextRequest) {
         location: body.location,
         phoneNumber: body.phoneNumber,
         licenseNo: body.licenseNo,
-        subscriptionPlanId: body.subscriptionPlanId,
       },
       include: {
         user: true,
-        subscriptionPlan: true,
       },
     });
     return mobileSuccess(contractor, 'Contractor created');

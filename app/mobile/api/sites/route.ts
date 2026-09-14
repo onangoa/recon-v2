@@ -69,19 +69,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const contractor = await prisma.contractor.findUnique({
-      where: { id: contractorId },
-      select: { purchasedSiteSlots: true },
-    });
-    const maxSlots = contractor?.purchasedSiteSlots ?? 1;
     const existingSiteCount = await prisma.site.count({ where: { contractorId } });
-
-    if (existingSiteCount >= maxSlots) {
-      return mobileError(
-        `Site limit reached. You have used all ${maxSlots} site slot${maxSlots > 1 ? 's' : ''} in your subscription. Subscribe again to add another site.`,
-        402
-      );
-    }
 
     const site = await prisma.$transaction(async (tx) => {
       const shouldBePrimary = body.isPrimary || existingSiteCount === 0;

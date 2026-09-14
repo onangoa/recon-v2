@@ -116,29 +116,16 @@ export default function CreateSitePage() {
         throw err;
       }
     } catch (error: any) {
-      if (error.code === 'SITE_LIMIT_REACHED') {
-        toast({
-          title: "Site Limit Reached",
-          description: getErrorMessage(error, "You've used all your subscription site slots. Subscribe again to add another site."),
-          variant: "destructive",
-          action: (
-            <Button size="sm" variant="outline" onClick={() => router.push('/contractor/settings?tab=subscription')}>
-              Subscribe Again
-            </Button>
-          ),
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: getErrorMessage(error, "Unable to create the site. Please check your connection and try again."),
-          variant: "destructive",
-          action: (
-            <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
-              <AlertCircle className="h-5 w-5 text-white" />
-            </div>
-          ),
-        });
-      }
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Unable to create the site. Please check your connection and try again."),
+        variant: "destructive",
+        action: (
+          <div className="flex items-center justify-center p-1 bg-white/20 rounded-full">
+            <AlertCircle className="h-5 w-5 text-white" />
+          </div>
+        ),
+      });
     } finally {
       setIsSubmitting(false);
     }

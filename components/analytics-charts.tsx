@@ -3,12 +3,12 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const revenueData = [
-  { month: 'Jan', revenue: 4000, subscriptions: 2400 },
-  { month: 'Feb', revenue: 3000, subscriptions: 1398 },
-  { month: 'Mar', revenue: 2000, subscriptions: 9800 },
-  { month: 'Apr', revenue: 2780, subscriptions: 3908 },
-  { month: 'May', revenue: 1890, subscriptions: 4800 },
-  { month: 'Jun', revenue: 2390, subscriptions: 3800 },
+  { month: 'Jan', revenue: 4000 },
+  { month: 'Feb', revenue: 3000 },
+  { month: 'Mar', revenue: 2000 },
+  { month: 'Apr', revenue: 2780 },
+  { month: 'May', revenue: 1890 },
+  { month: 'Jun', revenue: 2390 },
 ];
 
 const projectStatusData = [
@@ -43,7 +43,6 @@ export function AnalyticsCharts() {
             />
             <Legend />
             <Line type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={2} />
-            <Line type="monotone" dataKey="subscriptions" stroke="var(--accent)" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>

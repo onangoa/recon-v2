@@ -20,12 +20,6 @@ export async function GET(
             email: true,
           },
         },
-        subscriptionPlan: {
-          select: {
-            name: true,
-            price: true,
-          },
-        },
         projects: true,
         wallets: true,
       },
@@ -51,7 +45,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { companyName, location, phoneNumber, licenseNo, subscriptionPlanId, name, email } = body;
+    const { companyName, location, phoneNumber, licenseNo, name, email } = body;
 
     const contractor = await prisma.contractor.update({
       where: { id },
@@ -60,7 +54,6 @@ export async function PATCH(
         location,
         phoneNumber,
         licenseNo,
-        subscriptionPlanId,
         user: {
           update: {
             name,

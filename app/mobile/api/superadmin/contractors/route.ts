@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
         take: limit,
         include: {
           user: true,
-          subscriptionPlan: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -48,11 +47,7 @@ export async function POST(request: NextRequest) {
   if (!permCheck.authorized) return permCheck.error!;
   try {
     const body = await request.json();
-    const { name, email, companyName, location, phoneNumber, licenseNo, subscriptionPlanId, password } = body;
-
-    if (!subscriptionPlanId) {
-      return mobileError('Subscription plan is mandatory', 400);
-    }
+    const { name, email, companyName, location, phoneNumber, licenseNo, password } = body;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -84,7 +79,6 @@ export async function POST(request: NextRequest) {
           location,
           phoneNumber,
           licenseNo,
-          subscriptionPlanId,
         },
       });
 

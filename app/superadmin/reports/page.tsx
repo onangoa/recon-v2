@@ -22,7 +22,7 @@ export default function ReportsPage() {
   const reports = [
     {
       title: "Revenue Analytics",
-      description: "Detailed breakdown of subscription income and platform fees.",
+      description: "Detailed breakdown of platform revenue and wallet transactions.",
       icon: TrendingUp,
       color: "text-emerald-600",
       bg: "bg-emerald-50"

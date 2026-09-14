@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const where = withContractorFilter({ where: baseWhere }, permCheck.contractorId!).where;
 
-    const [sites, totalCount, contractor] = await Promise.all([
+    const [sites, totalCount] = await Promise.all([
       prisma.site.findMany({
         where,
         skip,
@@ -34,19 +34,12 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       }),
       prisma.site.count({ where }),
-      permCheck.contractorId
-        ? prisma.contractor.findUnique({
-            where: { id: permCheck.contractorId },
-            select: { purchasedSiteSlots: true },
-          })
-        : Promise.resolve(null),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       sites,
-      purchasedSiteSlots: contractor?.purchasedSiteSlots ?? 1,
       pagination: {
         page,
         limit,
@@ -65,28 +58,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const contractorId = permCheck.contractorId!;
-    
+
     const contractor = await prisma.contractor.findUnique({
       where: { id: contractorId },
-      select: { purchasedSiteSlots: true, subscriptionStatus: true, subscriptionEndDate: true, subscriptionPlanId: true },
     });
 
     if (!contractor) {
       return NextResponse.json({ error: 'Contractor account not found' }, { status: 404 });
     }
 
-    const maxSlots = contractor.purchasedSiteSlots ?? 1;
     const existingSiteCount = await prisma.site.count({ where: { contractorId } });
-
-    if (existingSiteCount >= maxSlots) {
-      return NextResponse.json({
-        error: 'Site limit reached',
-        message: `You have used all ${maxSlots} site slot${maxSlots > 1 ? 's' : ''} included in your subscription. Subscribe again to add another site.`,
-        code: 'SITE_LIMIT_REACHED',
-        purchasedSiteSlots: maxSlots,
-        usedSlots: existingSiteCount,
-      }, { status: 402 });
-    }
 
     const site = await prisma.$transaction(async (tx) => {
       // A contractor's first site is always their primary site so that

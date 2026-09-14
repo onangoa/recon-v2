@@ -6,20 +6,8 @@ import { BannerSlider } from '@/components/banner-slider';
 
 export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [plans, setPlans] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const response = await fetch('/web/api/subscription-plans');
-        const data = await response.json();
-        setPlans(data);
-      } catch (error) {
-        console.error('Failed to fetch plans');
-      }
-    };
-    fetchPlans();
-
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js';
     script.async = true;
@@ -47,7 +35,6 @@ export function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#5D4037]">
             <Link href="/#features" className="hover:text-[#8B4513] transition-colors">Features</Link>
             <Link href="/#apps" className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
-            <Link href="/#pricing" className="hover:text-[#8B4513] transition-colors">Pricing</Link>
             <Link href="/login" className="px-6 py-2 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
               Get Started
             </Link>
@@ -70,10 +57,9 @@ export function LandingPage() {
         <div className="flex flex-col items-center justify-center h-full gap-8 text-2xl font-medium">
           <Link href="/#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Features</Link>
           <Link href="/#apps" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Mobile App</Link>
-          <Link href="/#pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Pricing</Link>
           <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#8B4513] transition-colors">Login</Link>
           <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="px-8 py-3 bg-[#8B4513] text-white rounded-full hover:bg-[#6D3710] transition-colors">
-            Start Free Trial
+            Create Free Account
           </Link>
         </div>
       </div>
@@ -110,8 +96,8 @@ export function LandingPage() {
               <Link href="/register" className="px-8 py-4 rounded-full bg-[#8B4513] text-white font-bold text-lg hover:bg-[#6D3710] transition-all shadow-lg shadow-[#8B4513]/20 text-center">
                 Get Started
               </Link>
-              <Link href="#pricing" className="px-8 py-4 rounded-full border border-[#8B4513]/30 bg-white/50 backdrop-blur-sm font-bold text-lg hover:bg-white transition-all text-center">
-                View Pricing
+              <Link href="/#features" className="px-8 py-4 rounded-full border border-[#8B4513]/30 bg-white/50 backdrop-blur-sm font-bold text-lg hover:bg-white transition-all text-center">
+                Explore Features
               </Link>
             </div>
           </div>
@@ -283,58 +269,18 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Free Access Section */}
       <section id="pricing" className="py-32 px-6 bg-[#FFF8DC]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20 space-y-4">
-            <p className="text-[#8B4513] font-bold uppercase tracking-[0.3em] text-xs">SIMPLE PRICING</p>
-            <h2 className="text-5xl md:text-7xl font-bold tracking-tight text-[#3E2723]">Choose Your <span className="text-[#8B4513]">Plan.</span></h2>
-            <p className="text-xl text-[#5D4037] max-w-2xl mx-auto leading-relaxed">
-              No hidden fees. Just straightforward pricing that scales with your business.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {plans.length > 0 ? plans.map((plan) => (
-              <div key={plan.id} className="bg-white/50 backdrop-blur-sm rounded-3xl border border-[#8B4513]/20 hover:bg-white hover:shadow-xl transition-all duration-300 p-8 flex flex-col">
-                <div className="mb-6">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#8B4513]">{plan.name}</span>
-                  <div className="text-4xl font-black text-[#3E2723] mt-2">
-                    <span className="text-lg font-medium text-[#5D4037] align-top mt-1 inline-block mr-1">KES</span>
-                    {plan.price.toLocaleString()}
-                    <span className="text-sm font-medium text-[#5D4037] align-bottom ml-1">/mo</span>
-                  </div>
-                </div>
-                <div className="space-y-2 mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#5D4037]">Max Sites</span>
-                    <span className="font-bold text-[#3E2723]">1</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#5D4037]">Max Team</span>
-                    <span className="font-bold text-[#3E2723]">{plan.maxTeamMembers}</span>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-2 mb-6">
-                  {JSON.parse(plan.features || '[]').map((feature: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-[#5D4037]">
-                      <svg className="w-4 h-4 text-emerald-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                <Link href="/register" className="w-full py-3 rounded-full bg-[#8B4513] text-white font-bold text-center hover:bg-[#6D3710] transition-all">
-                  Get Started
-                </Link>
-              </div>
-            )) : (
-              <div className="col-span-full text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B4513]"></div>
-                <p className="mt-4 text-[#5D4037]">Loading pricing plans...</p>
-              </div>
-            )}
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <p className="text-[#8B4513] font-bold uppercase tracking-[0.3em] text-xs">SIMPLE PRICING</p>
+          <h2 className="text-5xl md:text-7xl font-bold tracking-tight text-[#3E2723]">Free to <span className="text-[#8B4513]">Use.</span></h2>
+          <p className="text-xl text-[#5D4037] max-w-2xl mx-auto leading-relaxed">
+            Every feature, every module, every site. No hidden fees, no plans, no limits. Create your account and start managing your construction sites right away.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/register" className="px-8 py-4 rounded-full bg-[#8B4513] text-white font-bold text-lg hover:bg-[#6D3710] transition-all shadow-lg shadow-[#8B4513]/20 text-center">
+              Create Free Account
+            </Link>
           </div>
         </div>
       </section>
@@ -397,7 +343,6 @@ export function LandingPage() {
             
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
               <Link href="/#features" className="hover:text-[#D2691E] transition-colors">Features</Link>
-              <Link href="/#pricing" className="hover:text-[#D2691E] transition-colors">Pricing</Link>
               <Link href="#" className="hover:text-[#D2691E] transition-colors">About</Link>
               <Link href="#" className="hover:text-[#D2691E] transition-colors">Contact</Link>
               <Link href="/privacy-policy" className="hover:text-[#D2691E] transition-colors">Privacy</Link>

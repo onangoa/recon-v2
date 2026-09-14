@@ -5,8 +5,6 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Users, 
-  ClipboardList, 
-  CreditCard, 
   Wallet, 
   ShieldCheck, 
   Settings,
@@ -14,13 +12,7 @@ import {
   Bell,
   MessageSquare,
   LogOut,
-  HardHat,
   ChevronsUpDown,
-  Building2,
-  Plus,
-  CheckCircle2,
-  Construction,
-  MapPin,
   UserCircle,
   SearchCheck
 } from 'lucide-react';
@@ -61,8 +53,6 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: 'Dashboard', href: '/superadmin', icon: LayoutDashboard },
     { label: 'Contractors', href: '/superadmin/contractors', icon: Users },
-    { label: 'Plans', href: '/superadmin/plans', icon: ClipboardList },
-    { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
     { label: 'Payment Review', href: '/superadmin/transactions/review', icon: SearchCheck },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },

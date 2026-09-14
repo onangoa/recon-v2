@@ -4,7 +4,6 @@ import {
   Bell, 
   ShieldCheck, 
   User, 
-  CreditCard, 
   Lock,
   Fingerprint,
 } from 'lucide-react';
@@ -22,7 +21,6 @@ import { useSearchParams } from 'next/navigation';
 import ProfileTab from './components/profile-tab';
 import NotificationsTab from './components/notifications-tab';
 import SecurityTab from './components/security-tab';
-import SubscriptionTab from './components/subscription-tab';
 import RolesTab from './components/roles-tab';
 import DevicesTab from './components/devices-tab';
 
@@ -72,9 +70,6 @@ function ContractorSettingsContent() {
           <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <Lock className="w-4 h-4" /> Security
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
-            <CreditCard className="w-4 h-4" /> Subscription
-          </TabsTrigger>
           <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <ShieldCheck className="w-4 h-4" /> Roles & Permissions
           </TabsTrigger>
@@ -93,10 +88,6 @@ function ContractorSettingsContent() {
         
         <TabsContent value="security" className="space-y-6">
           <SecurityTab />
-        </TabsContent>
-
-        <TabsContent value="subscription" className="space-y-6">
-          <SubscriptionTab />
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6">
