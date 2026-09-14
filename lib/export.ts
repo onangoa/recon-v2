@@ -32,9 +32,29 @@ export function exportToPDF(
   headers: string[],
   rows: string[][],
   filename: string,
-  columnStyles?: Record<string, any>
+  columnStyles?: Record<string, any>,
+  options?: {
+    /** Page orientation for wide tables. Default portrait. */
+    orientation?: 'portrait' | 'landscape';
+    /** Body font size. Default 8. */
+    fontSize?: number;
+    /** Header font size. Defaults to fontSize. */
+    headFontSize?: number;
+    /** Split tables wider than the page across multiple pages. */
+    horizontalPageBreak?: boolean;
+    /** Column keys (indexes as strings, or data keys) repeated on every horizontal page. */
+    horizontalPageBreakRepeat?: string[];
+  }
 ) {
-  const doc = new jsPDF();
+  const {
+    orientation = 'portrait',
+    fontSize = 8,
+    headFontSize,
+    horizontalPageBreak = false,
+    horizontalPageBreakRepeat,
+  } = options || {};
+
+  const doc = new jsPDF({ orientation });
 
   doc.setFontSize(16);
   doc.text(title, 14, 22);
@@ -46,9 +66,10 @@ export function exportToPDF(
     startY: 36,
     head: [headers],
     body: rows,
-    styles: { fontSize: 8, cellPadding: 3 },
-    headStyles: { fillColor: [41, 128, 185], fontSize: 8 },
+    styles: { fontSize, cellPadding: 3 },
+    headStyles: { fillColor: [41, 128, 185], fontSize: headFontSize ?? fontSize },
     columnStyles: columnStyles,
+    ...(horizontalPageBreak ? { horizontalPageBreak: true as const, horizontalPageBreakRepeat } : {}),
   });
 
   doc.save(`${filename}.pdf`);
