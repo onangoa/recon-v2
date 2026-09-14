@@ -1,6 +1,6 @@
 import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
-import { notifyWalletTopupConfirmed } from '@/lib/sms-notifications';
+import { notifyWalletTopupConfirmed, notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
 import { chargePayoutFee, refundPayoutFee } from '@/lib/payout-fee';
 
 // M-Pesa Configuration
@@ -628,6 +628,11 @@ export const handleB2CCallback = async (callbackData: any) => {
     // Update transaction
     await updateTransaction(transaction.id, updateData);
 
+    // SMS: tell the payout recipient which company sent the money
+    if (ResultCode === 0) {
+      await notifyPayoutSentToRecipient(transaction.id);
+    }
+
     return {
       success: true,
       transactionId: transaction.id,
@@ -854,6 +859,11 @@ export const handleB2BCallback = async (callbackData: any) => {
     // Update transaction
     await updateTransaction(transaction.id, updateData);
 
+    // SMS: tell the payout recipient which company sent the money
+    if (ResultCode === 0) {
+      await notifyPayoutSentToRecipient(transaction.id);
+    }
+
     return {
       success: true,
       transactionId: transaction.id,
@@ -1066,6 +1076,11 @@ export const handleB2PochiCallback = async (callbackData: any) => {
 
     // Update transaction
     await updateTransaction(transaction.id, updateData);
+
+    // SMS: tell the payout recipient which company sent the money
+    if (ResultCode === 0) {
+      await notifyPayoutSentToRecipient(transaction.id);
+    }
 
     return {
       success: true,

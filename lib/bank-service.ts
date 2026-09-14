@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { notifyBankTopupConfirmedForWallet } from './sms-notifications';
+import { notifyBankTopupConfirmedForWallet, notifyPayoutSentToRecipient } from './sms-notifications';
 import { getPayoutFee, chargePayoutFee } from './payout-fee';
 
 // ============ Co-op Bank OpenAPI Configuration ============
@@ -592,6 +592,9 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
           transaction.amount,
           callbackData?.TransactionReference || callbackData?.TransactionID || messageReference
         );
+      } else {
+        // SMS: tell the payout recipient which company sent the money
+        await notifyPayoutSentToRecipient(transaction.id);
       }
 
       return { success: true, transactionId: transaction.id, status: 'completed' };

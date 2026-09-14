@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { initiateSTKPush } from '@/lib/mpesa';
 import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
+import { notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
 import {
   mobileRequireContractorPermission,
   mobileSuccess,
@@ -159,6 +160,7 @@ export async function POST(
           reference: referenceNumber,
           status: 'completed',
           recipientName: recipientName || null,
+          phoneNumber: type === 'debit' ? mobileNumber || null : null,
           proofDocumentUrl: proofDocumentUrl || null,
           proofDocumentName: proofDocumentName || null,
         },
@@ -172,6 +174,8 @@ export async function POST(
       // Flat payout fee on outgoing manual payouts
       if (type === 'debit') {
         const feeCharged = await chargePayoutFee(transaction);
+        // SMS: tell the payout recipient which company sent the money
+        await notifyPayoutSentToRecipient(transaction.id);
         if (feeCharged > 0) {
           return mobileSuccess({ transaction, feeCharged });
         }

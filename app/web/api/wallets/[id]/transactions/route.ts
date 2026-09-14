@@ -5,6 +5,7 @@ import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import { WalletService } from '@/lib/wallet-service';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
+import { notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
 
 export async function GET(
   request: NextRequest,
@@ -168,6 +169,7 @@ export async function POST(
           reference: referenceNumber,
           status: 'completed',
           recipientName: recipientName || null,
+          phoneNumber: type === 'debit' ? mobileNumber || null : null,
           proofDocumentUrl: proofDocumentUrl || null,
           proofDocumentName: proofDocumentName || null,
         },
@@ -181,6 +183,8 @@ export async function POST(
       // Flat payout fee on outgoing manual payouts
       if (type === 'debit') {
         const feeCharged = await chargePayoutFee(transaction);
+        // SMS: tell the payout recipient which company sent the money
+        await notifyPayoutSentToRecipient(transaction.id);
         if (feeCharged > 0) {
           return NextResponse.json({ transaction, feeCharged });
         }
