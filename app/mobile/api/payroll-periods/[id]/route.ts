@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { PayrollCalculator, SalaryComponentData } from '@/lib/payroll-calculator';
+import { PayrollCalculator, SalaryComponentData, OvertimeRuleInput } from '@/lib/payroll-calculator';
 import {
   mobileRequireContractorPermission,
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
-import { shiftNetHours, countExpectedDays, aggregateAttendance, computeWorkedHours } from '@/lib/attendance-utils';
+import { shiftNetHours, countExpectedDays, aggregateAttendanceWithBands, computeWorkedHours, toDateKey } from '@/lib/attendance-utils';
 import { syncBiometricToDatabase } from '@/lib/biometric-attendance';
 import { startOfDay, endOfDay } from 'date-fns';
 
@@ -85,7 +85,7 @@ export async function PUT(
 
       const workers = await prisma.worker.findMany({
         where: workerWhere,
-        include: { designation: true, shift: true }
+        include: { designation: { include: { overtimeRules: true } }, shift: true }
       });
 
       const components = await prisma.salaryComponent.findMany({
@@ -96,6 +96,18 @@ export async function PUT(
 
       const periodStart = startOfDay(period.startDate);
       const periodEnd = endOfDay(period.endDate);
+
+      // Public holidays for the period (±1 day to cover overnight
+      // engagements that spill past the period boundary) — used to bucket
+      // each worker's overtime into weekday / rest-day / holiday bands.
+      const holidayFrom = new Date(periodStart);
+      holidayFrom.setDate(holidayFrom.getDate() - 1);
+      const holidayTo = new Date(periodEnd);
+      holidayTo.setDate(holidayTo.getDate() + 1);
+      const holidayRows = await prisma.holiday.findMany({
+        where: { contractorId: period.contractorId, date: { gte: holidayFrom, lte: holidayTo } },
+      });
+      const holidayDates = new Set(holidayRows.map(h => toDateKey(h.date)));
 
       let totalGross = 0;
       let totalNet = 0;
@@ -118,6 +130,8 @@ export async function PUT(
 
         // Re-compute hours on the fly so stale DB values (from an old
         // formula or a failed biometric sync) don't corrupt the payroll.
+        // Overtime itself is re-derived per day type from the raw punches
+        // in aggregateAttendanceWithBands below.
         const recomputedRecords = attendanceRecords.map((a) => {
           if (a.checkIn && a.checkOut && worker.shift) {
             const w = computeWorkedHours(
@@ -136,11 +150,25 @@ export async function PUT(
           return a;
         });
 
-        const agg = aggregateAttendance(recomputedRecords as any);
+        // Bucket overtime into weekday / rest-day / public-holiday bands
+        // using the designation's per-day-type rules (caps included).
+        const agg = aggregateAttendanceWithBands(recomputedRecords as any, {
+          shift: worker.shift as any,
+          workingDays: worker.shift?.workingDays,
+          holidayDates,
+          rules: worker.designation.overtimeRules,
+        });
 
         // Skip workers with no complete attendance (log in + log out) —
         // they shouldn't receive payslips.
         if (agg.daysWorked === 0) continue;
+
+        const overtimeRuleInputs: OvertimeRuleInput[] = worker.designation.overtimeRules.map(r => ({
+          dayType: r.dayType as OvertimeRuleInput['dayType'],
+          rateType: r.rateType,
+          rateAmount: r.rateAmount,
+          isActive: r.isActive,
+        }));
 
         const hoursPerDay = shiftNetHours(worker.shift);
         const expectedDays = countExpectedDays(
@@ -167,6 +195,7 @@ export async function PUT(
           attendance: isSimple
             ? {
                 overtimeHours: includeOvertime ? agg.overtimeHours : 0,
+                overtimeBands: includeOvertime ? agg.overtimeBands : undefined,
                 lateHours: 0,
                 lateDays: 0,
                 daysWorked: agg.daysWorked,
@@ -179,6 +208,7 @@ export async function PUT(
               }
             : {
                 overtimeHours: agg.overtimeHours,
+                overtimeBands: agg.overtimeBands,
                 lateHours: agg.lateHours,
                 lateDays: agg.lateDays,
                 daysWorked: agg.daysWorked,
@@ -201,10 +231,14 @@ export async function PUT(
                 rateAmount: worker.shift.overtimeRateAmount,
               }
             : undefined,
+          // Per-designation day-type rules; each band falls back to the
+          // shift config above, then the 1x default.
+          overtimeRules: overtimeRuleInputs,
         });
 
         const slipDaysWorked = agg.daysWorked;
         const slipOvertimeHours = isSimple && !includeOvertime ? 0 : agg.overtimeHours;
+        const slipOvertimeBands = calc.overtimeBands.length > 0 ? JSON.stringify(calc.overtimeBands) : null;
         const slipLateDays = isSimple ? 0 : agg.lateDays;
         const slipLateHours = isSimple ? 0 : agg.lateHours;
         const slipAttainedHours = agg.attainedHours;
@@ -219,6 +253,7 @@ export async function PUT(
             basicSalary: calc.payableBasic,
             overtimeHours: slipOvertimeHours,
             overtimePay: calc.overtimePay,
+            overtimeBands: slipOvertimeBands,
             daysWorked: slipDaysWorked,
             workingDays: expectedDays,
             attainedDays: slipDaysWorked,
@@ -254,6 +289,7 @@ export async function PUT(
             basicSalary: calc.payableBasic,
             overtimeHours: slipOvertimeHours,
             overtimePay: calc.overtimePay,
+            overtimeBands: slipOvertimeBands,
             daysWorked: slipDaysWorked,
             workingDays: expectedDays,
             attainedDays: slipDaysWorked,

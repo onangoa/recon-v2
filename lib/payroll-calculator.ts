@@ -1,3 +1,6 @@
+import type { OvertimeDayType } from './attendance-utils';
+import { OVERTIME_DAY_TYPES } from './attendance-utils';
+
 export const TAX_BANDS = [
   { min: 0, max: 24000, rate: 0.10 },      // 10% on first KES 24,000
   { min: 24001, max: 32333, rate: 0.25 },   // 25% on next KES 8,333
@@ -38,10 +41,50 @@ export interface PayrollCalculationInput {
     rateType: string;   // "hourly" or "fixed"
     rateAmount: number; // multiplier for "hourly", KES/hour for "fixed"
   };
+  /**
+   * Per-designation overtime rules by day type (see overtime.md #3). Each
+   * band's rate resolves as: designation rule → shift config → 1x default.
+   */
+  overtimeRules?: OvertimeRuleInput[];
 }
+
+/** A per-designation day-type overtime rule passed to the calculator. */
+export interface OvertimeRuleInput {
+  dayType: OvertimeDayType;
+  /** "hourly" (rateAmount = multiplier on the hourly rate) or "fixed" (KES/hour). */
+  rateType: string;
+  rateAmount: number;
+  /** Inactive rules are ignored (rate falls back to shift/default). */
+  isActive?: boolean;
+}
+
+/** One itemised overtime line on the payslip. */
+export interface OvertimeBandResult {
+  dayType: OvertimeDayType;
+  hours: number;
+  /** Resolved rate type actually applied. */
+  rateType: string;
+  /** Multiplier (hourly) or KES/hour (fixed) actually applied. */
+  rateAmount: number;
+  /** Where the resolved rate came from. */
+  source: 'designation' | 'shift' | 'default';
+  pay: number;
+}
+
+export const OVERTIME_BAND_LABELS: Record<OvertimeDayType, string> = {
+  weekday: 'Weekday',
+  rest_day: 'Rest Day',
+  public_holiday: 'Public Holiday',
+};
 
 export interface AttendancePayrollInput {
   overtimeHours: number;
+  /**
+   * Overtime hours per day type (weekday / rest_day / public_holiday).
+   * When omitted, `overtimeHours` is treated as a single weekday band
+   * (legacy behaviour — one rate applied to the total).
+   */
+  overtimeBands?: Partial<Record<OvertimeDayType, number>>;
   lateHours: number;
   lateDays: number;
   /** Days the worker was present (clocked in) during the period. */
@@ -75,6 +118,8 @@ export interface PayrollCalculationResult {
   hourlyRate: number;
   dailyRate: number;
   overtimePay: number;
+  /** Itemised per-day-type overtime lines (empty when no overtime). */
+  overtimeBands: OvertimeBandResult[];
   lateDeduction: number;
   totalAllowance: number;
   totalDeductions: number;
@@ -139,20 +184,22 @@ export class PayrollCalculator {
     });
 
     // Derive rates and attendance-adjusted pay.
-    const { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction } =
-      this.deriveRatesAndPay(basicSalary, attendance, rate, input.overtimeConfig);
+    const { hourlyRate, dailyRate, payableBasic, overtimePay, overtimeBands, lateDeduction } =
+      this.deriveRatesAndPay(basicSalary, attendance, rate, input.overtimeConfig, input.overtimeRules);
 
-    // Add overtime as an earning and lateness as a deduction so they appear
-    // as itemised lines on the payslip alongside configured components.
-    if (overtimePay > 0) {
-      totalAllowance += overtimePay;
+    // Add overtime as itemised per-band earnings and lateness as a
+    // deduction so they appear as itemised lines on the payslip alongside
+    // configured components.
+    for (const band of overtimeBands) {
+      if (band.pay <= 0) continue;
+      totalAllowance += band.pay;
       componentDetails.push({
-        salaryComponentId: 'overtime',
-        componentName: 'Overtime Pay',
+        salaryComponentId: `overtime-${band.dayType}`,
+        componentName: `Overtime Pay (${OVERTIME_BAND_LABELS[band.dayType]})`,
         componentType: 'earning',
         deductionType: null,
         isStatutory: false,
-        amount: overtimePay,
+        amount: band.pay,
         percentage: null,
       });
     }
@@ -186,6 +233,7 @@ export class PayrollCalculator {
       hourlyRate,
       dailyRate,
       overtimePay,
+      overtimeBands,
       lateDeduction,
       totalAllowance,
       totalDeductions: preTaxDeductions + postTaxDeductions,
@@ -202,13 +250,20 @@ export class PayrollCalculator {
   /**
    * Derive hourly/daily rates from the flat basic salary using the payment
    * frequency and the period's day/hour expectations, then compute the
-   * pro-rated basic pay, overtime pay (configurable rate) and late-hour deduction.
+   * pro-rated basic pay, overtime pay and late-hour deduction.
+   *
+   * Overtime is paid per day-type band (weekday / rest_day /
+   * public_holiday). Each band's rate resolves as: designation rule →
+   * shift config → 1x default. When no band map is supplied the total
+   * `overtimeHours` is treated as one weekday band (legacy behaviour, so
+   * callers that only aggregate a single number are unchanged).
    */
   private static deriveRatesAndPay(
     basicSalary: number,
     attendance: AttendancePayrollInput | undefined,
     rate: RateConfig | undefined,
     overtimeConfig?: { rateType: string; rateAmount: number },
+    overtimeRules?: OvertimeRuleInput[],
   ) {
     // Legacy path — no attendance integration. Pay full basic, no overtime/late.
     if (!attendance || !rate) {
@@ -217,6 +272,7 @@ export class PayrollCalculator {
         dailyRate: 0,
         payableBasic: basicSalary,
         overtimePay: 0,
+        overtimeBands: [] as OvertimeBandResult[],
         lateDeduction: 0,
       };
     }
@@ -252,17 +308,63 @@ export class PayrollCalculator {
     const daysWorked = Math.max(0, attendance.daysWorked || 0);
     const payableBasic = Math.max(0, dailyRate * daysWorked);
 
-    const otHours = Math.max(0, attendance.overtimeHours || 0);
-    let overtimePay: number;
-    if (overtimeConfig && overtimeConfig.rateType === 'fixed' && overtimeConfig.rateAmount > 0) {
-      overtimePay = otHours * overtimeConfig.rateAmount;
-    } else {
-      const multiplier = (overtimeConfig && overtimeConfig.rateAmount > 0) ? overtimeConfig.rateAmount : DEFAULT_OVERTIME_MULTIPLIER;
-      overtimePay = otHours * hourlyRate * multiplier;
+    const rulesByDayType = new Map<OvertimeDayType, OvertimeRuleInput>(
+      (overtimeRules || [])
+        .filter(r => r.isActive !== false && (OVERTIME_DAY_TYPES as readonly string[]).includes(r.dayType))
+        .map(r => [r.dayType as OvertimeDayType, r]),
+    );
+
+    // Band map when the caller supplied one; otherwise the scalar total
+    // is treated as a single weekday band (legacy single-rate behaviour).
+    const bandHours: Partial<Record<OvertimeDayType, number>> = attendance.overtimeBands
+      ?? { weekday: Math.max(0, attendance.overtimeHours || 0) };
+
+    const overtimeBands: OvertimeBandResult[] = [];
+    let overtimePay = 0;
+    for (const dayType of OVERTIME_DAY_TYPES) {
+      const hours = Math.max(0, bandHours[dayType] || 0);
+      if (hours <= 0) continue;
+
+      const rule = rulesByDayType.get(dayType);
+      let rateType: string;
+      let rateAmount: number;
+      let source: OvertimeBandResult['source'];
+
+      if (rule) {
+        // Designation rule wins for its day type — applied as configured
+        // (a fixed rule of 0 pays 0 by explicit intent).
+        rateType = rule.rateType;
+        rateAmount = rule.rateAmount;
+        source = 'designation';
+      } else if (overtimeConfig) {
+        // Shift fallback — resolved exactly like the legacy single-rate path.
+        if (overtimeConfig.rateType === 'fixed' && overtimeConfig.rateAmount > 0) {
+          rateType = 'fixed';
+          rateAmount = overtimeConfig.rateAmount;
+        } else {
+          rateType = 'hourly';
+          rateAmount = overtimeConfig.rateAmount > 0
+            ? overtimeConfig.rateAmount
+            : DEFAULT_OVERTIME_MULTIPLIER;
+        }
+        source = 'shift';
+      } else {
+        rateType = 'hourly';
+        rateAmount = DEFAULT_OVERTIME_MULTIPLIER;
+        source = 'default';
+      }
+
+      const pay = rateType === 'fixed'
+        ? hours * rateAmount
+        : hours * hourlyRate * rateAmount;
+
+      overtimePay += pay;
+      overtimeBands.push({ dayType, hours, rateType, rateAmount, source, pay });
     }
+
     const lateDeduction = Math.max(0, attendance.lateHours || 0) * hourlyRate;
 
-    return { hourlyRate, dailyRate, payableBasic, overtimePay, lateDeduction };
+    return { hourlyRate, dailyRate, payableBasic, overtimePay, overtimeBands, lateDeduction };
   }
 
   private static calculatePAYE(taxableIncome: number): number {

@@ -88,22 +88,11 @@ export function computeWorkedHours(
   // worker checked out. This avoids mixing break-inclusive wall-clock
   // hours with break-exclusive net hours (which produced false positives
   // when totalHours included a 60-min break but expectedHours didn't).
-  const thresholdMin = shift.overtimeThresholdMinutes || 0;
+  const overtimeStart = shiftOvertimeStart(ci, shift);
 
   let overtimeHours = 0;
-  if (shift.allowOvertime && shiftMinutes > 0) {
-    // Anchor shift start to the check-in calendar day at midnight, then
-    // offset by the shift start minutes-from-midnight. setMinutes handles
-    // overflow (>59) by rolling into hours/date automatically.
-    const midnight = new Date(ci);
-    midnight.setHours(0, 0, 0, 0);
-
-    const shiftEnd = new Date(midnight.getTime() + (start + shiftMinutes) * 60 * 1000);
-    const overtimeStart = new Date(shiftEnd.getTime() + thresholdMin * 60 * 1000);
-
-    if (co > overtimeStart) {
-      overtimeHours = (co.getTime() - overtimeStart.getTime()) / (1000 * 60 * 60);
-    }
+  if (overtimeStart && co > overtimeStart) {
+    overtimeHours = (co.getTime() - overtimeStart.getTime()) / (1000 * 60 * 60);
   }
 
   // Lateness: compare the check-in time-of-day to the shift start.
@@ -124,6 +113,30 @@ export function computeWorkedHours(
     lateHours: lateMinutes / 60,
     lateDays: lateMinutes > 0 ? 1 : 0,
   };
+}
+
+/**
+ * The DateTime at which overtime starts for a check-in under the legacy
+ * (non-banded) rules: the shift's scheduled end on the check-in calendar
+ * day plus the threshold grace minutes. Null when the shift does not
+ * allow overtime or has zero length.
+ */
+function shiftOvertimeStart(checkIn: Date, shift: ShiftShape): Date | null {
+  if (!shift.allowOvertime) return null;
+
+  const start = parseHHMM(shift.startTime);
+  const end = parseHHMM(shift.endTime);
+  let shiftMinutes = end - start;
+  if (shiftMinutes < 0) shiftMinutes += 24 * 60; // overnight wrap
+  if (shiftMinutes <= 0) return null;
+
+  // Anchor shift start to the check-in calendar day at midnight, then
+  // offset by the shift start minutes-from-midnight.
+  const midnight = new Date(checkIn);
+  midnight.setHours(0, 0, 0, 0);
+
+  const shiftEnd = new Date(midnight.getTime() + (start + shiftMinutes) * 60 * 1000);
+  return new Date(shiftEnd.getTime() + (shift.overtimeThresholdMinutes || 0) * 60 * 1000);
 }
 
 /** Parse "HH:mm" into minutes since midnight. Returns 0 for falsy input. */
@@ -217,6 +230,272 @@ export function aggregateAttendance(records: Attendance[]): AttendanceAggregate 
     daysWorked,
     attainedHours,
     overtimeHours,
+    lateHours,
+    lateDays,
+    leaveDays: 0,
+    leaveHours: 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Per-designation day-type overtime (Option #3 in overtime.md)
+// ---------------------------------------------------------------------------
+
+/** The day types an overtime rule can be attached to. */
+export type OvertimeDayType = 'weekday' | 'rest_day' | 'public_holiday';
+
+export const OVERTIME_DAY_TYPES: readonly OvertimeDayType[] = [
+  'weekday',
+  'rest_day',
+  'public_holiday',
+];
+
+/** Shape shared by the Prisma `OvertimeRule` and the designation form. */
+export interface OvertimeRuleShape {
+  dayType: string;
+  /** "hourly" (rateAmount = multiplier) or "fixed" (rateAmount = KES/hour). */
+  rateType: string;
+  rateAmount: number;
+  capHoursPerDay?: number | null;
+  isActive?: boolean;
+}
+
+/** Overtime hours split per day type. */
+export interface OvertimeBandHours {
+  weekday: number;
+  rest_day: number;
+  public_holiday: number;
+}
+
+export function emptyOvertimeBands(): OvertimeBandHours {
+  return { weekday: 0, rest_day: 0, public_holiday: 0 };
+}
+
+/** Local-calendar date key ("yyyy-mm-dd") used to match holiday dates. */
+export function toDateKey(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${m}-${d}`;
+}
+
+/** Context needed to classify a calendar day into an overtime day type. */
+export interface DayTypeContext {
+  /** Free-form working days from the worker's shift ("Mon,Tue,..."). Null/empty = every day is a working day (Sunday is then the rest day). */
+  workingDays?: string | null;
+  /** Local "yyyy-mm-dd" keys of the contractor's public holiday dates. */
+  holidayDates: Set<string>;
+}
+
+/**
+ * Classify a calendar day into an overtime day type.
+ *  - public holiday when the date is in the holiday set
+ *  - rest day when the day is outside the shift's working days
+ *    (or is a Sunday when no working days are configured)
+ *  - weekday otherwise
+ */
+export function resolveDayType(date: Date, ctx: DayTypeContext): OvertimeDayType {
+  if (ctx.holidayDates.has(toDateKey(date))) return 'public_holiday';
+  const mask = parseWorkingDays(ctx.workingDays);
+  if (mask ? !mask.has(date.getDay()) : date.getDay() === 0) return 'rest_day';
+  return 'weekday';
+}
+
+function isDayType(value: string): value is OvertimeDayType {
+  return (OVERTIME_DAY_TYPES as readonly string[]).includes(value);
+}
+
+/** A validated overtime rule row ready to persist against a designation. */
+export interface NormalizedOvertimeRule {
+  dayType: OvertimeDayType;
+  rateType: string;
+  rateAmount: number;
+  capHoursPerDay: number | null;
+  isActive: boolean;
+}
+
+/**
+ * Validate/normalise an `overtimeRules` payload from the designation API:
+ * drops unknown day types and duplicates, clamps amounts, defaults the
+ * rate type to "hourly" and isActive to true.
+ */
+export function normalizeOvertimeRules(rules: unknown): NormalizedOvertimeRule[] {
+  if (!Array.isArray(rules)) return [];
+  const out: NormalizedOvertimeRule[] = [];
+  const seen = new Set<string>();
+  for (const raw of rules) {
+    if (!raw || typeof raw !== 'object') continue;
+    const r = raw as Record<string, unknown>;
+    const dayType = String(r.dayType ?? '');
+    if (!isDayType(dayType) || seen.has(dayType)) continue;
+    seen.add(dayType);
+
+    const rateType = r.rateType === 'fixed' ? 'fixed' : 'hourly';
+    const rateAmountNum = Number(r.rateAmount);
+    const rateAmount = Number.isFinite(rateAmountNum) ? Math.max(0, rateAmountNum) : 0;
+    const capNum = r.capHoursPerDay == null || r.capHoursPerDay === '' ? NaN : Number(r.capHoursPerDay);
+    const capHoursPerDay = Number.isFinite(capNum) && capNum >= 0 ? capNum : null;
+
+    out.push({
+      dayType,
+      rateType,
+      rateAmount,
+      capHoursPerDay,
+      isActive: r.isActive !== false,
+    });
+  }
+  return out;
+}
+
+/** Index rules by day type; inactive / unknown-day-type rules are dropped. */
+export function rulesByDayType(
+  rules: OvertimeRuleShape[] | null | undefined,
+): Partial<Record<OvertimeDayType, OvertimeRuleShape>> {
+  const map: Partial<Record<OvertimeDayType, OvertimeRuleShape>> = {};
+  for (const rule of rules || []) {
+    if (rule.isActive === false) continue;
+    if (!isDayType(rule.dayType)) continue;
+    // First (or only, given the unique constraint) active rule wins.
+    if (!map[rule.dayType]) map[rule.dayType] = rule;
+  }
+  return map;
+}
+
+/**
+ * Bucket a single check-in/check-out pair's overtime into day-type bands.
+ *
+ * Policy (see overtime.md "Lean plan for #3"):
+ *  - No shift, or a shift with allowOvertime = false → no overtime at all
+ *    (legacy behaviour preserved).
+ *  - Rest day / public holiday engagement, when the designation has an
+ *    active rule for that day type: ALL worked hours that day count as
+ *    overtime in that band (statutory practice — work on a rest day or
+ *    holiday is overtime in full, not just hours past a shift end).
+ *  - Otherwise (weekdays, or rest/holiday days without a matching
+ *    designation rule): the legacy window — hours past the shift's end
+ *    time plus its threshold grace.
+ *  - The overtime window is split at local midnight and each piece is
+ *    banded by the calendar day it falls on, so overnight overtime
+ *    bleeding into a Sunday lands in the rest-day band.
+ *  - A band with a capHoursPerDay rule is capped per attendance record.
+ */
+export function bucketOvertimeForRecord(
+  checkIn: Date,
+  checkOut: Date,
+  shift: ShiftShape | null | undefined,
+  ctx: DayTypeContext,
+  rules: Partial<Record<OvertimeDayType, OvertimeRuleShape>> = {},
+): OvertimeBandHours {
+  const bands = emptyOvertimeBands();
+  if (!shift || !shift.allowOvertime) return bands;
+
+  const ci = new Date(checkIn);
+  ci.setSeconds(0, 0);
+  const co = new Date(checkOut);
+  co.setSeconds(0, 0);
+
+  const recordDayType = resolveDayType(ci, ctx);
+  const engagementRule = rules[recordDayType];
+
+  let windowStart: Date | null;
+  if (recordDayType !== 'weekday' && engagementRule) {
+    // Rest-day / public-holiday engagement: everything worked is overtime.
+    windowStart = ci;
+  } else {
+    // Legacy window: past shift end + threshold on the check-in day.
+    const otStart = shiftOvertimeStart(ci, shift);
+    windowStart = otStart && co > otStart ? otStart : null;
+  }
+  if (!windowStart || co <= windowStart) return bands;
+
+  // Split the overtime window at local midnight; each piece is banded by
+  // the calendar day it falls on.
+  let cursor = new Date(windowStart);
+  while (cursor < co) {
+    const nextMidnight = new Date(cursor);
+    nextMidnight.setHours(0, 0, 0, 0);
+    nextMidnight.setDate(nextMidnight.getDate() + 1);
+    const chunkEnd = nextMidnight < co ? nextMidnight : co;
+    const hours = (chunkEnd.getTime() - cursor.getTime()) / (1000 * 60 * 60);
+    if (hours > 0) {
+      const dayType = resolveDayType(cursor, ctx);
+      bands[dayType] += hours;
+    }
+    cursor = chunkEnd;
+  }
+
+  // Apply per-band caps (per attendance record / engagement day).
+  for (const dayType of OVERTIME_DAY_TYPES) {
+    const cap = rules[dayType]?.capHoursPerDay;
+    if (cap != null && cap >= 0 && bands[dayType] > cap) {
+      bands[dayType] = cap;
+    }
+  }
+
+  return bands;
+}
+
+export interface AttendanceBandsAggregate extends AttendanceAggregate {
+  /** Overtime hours per day type; `overtimeHours` is their sum. */
+  overtimeBands: OvertimeBandHours;
+}
+
+/**
+ * Banded variant of `aggregateAttendance`: classifies each complete
+ * attendance row's overtime into weekday / rest-day / holiday bands at
+ * payroll recompute time. The biometric write path keeps using the
+ * single-number `computeWorkedHours` / `aggregateAttendance` pipeline.
+ */
+export function aggregateAttendanceWithBands(
+  records: Attendance[],
+  options: {
+    shift?: ShiftShape | null | undefined;
+    workingDays?: string | null;
+    holidayDates?: Set<string>;
+    rules?: OvertimeRuleShape[] | null;
+  } = {},
+): AttendanceBandsAggregate {
+  const ctx: DayTypeContext = {
+    workingDays: options.workingDays !== undefined ? options.workingDays : options.shift?.workingDays,
+    holidayDates: options.holidayDates || new Set<string>(),
+  };
+  const rules = rulesByDayType(options.rules);
+
+  let daysWorked = 0;
+  let attainedHours = 0;
+  let lateHours = 0;
+  let lateDays = 0;
+  const overtimeBands = emptyOvertimeBands();
+
+  for (const r of records) {
+    const complete = r.status !== 'Absent' && r.checkIn != null && r.checkOut != null;
+    if (!complete) continue;
+    daysWorked++;
+    attainedHours += r.totalHours || 0;
+    lateHours += r.lateHours || 0;
+    lateDays += r.lateDays || 0;
+
+    if (options.shift) {
+      const bands = bucketOvertimeForRecord(
+        new Date(r.checkIn!),
+        new Date(r.checkOut!),
+        options.shift,
+        ctx,
+        rules,
+      );
+      overtimeBands.weekday += bands.weekday;
+      overtimeBands.rest_day += bands.rest_day;
+      overtimeBands.public_holiday += bands.public_holiday;
+    }
+  }
+
+  const overtimeHours =
+    overtimeBands.weekday + overtimeBands.rest_day + overtimeBands.public_holiday;
+
+  return {
+    daysWorked,
+    attainedHours,
+    overtimeHours,
+    overtimeBands,
     lateHours,
     lateDays,
     leaveDays: 0,

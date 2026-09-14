@@ -7,6 +7,7 @@ import {
   mobileError,
   mobileList,
 } from '@/lib/mobile-auth';
+import { normalizeOvertimeRules } from '@/lib/attendance-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: { overtimeRules: true },
       }),
       prisma.designation.count({ where })
     ]);
@@ -58,6 +60,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const contractorId = permCheck.contractorId!;
 
+    // Optional per-day-type overtime rules (weekday / rest_day /
+    // public_holiday) managed inline on the designation form.
+    const overtimeRules = normalizeOvertimeRules(body.overtimeRules);
+
     const designation = await prisma.designation.create({
       data: {
         title: body.title,
@@ -66,7 +72,9 @@ export async function POST(request: NextRequest) {
         paymentFrequency: body.paymentFrequency,
         isActive: body.isActive ?? true,
         contractorId: contractorId,
+        overtimeRules: overtimeRules.length > 0 ? { create: overtimeRules } : undefined,
       },
+      include: { overtimeRules: true },
     });
 
     await ActivityLogger.log({

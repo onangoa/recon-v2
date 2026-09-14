@@ -11,6 +11,8 @@ async function main() {
     await prisma.payrollPeriod.deleteMany({});
     await prisma.salaryComponent.deleteMany({});
     await prisma.worker.deleteMany({});
+    await prisma.overtimeRule.deleteMany({});
+    await prisma.holiday.deleteMany({});
     await prisma.designation.deleteMany({});
     await prisma.metric.deleteMany({});
     await prisma.visitor.deleteMany({});
@@ -211,6 +213,56 @@ const adminRole = await prisma.role.create({
     }
 
     console.log('Created contractors and admin roles');
+
+    // Seed Kenya's gazetted public holidays for each contractor. Used to
+    // bucket overtime into the public_holiday band at payroll time.
+    // Editable via /web/api/holidays. Notes:
+    //  - Easter-relative dates are computed (Good Friday / Easter Monday).
+    //  - Eid dates are moon-dependent approximations — adjust via the API.
+    //  - Sundays roll over to the following Monday (Public Holidays Act);
+    //    Saturdays are not rolled.
+    const KENYA_HOLIDAYS: { name: string; date: string }[] = [
+      // 2026
+      { name: "New Year's Day", date: '2026-01-01' },
+      { name: 'Idd-ul-Fitr (approx.)', date: '2026-03-20' },
+      { name: 'Good Friday', date: '2026-04-03' },
+      { name: 'Easter Monday', date: '2026-04-06' },
+      { name: 'Labour Day', date: '2026-05-01' },
+      { name: 'Idd-ul-Azha (approx.)', date: '2026-05-27' },
+      { name: 'Madaraka Day', date: '2026-06-01' },
+      { name: 'Utamaduni Day', date: '2026-10-10' },
+      { name: 'Mashujaa Day', date: '2026-10-20' },
+      { name: 'Jamhuri Day', date: '2026-12-12' },
+      { name: 'Christmas Day', date: '2026-12-25' },
+      { name: 'Boxing Day', date: '2026-12-26' },
+      // 2027
+      { name: "New Year's Day", date: '2027-01-01' },
+      { name: 'Idd-ul-Fitr (approx.)', date: '2027-03-10' },
+      { name: 'Good Friday', date: '2027-03-26' },
+      { name: 'Easter Monday', date: '2027-03-29' },
+      { name: 'Labour Day', date: '2027-05-01' },
+      { name: 'Idd-ul-Azha (approx.)', date: '2027-05-17' },
+      { name: 'Madaraka Day', date: '2027-06-01' },
+      { name: 'Utamaduni Day', date: '2027-10-10' },
+      { name: 'Utamaduni Day (observed)', date: '2027-10-11' },
+      { name: 'Mashujaa Day', date: '2027-10-20' },
+      { name: 'Jamhuri Day', date: '2027-12-12' },
+      { name: 'Jamhuri Day (observed)', date: '2027-12-13' },
+      { name: 'Christmas Day', date: '2027-12-25' },
+      { name: 'Boxing Day', date: '2027-12-26' },
+      { name: 'Boxing Day (observed)', date: '2027-12-27' },
+    ];
+
+    for (const contractor of contractors) {
+      await prisma.holiday.createMany({
+        data: KENYA_HOLIDAYS.map(h => ({
+          contractorId: contractor.id,
+          name: h.name,
+          date: new Date(`${h.date}T00:00:00`),
+        })),
+      });
+    }
+    console.log('Created public holidays');
 
     // Create Designations for each contractor
     const designations = [];

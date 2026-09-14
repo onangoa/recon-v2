@@ -6,6 +6,7 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
+import { normalizeOvertimeRules } from '@/lib/attendance-utils';
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +19,7 @@ export async function GET(
     const { id } = await params;
     const designation = await prisma.designation.findFirst({
       where: { id, contractorId },
+      include: { overtimeRules: true },
     });
     if (!designation) {
       return mobileError('Designation not found', 404);
@@ -56,7 +58,13 @@ export async function PUT(
         salary: body.salary,
         paymentFrequency: body.paymentFrequency,
         isActive: body.isActive,
+        // Replace the rule set only when the caller sent one — clients
+        // that don't know about rules (e.g. the mobile app) keep them.
+        ...(body.overtimeRules !== undefined
+          ? { overtimeRules: { deleteMany: {}, create: normalizeOvertimeRules(body.overtimeRules) } }
+          : {}),
       },
+      include: { overtimeRules: true },
     });
 
     await ActivityLogger.log({

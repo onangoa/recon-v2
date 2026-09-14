@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { PayrollCalculator, SalaryComponentData, AttendancePayrollInput, RateConfig } from '@/lib/payroll-calculator';
+import { PayrollCalculator, SalaryComponentData, AttendancePayrollInput, RateConfig, OvertimeRuleInput } from '@/lib/payroll-calculator';
 import { shiftNetHours, countExpectedDays } from '@/lib/attendance-utils';
 import { requireContractorPermission } from '@/lib/require-permission';
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Fetch worker and designation
     const worker = await prisma.worker.findUnique({
       where: { id: workerId },
-      include: { designation: true, shift: true }
+      include: { designation: { include: { overtimeRules: true } }, shift: true }
     });
 
     if (!worker) {
@@ -69,8 +69,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const designation = designationId 
-      ? await prisma.designation.findUnique({ where: { id: designationId } })
+    const designation = designationId
+      ? await prisma.designation.findUnique({
+          where: { id: designationId },
+          include: { overtimeRules: true },
+        })
       : worker.designation;
 
     if (!designation) {
@@ -112,6 +115,10 @@ export async function POST(request: NextRequest) {
 
       attendanceInput = {
         overtimeHours: overtimeHours || 0,
+        // Optional band map (weekday / rest_day / public_holiday hours) from
+        // the caller; when absent the calculator treats the total as one
+        // weekday band.
+        overtimeBands: body.overtimeBands,
         lateHours: lateHours || 0,
         lateDays: lateDays || 0,
         daysWorked: attainedDays || 0,
@@ -130,6 +137,16 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Per-designation day-type overtime rules (rate precedence:
+    // designation rule → shift config → 1x default).
+    const overtimeRuleInputs: OvertimeRuleInput[] = (designation.overtimeRules || [])
+      .map(r => ({
+        dayType: r.dayType as OvertimeRuleInput['dayType'],
+        rateType: r.rateType,
+        rateAmount: r.rateAmount,
+        isActive: r.isActive,
+      }));
+
     // Calculate payroll
     const calculation = PayrollCalculator.calculate({
       basicSalary: designation.salary || 0,
@@ -143,6 +160,7 @@ export async function POST(request: NextRequest) {
             rateAmount: worker.shift.overtimeRateAmount,
           }
         : undefined,
+      overtimeRules: overtimeRuleInputs,
     });
 
     // Create salary slip
@@ -158,6 +176,9 @@ export async function POST(request: NextRequest) {
         attainedDays: attendanceInput?.attainedDays ?? 0,
         overtimeHours: attendanceInput?.overtimeHours ?? 0,
         overtimePay: calculation.overtimePay,
+        overtimeBands: calculation.overtimeBands.length > 0
+          ? JSON.stringify(calculation.overtimeBands)
+          : undefined,
         lateHours: attendanceInput?.lateHours ?? 0,
         lateDays: attendanceInput?.lateDays ?? 0,
         leaveHours: attendanceInput?.leaveHours ?? 0,
