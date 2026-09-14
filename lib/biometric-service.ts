@@ -147,9 +147,15 @@ export async function getUserList(sn?: string | null): Promise<GetUserListRespon
   });
 }
 
+export interface DevicePerson {
+  id: number;
+  name: string;
+}
+
 export interface GetDeviceEnrollIdsResponse {
   deviceSn: string;
   enrollIds: number[];
+  persons: DevicePerson[];
   count: number;
 }
 
@@ -161,6 +167,16 @@ export async function getDeviceEnrollIds(sn?: string | null): Promise<number[]> 
   const deviceSn = resolveDeviceSn(sn);
   const res = await postJson<GetDeviceEnrollIdsResponse>('/api/getDeviceEnrollIds', { deviceSn });
   return Array.isArray(res.enrollIds) ? res.enrollIds : [];
+}
+
+/**
+ * Person registry of a device: enroll IDs with names, as registered in the
+ * fingerprint backend's person table (legacy global rows included).
+ */
+export async function getDevicePersons(sn?: string | null): Promise<DevicePerson[]> {
+  const deviceSn = resolveDeviceSn(sn);
+  const res = await postJson<GetDeviceEnrollIdsResponse>('/api/getDeviceEnrollIds', { deviceSn });
+  return Array.isArray(res.persons) ? res.persons : [];
 }
 
 /**

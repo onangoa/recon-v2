@@ -4,8 +4,6 @@ import { ActivityLogger } from '@/lib/activity-logger';
 import { requirePermission } from '@/lib/require-permission';
 import { getCurrentContractor } from '@/lib/auth';
 import { withContractorFilter } from '@/lib/contractor-isolation';
-import { getDeviceEnrollIds } from '@/lib/biometric-service';
-import { nextFreeEnrollId } from '@/lib/enroll-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,28 +113,9 @@ export async function POST(request: NextRequest) {
       designationId = null;
     }
 
-    // System-assigned Enroll ID: when blank, fill the first free slot for the
-    // target device (enroll IDs are unique per device, e.g. 1,2,3,10 taken -> 4).
-    let enrollId = body.enrollId;
-    if (enrollId === undefined || enrollId === null || String(enrollId).trim() === '') {
-      enrollId = null;
-      let sn = body.deviceSn || null;
-      if (!sn) {
-        const first = await prisma.biometricDevice.findFirst({
-          where: { contractorId, isActive: true },
-          orderBy: { createdAt: 'desc' },
-        });
-        sn = first?.sn || null;
-      }
-      if (sn) {
-        try {
-          const taken = await getDeviceEnrollIds(sn);
-          enrollId = String(nextFreeEnrollId(taken));
-        } catch {
-          enrollId = null;
-        }
-      }
-    }
+    // Note: the Enroll ID is not set here — it is assigned server-side by
+    // /web/api/biometric/enroll when the worker is enrolled to a device
+    // (unique per device, first free slot).
 
     const worker = await prisma.worker.create({
       data: {
@@ -144,7 +123,7 @@ export async function POST(request: NextRequest) {
         email: body.email,
         phone: body.phone,
         nationalId: body.nationalId,
-        enrollId,
+        enrollId: body.enrollId || null,
         designationId: designationId,
         shiftId: body.shiftId || null,
         paymentMode: body.paymentMode || 'manual',

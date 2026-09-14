@@ -10,7 +10,6 @@ import {
   UserPlus,
   Mail,
   Phone,
-  Shield,
   HardHat,
   MoreVertical,
   Filter,
@@ -365,7 +364,7 @@ export default function WorkersPage() {
   };
 
   const enrollAllUnenrolled = async () => {
-    const unenrolled = biometricRows.filter((w) => !w.enrolled && w.enrollId);
+    const unenrolled = biometricRows.filter((w) => !w.enrolled);
     if (unenrolled.length === 0) {
       toast({ title: 'Nothing to enroll', description: 'All workers are already enrolled to the device.' });
       return;
@@ -778,10 +777,6 @@ export default function WorkersPage() {
                           <CreditCard className="w-3 h-3 mr-1 opacity-60" />
                           ID: {worker.nationalId || 'N/A'}
                         </div>
-                        <div className="flex items-center text-primary">
-                          <Shield className="w-3 h-3 mr-1 opacity-60" />
-                          Enroll: {worker.enrollId || 'N/A'}
-                        </div>
                         <div className="flex items-center">
                           <CreditCard className="w-3 h-3 mr-1 opacity-60" />
                           {worker.paymentMode === 'manual' || !worker.paymentMode ? 'Manual' :
@@ -918,7 +913,7 @@ export default function WorkersPage() {
               Biometric Device Enrollment
             </DialogTitle>
             <DialogDescription>
-              Workers enrolled on the connected device. Enroll any that are missing from the device — the device requires a unique enroll ID.
+              Workers enrolled on the connected device. Enroll any that are missing — enroll IDs are handled automatically.
             </DialogDescription>
           </DialogHeader>
 
@@ -965,13 +960,12 @@ export default function WorkersPage() {
                   <span>
                     <strong className="text-foreground">{biometricRows.filter(w => w.enrolled).length}</strong> / {biometricRows.length} enrolled to device
                   </span>
-                  <span>{biometricRows.filter(w => !w.enrolled && w.enrollId).length} can be enrolled</span>
+                  <span>{biometricRows.filter(w => !w.enrolled).length} can be enrolled</span>
                 </div>
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead className="text-[10px] font-bold uppercase">Worker</TableHead>
-                      <TableHead className="text-[10px] font-bold uppercase">Enroll ID</TableHead>
                       <TableHead className="text-[10px] font-bold uppercase text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -979,13 +973,12 @@ export default function WorkersPage() {
                     {biometricRows.map((w) => (
                       <TableRow key={w.id}>
                         <TableCell className="text-xs font-medium">{w.name}</TableCell>
-                        <TableCell className="text-xs font-mono">{w.enrollId || '—'}</TableCell>
                         <TableCell className="text-center">
                           {w.enrolled ? (
                             <Badge className="text-[9px] font-bold bg-emerald-500/10 text-emerald-600">
                               <CheckCircle2 className="w-3 h-3 mr-1" /> Enrolled
                             </Badge>
-                          ) : w.enrollId ? (
+                          ) : (
                             <Button
                               size="sm"
                               variant="outline"
@@ -996,8 +989,6 @@ export default function WorkersPage() {
                               {enrollingIds.includes(w.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <ScanLine className="w-3 h-3" />}
                               Enroll
                             </Button>
-                          ) : (
-                            <Badge variant="outline" className="text-[9px] font-bold text-muted-foreground">No ID</Badge>
                           )}
                         </TableCell>
                       </TableRow>
@@ -1012,7 +1003,7 @@ export default function WorkersPage() {
             <Button
               variant="default"
               className="gap-2"
-              disabled={biometricLoading || enrollAllRunning || biometricRows.filter(w => !w.enrolled && w.enrollId).length === 0}
+              disabled={biometricLoading || enrollAllRunning || biometricRows.filter(w => !w.enrolled).length === 0}
               onClick={enrollAllUnenrolled}
             >
               {enrollAllRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}

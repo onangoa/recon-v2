@@ -66,9 +66,12 @@ export async function POST(request: NextRequest) {
       const logTime = parseLogTime(records_time);
       const logDate = startOfDay(logTime);
 
-      const worker = await prisma.worker.findUnique({
+      // enrollId is no longer globally unique (per-device namespace): pick the
+      // most recently updated worker holding this id (latest enrollment).
+      const worker = await prisma.worker.findFirst({
         where: { enrollId: String(enroll_id) },
         include: { shift: true },
+        orderBy: { updatedAt: 'desc' },
       });
 
       if (!worker) {

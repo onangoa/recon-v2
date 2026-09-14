@@ -180,13 +180,6 @@ export default function ViewWorkerPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-                <div>
-                  <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Enroll ID</dt>
-                  <dd className="text-sm font-medium text-gray-900">{worker.enrollId || '—'}</dd>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-muted-foreground" />
                 <div>
                   <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email</dt>

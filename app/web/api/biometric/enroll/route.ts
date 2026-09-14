@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
-import { sendUserToDevice } from '@/lib/biometric-service';
+import { sendUserToDevice, getEnrolledEnrollIds, getDevicePersons } from '@/lib/biometric-service';
+import { nextFreeEnrollId } from '@/lib/enroll-id';
 
 /**
  * POST /web/api/biometric/enroll
@@ -12,13 +13,26 @@ import { sendUserToDevice } from '@/lib/biometric-service';
  * Body:
  *   { workerId: string, deviceSn?: string }   // enroll the worker stored in the DB
  *   -- or --
- *   { enrollId, name, face?, deviceSn }        // ad-hoc payload
+ *   { enrollId, name, face?, deviceSn }        // ad-hoc payload (enrollId still required)
  *
  * `deviceSn` selects which of the contractor's configured devices to push to.
- * If omitted, the first active configured device is used. The worker's
- * enrollId (unique in the device) and name are sent. A base64 JPEG face photo
- * can be supplied via `face`; otherwise it is omitted.
+ * If omitted, the first active configured device is used.
+ *
+ * The Enroll ID is assigned SERVER-SIDE (unique per device): the first free
+ * slot of the device's namespace (person-table registry + ids enrolled on the
+ * hardware), e.g. 1,2,3,10 taken -> 4. A worker keeps an existing ID when it
+ * is still free on the device or already registered to the same person.
  */
+
+/** Loose name match for recognising a worker's own person row on a device. */
+function isSamePersonName(a: string, b: string): boolean {
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const x = norm(a);
+  const y = norm(b);
+  if (!x || !y) return false;
+  return x === y || x.startsWith(y) || y.startsWith(x);
+}
+
 export async function POST(request: NextRequest) {
   const permCheck = await requireContractorPermission(request, 'workers:update');
   if (!permCheck.authorized) return permCheck.error;
@@ -32,29 +46,6 @@ export async function POST(request: NextRequest) {
     let face: string | undefined = body.face;
     let workerId: string | undefined = body.workerId;
     let deviceSn: string | undefined = body.deviceSn;
-
-    if (workerId) {
-      const worker = await prisma.worker.findFirst({
-        where: { id: workerId, contractorId },
-        select: { id: true, name: true, enrollId: true },
-      });
-      if (!worker) {
-        return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
-      }
-      enrollId = worker.enrollId ?? body.enrollId;
-      name = worker.name;
-      workerId = worker.id;
-    }
-
-    if (enrollId === undefined || enrollId === null || enrollId === '') {
-      return NextResponse.json(
-        { error: 'Enroll ID is required to enroll a worker to the device' },
-        { status: 400 }
-      );
-    }
-    if (!name) {
-      return NextResponse.json({ error: 'Worker name is required' }, { status: 400 });
-    }
 
     // Resolve the target device from the contractor's configured devices.
     let device = deviceSn
@@ -81,6 +72,70 @@ export async function POST(request: NextRequest) {
         { error: `Device "${device.name}" is inactive. Enable it in Settings → Devices.` },
         { status: 400 }
       );
+    }
+
+    if (workerId) {
+      const worker = await prisma.worker.findFirst({
+        where: { id: workerId, contractorId },
+        select: { id: true, name: true, enrollId: true },
+      });
+      if (!worker) {
+        return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
+      }
+      name = worker.name;
+      workerId = worker.id;
+
+      // Server-side Enroll ID assignment (unique per device).
+      // Taken = the device's person registry (with names) + ids enrolled on
+      // the hardware. Best-effort: on API failure fall back to what we have.
+      let personList: { id: number; name: string }[] = [];
+      try {
+        personList = await getDevicePersons(device.sn);
+      } catch {
+        personList = [];
+      }
+      let hardwareIds: number[] = [];
+      try {
+        hardwareIds = await getEnrolledEnrollIds(device.sn);
+      } catch {
+        hardwareIds = [];
+      }
+      const taken = new Set<number>([...personList.map((p) => p.id), ...hardwareIds]);
+
+      const current =
+        worker.enrollId !== null && worker.enrollId !== '' ? Number(worker.enrollId) : NaN;
+      let assigned: number;
+      if (Number.isFinite(current) && !taken.has(current)) {
+        // Worker already has an ID that is free on this device — keep it.
+        assigned = current;
+      } else if (
+        Number.isFinite(current) &&
+        personList.some((p) => p.id === current && isSamePersonName(p.name, worker.name))
+      ) {
+        // The device slot already belongs to this worker (re-enroll / update).
+        assigned = current;
+      } else {
+        // Assign the first free slot of this device (e.g. 1,2,3,10 taken -> 4).
+        assigned = nextFreeEnrollId([...taken]);
+      }
+      enrollId = assigned;
+
+      if (String(assigned) !== (worker.enrollId ?? '')) {
+        await prisma.worker.update({
+          where: { id: worker.id },
+          data: { enrollId: String(assigned) },
+        });
+      }
+    }
+
+    if (enrollId === undefined || enrollId === null || enrollId === '') {
+      return NextResponse.json(
+        { error: 'Enroll ID is required to enroll a worker to the device' },
+        { status: 400 }
+      );
+    }
+    if (!name) {
+      return NextResponse.json({ error: 'Worker name is required' }, { status: 400 });
     }
 
     const response = await sendUserToDevice({
