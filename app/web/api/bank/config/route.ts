@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { getPayoutFee } from '@/lib/payout-fee';
 
 export async function GET(request: NextRequest) {
   const permCheck = await requireContractorPermission(request, 'wallets:read');
@@ -8,5 +9,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     bankName: 'Co-operative Bank of Kenya (RECON ENGINEERING ..)',
     sourceAccount: process.env.COOP_BANK_SOURCE_ACCOUNT || '',
+    payoutFee: await getPayoutFee(),
   });
 }

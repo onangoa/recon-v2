@@ -917,3 +917,11 @@ model Transaction {
   @@index([status])
   @@index([transactionType])
 }
+
+/// Dynamic platform-wide settings editable by super admins (key/value store).
+/// Currently used for the flat payout transaction fee ("payoutFee").
+model PlatformConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

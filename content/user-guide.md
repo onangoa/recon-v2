@@ -160,6 +160,8 @@ Manage project funds, track balances, and monitor financial transactions.
 - Create, edit, and delete wallets.
 - View wallet details with full transaction history.
 
+**Payout fee:** every outgoing payout (bank, M-Pesa, or manual debit) carries a flat platform fee (default KES 40, configurable by the superadmin under **Settings → Payout Fees**). The wallet is debited the payout amount **plus** the fee, and the fee appears as a separate `PAYOUT_FEE` transaction. Worker payroll payments are exempt, and a failed or reversed payout never leaves you out of pocket — the fee is only charged when a payout completes and is refunded if it is reversed.
+
 **Sub-pages:**
 
 | Route | Purpose |
@@ -565,7 +567,7 @@ Manage your Super Admin account details and security settings.
 
 Configure global platform parameters, security, and integrations.
 
-- **General:** Platform name, global support email, base URL; regional settings (currency KES, timezone Africa/Nairobi).
+- **General:** Platform name, global support email, base URL; regional settings (currency KES, timezone Africa/Nairobi); payout fee (flat KES amount charged on outgoing payouts — payroll exempt).
 - **Security:** MFA toggle, session timeout (30 min), strict password policy toggles.
 - **Alerts:** Notifications for new registrations, security breaches, M-Pesa failures.
 

@@ -8,6 +8,7 @@ import {
   mobileList,
 } from '@/lib/mobile-auth';
 import { notifyPayoutApproved, notifyPayoutRejected } from '@/lib/sms-notifications';
+import { getPayoutFee, isPayrollPayout } from '@/lib/payout-fee';
 
 export async function GET(
   request: NextRequest
@@ -84,12 +85,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (transaction.wallet.balance < transaction.amount) {
+        // Balance must cover the payout plus the flat payout fee.
+        // Payroll disbursements are exempt from the fee.
+        const payoutFee = isPayrollPayout(transaction) ? 0 : await getPayoutFee();
+        if (transaction.wallet.balance < transaction.amount + payoutFee) {
           await prisma.transaction.update({
             where: { id: transactionId },
             data: {
               status: 'FAILED',
-              resultDesc: 'Insufficient balance at time of approval'
+              resultDesc: payoutFee > 0
+                ? `Insufficient balance at time of approval (needs amount + ${payoutFee} fee)`
+                : 'Insufficient balance at time of approval'
             }
           });
           await notifyPayoutRejected(transactionId, 'Insufficient balance at time of approval');

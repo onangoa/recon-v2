@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { initiateB2C } from '@/lib/mpesa-service';
 import { prisma } from '@/lib/prisma';
+import { getPayoutFee } from '@/lib/payout-fee';
 import {
   mobileRequirePermission,
   mobileSuccess,
@@ -42,8 +43,9 @@ export async function POST(req: NextRequest) {
       return mobileError('Wallet not found', 404);
     }
 
-    if (wallet.balance < amount) {
-      return mobileError('Insufficient wallet balance', 400);
+    const payoutFee = await getPayoutFee();
+    if (wallet.balance < amount + payoutFee) {
+      return mobileError(`Insufficient wallet balance (needs amount + ${payoutFee} payout fee)`, 400);
     }
 
     const result = await initiateB2C(

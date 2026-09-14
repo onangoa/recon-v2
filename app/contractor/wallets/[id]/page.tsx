@@ -185,6 +185,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [bankDepositAccount, setBankDepositAccount] = useState('');
   const [bankDepositConfirming, setBankDepositConfirming] = useState(false);
   const [bankSourceAccount, setBankSourceAccount] = useState('');
+  const [payoutFee, setPayoutFee] = useState(0);
   const [bankDepositMemo, setBankDepositMemo] = useState('');
   const [isBankDepositing, setIsBankDepositing] = useState(false);
 
@@ -376,6 +377,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
         if (!response.ok) return;
         const data = await response.json();
         setBankSourceAccount(data.sourceAccount || '');
+        if (typeof data.payoutFee === 'number') setPayoutFee(data.payoutFee);
       } catch {
         return;
       }
@@ -494,10 +496,10 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       return;
     }
 
-    if (wallet && parseFloat(paymentAmount) > wallet.balance) {
+    if (wallet && parseFloat(paymentAmount) + payoutFee > wallet.balance) {
       toast({
         title: "Insufficient Balance",
-        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)}`,
+        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)} (payout + ${payoutFee} fee required)`,
         variant: "destructive",
       });
       return;
@@ -638,10 +640,10 @@ const handleBankDeposit = async () => {
       toast({ title: "Validation Error", description: "Recipient mobile number is required.", variant: "destructive" });
       return;
     }
-    if (wallet && parseFloat(bankPayoutAmount) > wallet.balance) {
+    if (wallet && parseFloat(bankPayoutAmount) + payoutFee > wallet.balance) {
       toast({
         title: "Insufficient Balance",
-        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)}`,
+        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)} (payout + ${payoutFee} fee required)`,
         variant: "destructive",
       });
       return;
@@ -1403,7 +1405,12 @@ const handleBankDeposit = async () => {
                     </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">
-                    {wallet.balance < parseFloat(bankPayoutAmount || '0') && (
+                    {payoutFee > 0 && (
+                      <p className="text-[10px] text-muted-foreground font-semibold mb-1">
+                        A KES {payoutFee} payout fee applies — total debit KES {(parseFloat(bankPayoutAmount || '0') + payoutFee).toLocaleString()}
+                      </p>
+                    )}
+                    {wallet.balance < parseFloat(bankPayoutAmount || '0') + payoutFee && (
                       <p className="text-[10px] text-red-600 font-bold mb-2">Insufficient Balance!</p>
                     )}
                     <div className="flex justify-end gap-2 w-full">
@@ -1411,7 +1418,7 @@ const handleBankDeposit = async () => {
                       <Button
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                         onClick={handleBankPayout}
-                        disabled={isBankPaying || isUploadingProof || wallet.balance < parseFloat(bankPayoutAmount || '0')}
+                        disabled={isBankPaying || isUploadingProof || wallet.balance < parseFloat(bankPayoutAmount || '0') + payoutFee}
                       >
                         {isBankPaying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Create Bank Payout
@@ -1613,7 +1620,12 @@ const handleBankDeposit = async () => {
                     </div>
                   </div>
                   <DialogFooter className="flex flex-col gap-2">
-                    {wallet.balance < parseFloat(paymentAmount || '0') && (
+                    {payoutFee > 0 && (
+                      <p className="text-[10px] text-muted-foreground font-semibold mb-1">
+                        A KES {payoutFee} payout fee applies — total debit KES {(parseFloat(paymentAmount || '0') + payoutFee).toLocaleString()}
+                      </p>
+                    )}
+                    {wallet.balance < parseFloat(paymentAmount || '0') + payoutFee && (
                       <p className="text-[10px] text-red-600 font-bold mb-2">Insufficient Balance!</p>
                     )}
                     <div className="flex justify-end gap-2 w-full">
@@ -1621,7 +1633,7 @@ const handleBankDeposit = async () => {
                       <Button 
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                         onClick={handlePayment}
-                        disabled={isMakingPayment || isUploadingProof || wallet.balance < parseFloat(paymentAmount || '0')}
+                        disabled={isMakingPayment || isUploadingProof || wallet.balance < parseFloat(paymentAmount || '0') + payoutFee}
                       >
                         {isMakingPayment && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Execute Payment

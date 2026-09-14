@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { initiateSTKPush } from '@/lib/mpesa';
 import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
+import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
 import {
   mobileRequireContractorPermission,
   mobileSuccess,
@@ -87,6 +88,10 @@ export async function POST(
       return mobileError('Wallet not found', 404);
     }
 
+    // Flat fee charged on every outgoing payout; the wallet must cover
+    // the amount plus the fee. (Payroll never goes through this route.)
+    const payoutFee = type === 'debit' ? await getPayoutFee() : 0;
+
     // Co-op Bank integration: top-up via bank or payout via bank
     if (method === 'bank') {
       try {
@@ -107,8 +112,8 @@ export async function POST(
           });
           return mobileSuccess(result, 'Bank top-up initiated and pending confirmation');
         } else {
-          if (wallet.balance < amount) {
-            return mobileError('Insufficient balance', 400);
+          if (wallet.balance < amount + payoutFee) {
+            return mobileError(`Insufficient balance (payout + ${payoutFee} fee)`, 400);
           }
           const channel: 'pesalink' | 'ift' | 'mpesa' = (payoutChannel as any) || 'pesalink';
           if (channel === 'mpesa' && !mobileNumber && !referenceNumber) {
@@ -139,8 +144,8 @@ export async function POST(
     }
 
     if (method !== 'mpesa') {
-      if (type === 'debit' && wallet.balance < amount) {
-        return mobileError('Insufficient balance', 400);
+      if (type === 'debit' && wallet.balance < amount + payoutFee) {
+        return mobileError(`Insufficient balance (payout + ${payoutFee} fee)`, 400);
       }
 
       const newBalance = type === 'credit' ? wallet.balance + amount : wallet.balance - amount;
@@ -164,6 +169,14 @@ export async function POST(
         data: { balance: newBalance },
       });
 
+      // Flat payout fee on outgoing manual payouts
+      if (type === 'debit') {
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          return mobileSuccess({ transaction, feeCharged });
+        }
+      }
+
       return mobileSuccess(transaction);
     }
 
@@ -177,8 +190,8 @@ export async function POST(
 
       return mobileSuccess({ mpesaResponse: stkResponse }, 'STK Push initiated');
     } else {
-      if (wallet.balance < amount) {
-        return mobileError('Insufficient balance', 400);
+      if (wallet.balance < amount + payoutFee) {
+        return mobileError(`Insufficient balance (payout + ${payoutFee} fee)`, 400);
       }
 
       let transactionType = 'B2C';

@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { notifyBankTopupConfirmedForWallet } from './sms-notifications';
+import { getPayoutFee, chargePayoutFee } from './payout-fee';
 
 // ============ Co-op Bank OpenAPI Configuration ============
 const COOP_BASE_URL = process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opbank.co.ke';
@@ -376,8 +377,10 @@ export async function createBankPayout(data: {
   const wallet = await prisma.wallet.findUnique({ where: { id: data.walletId } });
   if (!wallet) throw new Error(`Wallet ${data.walletId} not found`);
 
-  if (wallet.balance < data.amount) {
-    throw new Error('Insufficient wallet balance for bank payout');
+  // Balance must cover the payout plus the flat payout fee
+  const payoutFee = await getPayoutFee();
+  if (wallet.balance < data.amount + payoutFee) {
+    throw new Error(`Insufficient wallet balance for bank payout (amount + ${payoutFee} fee)`);
   }
 
   const transactionType =
@@ -567,6 +570,11 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
           where: { id: transaction.walletId },
           data: { balance: { decrement: transaction.amount } },
         });
+        // Flat payout fee (skipped for payroll disbursements)
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          console.log(`Charged payout fee of ${feeCharged} for transaction ${transaction.id}`);
+        }
       }
 
       await prisma.transaction.update({

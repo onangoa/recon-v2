@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initiateB2Pochi, TransactionType } from '@/lib/mpesa-service';
 import { prisma } from '@/lib/prisma';
+import { getPayoutFee } from '@/lib/payout-fee';
 import { requirePermission } from '@/lib/require-permission';
 
 export async function POST(req: NextRequest) {
@@ -51,10 +52,11 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    if (wallet.balance < amount) {
+    const payoutFee = await getPayoutFee();
+    if (wallet.balance < amount + payoutFee) {
       return NextResponse.json({
         success: false,
-        error: 'Insufficient wallet balance'
+        error: `Insufficient wallet balance (needs amount + ${payoutFee} payout fee)`
       }, { status: 400 });
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Settings,
   Shield,
@@ -30,6 +30,45 @@ import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
+  const [payoutFee, setPayoutFee] = useState('40');
+  const [feeSaving, setFeeSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/web/api/superadmin/config');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (typeof data.payoutFee === 'number') setPayoutFee(String(data.payoutFee));
+      } catch {
+        return;
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSaveFee = async () => {
+    const value = Number.parseFloat(payoutFee);
+    if (!Number.isFinite(value) || value < 0) {
+      toast.error('Payout fee must be a number of 0 or more');
+      return;
+    }
+    setFeeSaving(true);
+    try {
+      const response = await fetch('/web/api/superadmin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payoutFee: value }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to save the payout fee');
+      toast.success(`Payout fee updated to KES ${data.payoutFee}`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save the payout fee');
+    } finally {
+      setFeeSaving(false);
+    }
+  };
 
   const handleSave = async (section: string) => {
     setLoading(true);
@@ -100,6 +139,36 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle>Payout Fees</CardTitle>
+              <CardDescription>Flat fee charged on outgoing wallet payouts. Worker payroll disbursements are exempt.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="payout-fee">Payout Transaction Fee (KES)</Label>
+                  <Input
+                    id="payout-fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={payoutFee}
+                    onChange={(e) => setPayoutFee(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Every outgoing payout (bank transfer, M-Pesa or manual) debits the wallet the payout amount plus this fee. The fee is recorded as platform revenue.
+              </p>
+            </CardContent>
+            <CardFooter className="border-t border-border pt-4">
+              <Button onClick={handleSaveFee} disabled={feeSaving} className="gap-2">
+                <Save className="w-4 h-4" /> {feeSaving ? 'Saving...' : 'Save Fee'}
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
 

@@ -4,6 +4,7 @@ import { initiateSTKPush, initiateB2C, initiateB2B, initiateB2Pochi } from '@/li
 import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import { WalletService } from '@/lib/wallet-service';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
 
 export async function GET(
   request: NextRequest,
@@ -90,6 +91,10 @@ export async function POST(
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
+    // Flat fee charged on every outgoing payout; the wallet must cover
+    // the amount plus the fee. (Payroll never goes through this route.)
+    const payoutFee = type === 'debit' ? await getPayoutFee() : 0;
+
     // Co-op Bank integration: top-up via bank or payout via bank
     if (method === 'bank') {
       try {
@@ -112,8 +117,8 @@ export async function POST(
           return NextResponse.json(result);
         } else {
           // Bank payout - create pending approval transaction
-          if (wallet.balance < amount) {
-            return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+          if (wallet.balance < amount + payoutFee) {
+            return NextResponse.json({ error: `Insufficient balance (payout + ${payoutFee} fee)` }, { status: 400 });
           }
           const channel: 'pesalink' | 'ift' | 'mpesa' = (payoutChannel as any) || 'pesalink';
           if (channel === 'mpesa' && !mobileNumber && !referenceNumber) {
@@ -148,8 +153,8 @@ export async function POST(
 
     // Standard manual/other method
     if (method !== 'mpesa') {
-      if (type === 'debit' && wallet.balance < amount) {
-        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+      if (type === 'debit' && wallet.balance < amount + payoutFee) {
+        return NextResponse.json({ error: `Insufficient balance (payout + ${payoutFee} fee)` }, { status: 400 });
       }
 
       const newBalance = type === 'credit' ? wallet.balance + amount : wallet.balance - amount;
@@ -173,6 +178,14 @@ export async function POST(
         data: { balance: newBalance },
       });
 
+      // Flat payout fee on outgoing manual payouts
+      if (type === 'debit') {
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          return NextResponse.json({ transaction, feeCharged });
+        }
+      }
+
       return NextResponse.json(transaction);
     }
 
@@ -189,8 +202,8 @@ export async function POST(
       return NextResponse.json({ mpesaResponse: stkResponse });
     } else {
       // Payout - create pending approval transaction
-      if (wallet.balance < amount) {
-        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+      if (wallet.balance < amount + payoutFee) {
+        return NextResponse.json({ error: `Insufficient balance (payout + ${payoutFee} fee)` }, { status: 400 });
       }
 
       let transactionType = 'B2C';

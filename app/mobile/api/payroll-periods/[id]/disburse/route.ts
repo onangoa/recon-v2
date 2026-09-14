@@ -96,6 +96,7 @@ export async function POST(
             transactionType: 'PAYROLL_MANUAL',
             accountReference: worker.name,
             phoneNumber: worker.phone,
+            metadata: JSON.stringify({ category: 'payroll' }),
           },
         });
 
@@ -180,6 +181,7 @@ export async function POST(
           transactionDesc: `Payroll: ${worker.name} - ${period.name}`,
           remarks: payoutType,
           phoneNumber: (worker.paymentMode === 'phone' || worker.paymentMode === 'pochi') ? phoneNumber : undefined,
+          metadata: JSON.stringify({ category: 'payroll' }),
         },
       });
 

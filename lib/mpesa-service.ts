@@ -1,6 +1,7 @@
 import MpesaPackage from 'mpesa-servc';
 import { prisma } from '@/lib/prisma';
 import { notifyWalletTopupConfirmed } from '@/lib/sms-notifications';
+import { chargePayoutFee, refundPayoutFee } from '@/lib/payout-fee';
 
 // M-Pesa Configuration
 export const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
@@ -601,6 +602,11 @@ export const handleB2CCallback = async (callbackData: any) => {
             }
           }
         });
+        // Flat payout fee (skipped for payroll disbursements)
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          console.log(`Charged payout fee of ${feeCharged} for transaction ${transaction.id}`);
+        }
         console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
@@ -822,6 +828,11 @@ export const handleB2BCallback = async (callbackData: any) => {
             }
           }
         });
+        // Flat payout fee (skipped for payroll disbursements)
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          console.log(`Charged payout fee of ${feeCharged} for transaction ${transaction.id}`);
+        }
         console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
@@ -1030,6 +1041,11 @@ export const handleB2PochiCallback = async (callbackData: any) => {
             }
           }
         });
+        // Flat payout fee (skipped for payroll disbursements)
+        const feeCharged = await chargePayoutFee(transaction);
+        if (feeCharged > 0) {
+          console.log(`Charged payout fee of ${feeCharged} for transaction ${transaction.id}`);
+        }
         console.log(`Successfully decremented wallet ${transaction.walletId} balance`);
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
@@ -1614,6 +1630,19 @@ export const handleReversalCallback = async (callbackData: any) => {
             }
           }
         });
+        // Refund the flat payout fee that was charged on the original payout
+        if (reversedTransactionID) {
+          const originalPayout = await prisma.transaction.findFirst({
+            where: { mpesaTransactionId: String(reversedTransactionID), type: 'debit' },
+            select: { id: true },
+          });
+          if (originalPayout) {
+            const feeRefunded = await refundPayoutFee(originalPayout.id);
+            if (feeRefunded > 0) {
+              console.log(`Refunded payout fee of ${feeRefunded} for transaction ${originalPayout.id}`);
+            }
+          }
+        }
         console.log(`Successfully incremented wallet ${transaction.walletId} balance`);
       } else {
         console.warn('Could not update wallet balance: invalid or missing reversal amount', {
