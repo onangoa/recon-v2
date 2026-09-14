@@ -69,10 +69,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import Link from 'next/link';
+
+interface OvertimeRule {
+  id?: string;
+  dayType: 'weekday' | 'rest_day' | 'public_holiday';
+  rateType: string;
+  rateAmount: number;
+  capHoursPerDay: number | null;
+  isActive: boolean;
+}
 
 interface Designation {
   id: string;
@@ -81,7 +91,29 @@ interface Designation {
   salary: number | null;
   paymentFrequency: string | null;
   isActive: boolean;
+  overtimeRules?: OvertimeRule[];
 }
+
+type OtDayType = 'weekday' | 'rest_day' | 'public_holiday';
+
+const OT_DAY_TYPES: { key: OtDayType; label: string; hint: string }[] = [
+  { key: 'weekday', label: 'Weekday', hint: 'e.g. 1.5' },
+  { key: 'rest_day', label: 'Rest Day', hint: 'e.g. 2 (Sundays / off days)' },
+  { key: 'public_holiday', label: 'Public Holiday', hint: 'e.g. 2 (gazetted holidays)' },
+];
+
+interface OtRuleFormState {
+  enabled: boolean;
+  rateType: string;
+  rateAmount: string;
+  capHoursPerDay: string;
+}
+
+const defaultOtRules = (): Record<OtDayType, OtRuleFormState> => ({
+  weekday: { enabled: false, rateType: 'hourly', rateAmount: '1.5', capHoursPerDay: '' },
+  rest_day: { enabled: false, rateType: 'hourly', rateAmount: '2', capHoursPerDay: '' },
+  public_holiday: { enabled: false, rateType: 'hourly', rateAmount: '2', capHoursPerDay: '' },
+});
 
 export default function DesignationsPage() {
   const { toast } = useToast();
@@ -108,6 +140,7 @@ export default function DesignationsPage() {
     paymentFrequency: 'monthly',
     isActive: true
   });
+  const [otRules, setOtRules] = useState<Record<OtDayType, OtRuleFormState>>(defaultOtRules);
 
   const fetchDesignations = async () => {
     setIsLoading(true);
@@ -144,12 +177,22 @@ export default function DesignationsPage() {
       const url = editingId ? `/web/api/designations/${editingId}` : '/web/api/designations';
       const method = editingId ? 'PUT' : 'POST';
 
+      const overtimeRules = OT_DAY_TYPES
+        .filter(({ key }) => otRules[key].enabled)
+        .map(({ key }) => ({
+          dayType: key,
+          rateType: otRules[key].rateType,
+          rateAmount: otRules[key].rateAmount ? parseFloat(otRules[key].rateAmount) : 0,
+          capHoursPerDay: otRules[key].capHoursPerDay ? parseFloat(otRules[key].capHoursPerDay) : null,
+        }));
+
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
           salary: formData.salary ? parseFloat(formData.salary) : null,
+          overtimeRules,
           contractorId: 'placeholder-id' // In a real app, this would come from auth/context
         }),
       });
@@ -176,6 +219,17 @@ export default function DesignationsPage() {
       paymentFrequency: design.paymentFrequency || 'monthly',
       isActive: design.isActive
     });
+    const next = defaultOtRules();
+    for (const rule of design.overtimeRules || []) {
+      if (rule.dayType !== 'weekday' && rule.dayType !== 'rest_day' && rule.dayType !== 'public_holiday') continue;
+      next[rule.dayType] = {
+        enabled: rule.isActive !== false,
+        rateType: rule.rateType === 'fixed' ? 'fixed' : 'hourly',
+        rateAmount: rule.rateAmount != null ? String(rule.rateAmount) : next[rule.dayType].rateAmount,
+        capHoursPerDay: rule.capHoursPerDay != null ? String(rule.capHoursPerDay) : '',
+      };
+    }
+    setOtRules(next);
     setIsDialogOpen(true);
   };
 
@@ -188,6 +242,7 @@ export default function DesignationsPage() {
       paymentFrequency: 'monthly',
       isActive: true
     });
+    setOtRules(defaultOtRules());
   };
 
   const handleDelete = async () => {
@@ -257,7 +312,7 @@ export default function DesignationsPage() {
             <DialogTrigger asChild>
               <Button onClick={() => resetForm()} className="gap-2"><Plus className="w-4 h-4" /> Add Designation</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingId ? 'Edit Designation' : 'Add New Designation'}</DialogTitle>
                 <DialogDescription>
@@ -294,6 +349,73 @@ export default function DesignationsPage() {
                     </select>
                   </div>
                 </div>
+
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div>
+                    <Label className="text-sm font-semibold">Overtime Rules (per day type)</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Overrides the shift's overtime rate for this designation. Unchecked day types fall back to the shift's rate (then 1x). Work on a rest day or public holiday counts fully as overtime for that day.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {OT_DAY_TYPES.map(({ key, label, hint }) => {
+                      const rule = otRules[key];
+                      return (
+                        <div key={key} className="grid grid-cols-[auto_1fr] md:grid-cols-[150px_110px_1fr_90px] gap-2 items-center">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`ot-${key}`}
+                              checked={rule.enabled}
+                              onCheckedChange={checked => setOtRules({
+                                ...otRules,
+                                [key]: { ...rule, enabled: checked === true },
+                              })}
+                            />
+                            <Label htmlFor={`ot-${key}`} className="text-xs font-medium cursor-pointer">{label}</Label>
+                          </div>
+                          <select
+                            aria-label={`${label} overtime rate type`}
+                            value={rule.rateType}
+                            disabled={!rule.enabled}
+                            onChange={e => setOtRules({ ...otRules, [key]: { ...rule, rateType: e.target.value } })}
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="hourly">Multiplier</option>
+                            <option value="fixed">KES / hour</option>
+                          </select>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              aria-label={`${label} overtime rate amount`}
+                              placeholder={hint}
+                              value={rule.rateAmount}
+                              disabled={!rule.enabled}
+                              onChange={e => setOtRules({ ...otRules, [key]: { ...rule, rateAmount: e.target.value } })}
+                              className="h-9 text-xs"
+                            />
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {rule.rateType === 'fixed' ? 'KES/h' : '× hourly'}
+                            </span>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            aria-label={`${label} overtime cap hours per day`}
+                            placeholder="Cap h/day"
+                            value={rule.capHoursPerDay}
+                            disabled={!rule.enabled}
+                            onChange={e => setOtRules({ ...otRules, [key]: { ...rule, capHoursPerDay: e.target.value } })}
+                            className="h-9 text-xs"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={isSaving}>
@@ -384,6 +506,17 @@ export default function DesignationsPage() {
                           <span>{formatCurrency(design.salary)}</span>
                         </div>
                         <span className="text-xs text-muted-foreground capitalize">{design.paymentFrequency || 'N/A'}</span>
+                        {(design.overtimeRules || []).filter(r => r.isActive).length > 0 && (
+                          <span className="text-[10px] text-orange-600 font-mono">
+                            OT: {(design.overtimeRules || [])
+                              .filter(r => r.isActive)
+                              .sort((a, b) => a.dayType.localeCompare(b.dayType))
+                              .map(r => r.rateType === 'fixed'
+                                ? `${r.rateAmount}/h`
+                                : `${r.rateAmount}x`)
+                              .join(' · ')}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

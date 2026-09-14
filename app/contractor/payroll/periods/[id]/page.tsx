@@ -38,13 +38,13 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { 
   Card, 
@@ -82,6 +82,35 @@ interface SalarySlipDetail {
   isStatutory: boolean;
 }
 
+interface OvertimeBandLine {
+  dayType: string;
+  hours: number;
+  rateType: string;
+  rateAmount: number;
+  source: string;
+  pay: number;
+}
+
+const OT_BAND_LABELS: Record<string, string> = {
+  weekday: 'Weekday',
+  rest_day: 'Rest Day',
+  public_holiday: 'Public Holiday',
+};
+
+function parseOvertimeBands(raw: string | null | undefined): OvertimeBandLine[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (b): b is OvertimeBandLine =>
+        b && typeof b.dayType === 'string' && typeof b.hours === 'number' && typeof b.pay === 'number'
+    );
+  } catch {
+    return [];
+  }
+}
+
 interface SalarySlip {
   id: string;
   worker: {
@@ -105,6 +134,7 @@ interface SalarySlip {
   // Attendance-derived fields
   overtimeHours: number;
   overtimePay: number;
+  overtimeBands?: string | null;
   daysWorked: number;
   workingDays: number;
   attainedDays: number;
@@ -709,6 +739,14 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                     <span className="text-muted-foreground">Overtime Pay</span>
                     <span className="font-mono text-emerald-600">{formatCurrency(viewingSlip.overtimePay)}</span>
                   </div>
+                  {parseOvertimeBands(viewingSlip.overtimeBands).map(b => (
+                    <div key={b.dayType} className="col-span-2 flex justify-between pl-3 border-l-2 border-orange-500/30">
+                      <span className="text-xs text-muted-foreground">
+                        OT {OT_BAND_LABELS[b.dayType] || b.dayType} — {b.rateType === 'fixed' ? `KES ${b.rateAmount.toLocaleString()}/h` : `${b.rateAmount}x`} × {b.hours.toFixed(1)}h
+                      </span>
+                      <span className="font-mono text-xs text-emerald-600">{formatCurrency(b.pay)}</span>
+                    </div>
+                  ))}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Late Days</span>
                     <span className="font-mono">{viewingSlip.lateDays}</span>
@@ -815,7 +853,8 @@ export default function PayrollPeriodDetailPage({ params }: { params: Promise<{ 
                     <p className="font-bold">How attendance affects pay:</p>
                     <ul className="mt-1 space-y-0.5 list-disc list-inside">
                       <li>Basic salary is pro-rated by days worked / expected working days</li>
-                      <li>Overtime is paid according to each shift's configured rate</li>
+                      <li>Overtime is split into weekday / rest-day / public-holiday bands and paid per the designation's day-type rules (falling back to the shift rate)</li>
+                      <li>Work on a rest day or gazetted holiday counts fully as overtime for that day when a rule is configured</li>
                       <li>Late hours are deducted as unpaid post-tax deductions</li>
                       <li>Workers without attendance records will have 0 days worked</li>
                     </ul>
