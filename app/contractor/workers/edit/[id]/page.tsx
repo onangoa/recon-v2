@@ -10,7 +10,8 @@ import {
   ScanLine,
   AlertCircle,
   Upload,
-  CreditCard
+  CreditCard,
+  Wand2
 } from 'lucide-react';
 import { 
   Breadcrumb, 
@@ -24,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
+import { nextFreeEnrollId } from '@/lib/enroll-id';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -61,7 +63,6 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [takenEnrollIds, setTakenEnrollIds] = useState<number[]>([]);
   const [enrollIdAvailable, setEnrollIdAvailable] = useState<boolean | null>(null);
-  const [enrollIdConflictSource, setEnrollIdConflictSource] = useState<'device' | 'database' | null>(null);
   const [originalEnrollId, setOriginalEnrollId] = useState<string>('');
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDeviceSn, setSelectedDeviceSn] = useState<string>('');
@@ -141,66 +142,58 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     fetchData();
   }, [id, toast, activeSite?.contractorId]);
 
-  // Validate typed enroll ID against both the device and the database,
+  // Validate the typed enroll ID against the selected device (per-device namespace),
   // excluding the worker's own current enroll ID (it can keep its own).
-  const [deviceEnrollIds, setDeviceEnrollIds] = useState<number[]>([]);
-
   useEffect(() => {
     const value = formData.enrollId.trim();
     if (!value) {
       setEnrollIdAvailable(null);
-      setEnrollIdConflictSource(null);
       return;
     }
     const num = Number(value);
     if (!Number.isFinite(num)) {
       setEnrollIdAvailable(false);
-      setEnrollIdConflictSource(null);
       return;
     }
     // The worker may keep its own current enroll ID.
     const isOwn = originalEnrollId.trim() !== '' && Number(originalEnrollId) === num;
     if (isOwn) {
       setEnrollIdAvailable(true);
-      setEnrollIdConflictSource(null);
       return;
     }
-    if (takenEnrollIds.includes(num)) {
-      setEnrollIdAvailable(false);
-      setEnrollIdConflictSource(deviceEnrollIds.includes(num) ? 'device' : 'database');
-    } else {
-      setEnrollIdAvailable(true);
-      setEnrollIdConflictSource(null);
-    }
-  }, [formData.enrollId, takenEnrollIds, deviceEnrollIds, originalEnrollId]);
+    setEnrollIdAvailable(!takenEnrollIds.includes(num));
+  }, [formData.enrollId, takenEnrollIds, originalEnrollId]);
 
-  // Fetch the selected device's enrolled IDs (from device + database).
+  // Fetch the selected device's taken Enroll IDs (person-table registry for the
+  // device + ids enrolled on the hardware). Enroll IDs are unique per device.
+  const [enrollIdsLoaded, setEnrollIdsLoaded] = useState(false);
+
   useEffect(() => {
-    if (!selectedDeviceSn) {
-      const controller = new AbortController();
-      fetch('/web/api/biometric/users', { signal: controller.signal })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) {
-            setTakenEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
-            setDeviceEnrollIds(Array.isArray(data.deviceEnrollIds) ? data.deviceEnrollIds : []);
-          }
-        })
-        .catch(() => {});
-      return () => controller.abort();
-    }
+    const url = selectedDeviceSn
+      ? `/web/api/biometric/users?deviceSn=${encodeURIComponent(selectedDeviceSn)}`
+      : '/web/api/biometric/users';
     const controller = new AbortController();
-    fetch(`/web/api/biometric/users?deviceSn=${encodeURIComponent(selectedDeviceSn)}`, { signal: controller.signal })
+    fetch(url, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) {
-          setTakenEnrollIds(Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
-          setDeviceEnrollIds(Array.isArray(data.deviceEnrollIds) ? data.deviceEnrollIds : []);
-        }
+        if (!data) return;
+        const dev: number[] = Array.isArray(data.deviceEnrollIds)
+          ? data.deviceEnrollIds
+          : (Array.isArray(data.enrolledEnrollIds) ? data.enrolledEnrollIds : []);
+        setTakenEnrollIds(dev);
+        setEnrollIdsLoaded(true);
       })
       .catch(() => {});
     return () => controller.abort();
   }, [selectedDeviceSn]);
+
+  // System-assigned Enroll ID: fill the first free slot (e.g. 1,2,3,10 taken -> 4,
+  // then 5..9, then 11). The worker's own current ID is part of the taken set,
+  // so the assignment never collides with the worker itself.
+  const assignNextFreeEnrollId = () => {
+    const next = String(nextFreeEnrollId(takenEnrollIds));
+    setFormData((prev) => ({ ...prev, enrollId: next }));
+  };
 
   const handleIdDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -251,7 +244,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
       if (Number.isFinite(num) && !isOwn && takenEnrollIds.includes(num)) {
         toast({
           title: "Enroll ID already in use",
-          description: `Enroll ID ${num} already exists on the selected device. Choose a unique ID.`,
+          description: `Enroll ID ${num} is already in use on the selected device. Choose a unique ID.`,
           variant: "destructive",
         });
         return;
@@ -403,21 +396,33 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Enroll ID</label>
-                <input
-                  type="text"
-                  value={formData.enrollId}
-                  onChange={(e) => setFormData({...formData, enrollId: e.target.value})}
-                  disabled={isSubmitting}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.enrollId}
+                    onChange={(e) => setFormData({...formData, enrollId: e.target.value})}
+                    disabled={isSubmitting}
+                    className="flex-1 min-w-0 rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={assignNextFreeEnrollId}
+                    disabled={isSubmitting || !enrollIdsLoaded}
+                    title="Assign the first free Enroll ID"
+                    className="h-10 shrink-0 gap-1 whitespace-nowrap px-3 border-gray-300"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    Next free{enrollIdsLoaded ? `: ${nextFreeEnrollId(takenEnrollIds)}` : ''}
+                  </Button>
+                </div>
                 {formData.enrollId.trim() && (
                   <p className={`mt-1 text-xs font-medium flex items-center gap-1 ${enrollIdAvailable ? 'text-emerald-600' : 'text-destructive'}`}>
                     {enrollIdAvailable ? (
-                      <><CheckCircle2 className="w-3 h-3" /> Available</>
-                    ) : enrollIdConflictSource === 'device' ? (
-                      <><AlertCircle className="w-3 h-3" /> Already enrolled on selected device — pick a unique ID</>
+                      <><CheckCircle2 className="w-3 h-3" /> Available on selected device</>
                     ) : (
-                      <><AlertCircle className="w-3 h-3" /> Already used by another worker — pick a unique ID</>
+                      <><AlertCircle className="w-3 h-3" /> Already in use on selected device — pick a unique ID</>
                     )}
                   </p>
                 )}

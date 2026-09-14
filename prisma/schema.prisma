@@ -142,7 +142,7 @@ model Worker {
   joinedAt              DateTime        @default(now())
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
-  enrollId              String?         @unique
+  enrollId              String?
   idDocumentUrl         String?
   attendances           Attendance[]
   payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")

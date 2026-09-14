@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireContractorPermission } from '@/lib/require-permission';
-import { getUserList } from '@/lib/biometric-service';
+import { getUserList, getDeviceEnrollIds } from '@/lib/biometric-service';
 
 /**
  * GET /web/api/biometric/users?deviceSn=AYTI...
@@ -15,7 +15,8 @@ import { getUserList } from '@/lib/biometric-service';
  *
  * Response:
  *   {
- *     enrolledEnrollIds: number[],
+ *     enrolledEnrollIds: number[],   // IDs currently enrolled on the device hardware
+ *     deviceEnrollIds: number[],     // per-device taken set: person-table IDs for this device (hardware list included)
  *     device: { sn, count, available, ... },
  *     workers: [{ id, name, enrollId, enrolled: boolean }]
  *   }
@@ -76,6 +77,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Per-device taken set: enroll IDs are unique per device, so an ID is
+    // taken when it is registered for this device in the fingerprint backend's
+    // person table (legacy global rows included) or enrolled on the hardware.
+    let personEnrollIds: number[] = [];
+    if (sn) {
+      try {
+        personEnrollIds = await getDeviceEnrollIds(sn);
+      } catch {
+        personEnrollIds = [];
+      }
+    }
+    const deviceTakenIds = Array.from(new Set([...enrolledEnrollIds, ...personEnrollIds]));
+
     const workerRows = workers.map((w) => ({
       id: w.id,
       name: w.name,
@@ -86,6 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       enrolledEnrollIds,
+      deviceEnrollIds: deviceTakenIds,
       deviceChecked,
       device: deviceInfo,
       workers: workerRows,
