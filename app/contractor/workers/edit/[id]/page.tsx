@@ -433,9 +433,6 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                   ))}
                 </div>
               )}
-              <p className="mt-1 text-xs text-muted-foreground italic">
-                A worker can hold several shifts — the one covering a day drives attendance &amp; overtime for that day.
-              </p>
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Status</label>

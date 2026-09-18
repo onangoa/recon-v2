@@ -1209,14 +1209,14 @@ const handleBankDeposit = async () => {
                     <Building2 className="w-4 h-4" /> Send Bank Payout
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
+                <DialogContent className="max-w-md flex flex-col overflow-hidden">
+                  <DialogHeader className="shrink-0">
                     <DialogTitle className="text-blue-700 flex items-center gap-2">
                       <Building2 className="w-5 h-5" /> Outward Bank Payout
                     </DialogTitle>
                     <DialogDescription>Pay to a bank account or mobile wallet via Co-op Bank.</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-4 py-4 min-h-0 flex-1 overflow-y-auto pr-1">
                     <div className="space-y-2">
                       <Label>Payout Channel</Label>
                       <Select value={bankPayoutChannel} onValueChange={setBankPayoutChannel}>
@@ -1351,7 +1351,7 @@ const handleBankDeposit = async () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <Label>Notification Mobile No.</Label>
-                            <span className="text-[10px] italic text-muted-foreground">Gets an SMS when the payout completes</span>
+                            <span className="text-[10px] italic text-muted-foreground">For SMS notifications</span>
                           </div>
                           <Input
                             type="tel"
@@ -1427,7 +1427,7 @@ const handleBankDeposit = async () => {
                       </div>
                     </div>
                   </div>
-                  <DialogFooter className="flex flex-col gap-2">
+                  <DialogFooter className="flex flex-col gap-2 shrink-0">
                     {payoutFee > 0 && (
                       <p className="text-[10px] text-muted-foreground font-semibold mb-1">
                         A KES {payoutFee} payout fee applies — total debit KES {(parseFloat(bankPayoutAmount || '0') + payoutFee).toLocaleString()}
@@ -1457,15 +1457,15 @@ const handleBankDeposit = async () => {
                     <Smartphone className="w-4 h-4" /> Send M-Pesa Payment
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
+                <DialogContent className="max-w-md flex flex-col overflow-hidden">
+                  <DialogHeader className="shrink-0">
                     <DialogTitle className="text-blue-700 flex items-center gap-2">
                       <ArrowDownLeft className="w-5 h-5" /> Outward M-Pesa Payout
                     </DialogTitle>
                   <DialogDescription>Pay suppliers or staff via M-Pesa services.</DialogDescription>
                 </DialogHeader>
-                
-                  <div className="space-y-4 py-4">
+
+                  <div className="space-y-4 py-4 min-h-0 flex-1 overflow-y-auto pr-1">
                     {(mpesaBeneficiaries.length > 0 || mpesaRecent.length > 0) && (
                       <div className="space-y-2">
                         <Label>Saved Recipient</Label>
@@ -1642,7 +1642,7 @@ const handleBankDeposit = async () => {
                       </div>
                     </div>
                   </div>
-                  <DialogFooter className="flex flex-col gap-2">
+                  <DialogFooter className="flex flex-col gap-2 shrink-0">
                     {payoutFee > 0 && (
                       <p className="text-[10px] text-muted-foreground font-semibold mb-1">
                         A KES {payoutFee} payout fee applies — total debit KES {(parseFloat(paymentAmount || '0') + payoutFee).toLocaleString()}
