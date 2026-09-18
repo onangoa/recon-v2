@@ -19,10 +19,11 @@ async function main() {
     take: 50,
   });
   const wallet = wallets.find((w) => w.contractor?.companyName);
-  if (!wallet) {
+  if (!wallet?.contractor?.companyName || !wallet.contractorId) {
     console.log('No wallet with a named contractor found — nothing to test against.');
     return;
   }
+  const contractorId: string = wallet.contractorId;
   console.log(`Using wallet of contractor: ${wallet.contractor.companyName}`);
 
   const created: string[] = [];
@@ -89,7 +90,7 @@ async function main() {
   console.log('(no [SMS] OUT line above = correctly skipped)');
 
   console.log('\n--- 6. beneficiary mobileNumber round-trip + recents ---');
-  const beneficiary = await savePayoutBeneficiary(wallet.contractorId, {
+  const beneficiary = await savePayoutBeneficiary(contractorId, {
     channel: 'pesalink',
     destination: '01102789645002',
     label: 'SMS Test KCB',
@@ -99,7 +100,7 @@ async function main() {
   });
   const readBack = await prisma.payoutBeneficiary.findUnique({ where: { id: beneficiary.id } });
   console.log(`saved beneficiary mobileNumber: ${readBack?.mobileNumber}`);
-  const recents = await getRecentPayoutRecipients(wallet.contractorId, 20);
+  const recents = await getRecentPayoutRecipients(contractorId, 20);
   const recentBank = recents.find((r) => r.channel === 'pesalink' && r.destination === '01102789645002');
   console.log(`recent pesalink entry mobileNumber: ${recentBank?.mobileNumber ?? '(none)'}`);
   await prisma.payoutBeneficiary.delete({ where: { id: beneficiary.id } });
