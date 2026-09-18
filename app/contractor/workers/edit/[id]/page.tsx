@@ -226,7 +226,10 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
         body: JSON.stringify({ ...formData, idDocumentUrl: idDocUrl }),
       });
 
-      if (!response.ok) throw new Error('Failed to update worker');
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(getApiError(data, 'Failed to update worker'));
+      }
 
       if (enrollDevice) {
         setIsEnrolling(true);

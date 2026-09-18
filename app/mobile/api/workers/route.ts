@@ -89,12 +89,29 @@ export async function POST(request: NextRequest) {
       return mobileError('Invalid shift ID', 400);
     }
 
+    // National ID must be unique within the contractor's account. Checked
+    // up front so the user gets a named, actionable message instead of a
+    // raw unique-constraint error.
+    const nationalId = body.nationalId ? String(body.nationalId).trim() : null;
+    if (nationalId) {
+      const existing = await prisma.worker.findFirst({
+        where: { nationalId, contractorId },
+        select: { name: true, status: true },
+      });
+      if (existing) {
+        return mobileError(
+          `National ID ${nationalId} is already registered to "${existing.name}" in your account. Every worker must have a unique National ID — search for it in your Workers list to update or remove that entry first.`,
+          409
+        );
+      }
+    }
+
     const worker = await prisma.worker.create({
       data: {
         name: body.name,
         email: body.email,
         phone: body.phone,
-        nationalId: body.nationalId,
+        nationalId,
         enrollId: body.enrollId || null,
         designationId: designationId,
         shiftId: ownedShiftIds[0] || null,
@@ -126,7 +143,12 @@ export async function POST(request: NextRequest) {
     });
 
     return mobileSuccess(withShiftsArray(worker), 'Worker created');
-  } catch (error) {
+  } catch (error: any) {
+    // Race fallback: another request claimed the National ID between the
+    // pre-check and the insert.
+    if (error?.code === 'P2002' && String(error?.meta?.target || '').includes('nationalId')) {
+      return mobileError('National ID is already used by another worker in your account.', 409);
+    }
     console.error('Mobile create worker error:', error);
     return mobileError('Failed to create worker', 500);
   }

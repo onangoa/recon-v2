@@ -84,6 +84,25 @@ export async function PUT(
       }
     }
 
+    // National ID must stay unique within the contractor's account
+    // (this worker itself excluded). undefined = leave unchanged.
+    const nationalId =
+      body.nationalId === undefined ? undefined : String(body.nationalId).trim() || null;
+    if (nationalId) {
+      const existing = await prisma.worker.findFirst({
+        where: { nationalId, contractorId: worker.contractorId, id: { not: id } },
+        select: { name: true },
+      });
+      if (existing) {
+        return NextResponse.json(
+          {
+            error: `National ID ${nationalId} is already registered to "${existing.name}" in your account. Every worker must have a unique National ID.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     if (shiftIds) {
       // Sync join rows (and the mirrored primary shift) before the update
       // so the returned worker reflects the new assignments.
@@ -96,7 +115,7 @@ export async function PUT(
         name: body.name,
         email: body.email,
         phone: body.phone,
-        nationalId: body.nationalId,
+        nationalId,
         enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
         designationId,
         shiftId: shiftIds ? (shiftIds[0] || null) : undefined,
@@ -125,7 +144,13 @@ export async function PUT(
     });
 
     return NextResponse.json(withShiftsArray(updatedWorker));
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2002' && String(error?.meta?.target || '').includes('nationalId')) {
+      return NextResponse.json(
+        { error: 'National ID is already used by another worker in your account.' },
+        { status: 409 }
+      );
+    }
     console.error('Failed to update worker:', error);
     return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 });
   }

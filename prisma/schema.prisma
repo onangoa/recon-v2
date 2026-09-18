@@ -125,7 +125,9 @@ model Worker {
   name                  String
   email                 String?
   phone                 String?
-  nationalId            String?         @unique
+  /// Unique per contractor (the same person may work for several contractor
+  /// accounts) — see @@unique([contractorId, nationalId]) below.
+  nationalId            String?
   designationId         String?
   shiftId               String?
   paymentMode           String          @default("manual")
@@ -145,6 +147,7 @@ model Worker {
   shift                 Shift?          @relation(fields: [shiftId], references: [id])
   designation           Designation?    @relation(fields: [designationId], references: [id])
 
+  @@unique([contractorId, nationalId])
   @@index([contractorId])
   @@index([designationId])
   @@index([shiftId])

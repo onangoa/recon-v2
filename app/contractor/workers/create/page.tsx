@@ -200,7 +200,10 @@ export default function CreateWorkerPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create worker');
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(getApiError(data, 'Failed to create worker'));
+      }
       const created = await response.json();
 
       if (enrollDevice && created?.id) {
