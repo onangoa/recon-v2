@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
+import {
+  normalizeShiftIdsInput,
+  syncWorkerShiftAssignments,
+  validateShiftOwnership,
+  withShiftsArray,
+  workerShiftInclude,
+} from '@/lib/worker-shifts';
 
 export async function GET(
   request: NextRequest,
@@ -17,12 +24,13 @@ export async function GET(
       include: {
         designation: true,
         shift: true,
+        ...workerShiftInclude,
       },
     });
     if (!worker) {
       return NextResponse.json({ error: 'Worker not found' }, { status: 404 });
     }
-    return NextResponse.json(worker);
+    return NextResponse.json(withShiftsArray(worker));
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch worker' }, { status: 500 });
   }
@@ -53,10 +61,9 @@ export async function PUT(
       designationId = null;
     }
 
-    let shiftId = body.shiftId;
-    if (shiftId === "" || shiftId === "null" || shiftId === "undefined") {
-      shiftId = null;
-    }
+    // Multi-shift assignment: `shiftIds` array, or the legacy single
+    // `shiftId`. Undefined (neither key present) leaves assignments as-is.
+    const shiftIds = normalizeShiftIdsInput(body);
 
     if (designationId) {
       const designation = await prisma.designation.findFirst({
@@ -70,16 +77,17 @@ export async function PUT(
       }
     }
 
-    if (shiftId) {
-      const shift = await prisma.shift.findFirst({
-        where: {
-          id: shiftId,
-          contractorId: worker.contractorId
-        }
-      });
-      if (!shift) {
+    if (shiftIds) {
+      const ownedShiftIds = await validateShiftOwnership(shiftIds, worker.contractorId);
+      if (ownedShiftIds === null) {
         return NextResponse.json({ error: 'Invalid shift ID' }, { status: 400 });
       }
+    }
+
+    if (shiftIds) {
+      // Sync join rows (and the mirrored primary shift) before the update
+      // so the returned worker reflects the new assignments.
+      await syncWorkerShiftAssignments(id, shiftIds);
     }
 
     const updatedWorker = await prisma.worker.update({
@@ -91,7 +99,7 @@ export async function PUT(
         nationalId: body.nationalId,
         enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
         designationId,
-        shiftId,
+        shiftId: shiftIds ? (shiftIds[0] || null) : undefined,
         paymentMode: body.paymentMode,
         paymentPhone: body.paymentPhone !== undefined ? body.paymentPhone : undefined,
         paymentAccount: body.paymentAccount !== undefined ? body.paymentAccount : undefined,
@@ -102,6 +110,7 @@ export async function PUT(
       include: {
         designation: true,
         shift: true,
+        ...workerShiftInclude,
       },
     });
 
@@ -115,7 +124,7 @@ export async function PUT(
       details: { name: updatedWorker.name, status: updatedWorker.status }
     });
 
-    return NextResponse.json(updatedWorker);
+    return NextResponse.json(withShiftsArray(updatedWorker));
   } catch (error) {
     console.error('Failed to update worker:', error);
     return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 });

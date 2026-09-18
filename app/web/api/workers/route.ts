@@ -4,6 +4,12 @@ import { ActivityLogger } from '@/lib/activity-logger';
 import { requirePermission } from '@/lib/require-permission';
 import { getCurrentContractor } from '@/lib/auth';
 import { withContractorFilter } from '@/lib/contractor-isolation';
+import {
+  normalizeShiftIdsInput,
+  validateShiftOwnership,
+  withShiftsArray,
+  workerShiftInclude,
+} from '@/lib/worker-shifts';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +50,7 @@ export async function GET(request: NextRequest) {
     const [workers, total] = await Promise.all([
       prisma.worker.findMany({
         where,
-        include: { designation: true, shift: true },
+        include: { designation: true, shift: true, ...workerShiftInclude },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' }
@@ -76,7 +82,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.count - a.count);
 
     return NextResponse.json({
-      workers,
+      workers: workers.map(withShiftsArray),
       pagination: {
         total,
         pages: Math.ceil(total / limit),
@@ -117,6 +123,12 @@ export async function POST(request: NextRequest) {
     // /web/api/biometric/enroll when the worker is enrolled to a device
     // (unique per device, first free slot).
 
+    const shiftIds = normalizeShiftIdsInput(body) || [];
+    const ownedShiftIds = await validateShiftOwnership(shiftIds, contractorId);
+    if (ownedShiftIds === null) {
+      return NextResponse.json({ error: 'Invalid shift ID' }, { status: 400 });
+    }
+
     const worker = await prisma.worker.create({
       data: {
         name: body.name,
@@ -125,7 +137,10 @@ export async function POST(request: NextRequest) {
         nationalId: body.nationalId,
         enrollId: body.enrollId || null,
         designationId: designationId,
-        shiftId: body.shiftId || null,
+        shiftId: ownedShiftIds[0] || null,
+        workerShifts: {
+          create: ownedShiftIds.map((shiftId) => ({ shiftId })),
+        },
         paymentMode: body.paymentMode || 'manual',
         paymentPhone: body.paymentPhone || null,
         paymentAccount: body.paymentAccount || null,
@@ -137,6 +152,7 @@ export async function POST(request: NextRequest) {
       include: {
         designation: true,
         shift: true,
+        ...workerShiftInclude,
       },
     });
 
@@ -151,7 +167,7 @@ export async function POST(request: NextRequest) {
       details: { name: worker.name, designation: worker.designation?.title }
     });
 
-    return NextResponse.json(worker, { status: 201 });
+    return NextResponse.json(withShiftsArray(worker), { status: 201 });
   } catch (error) {
     console.error('Failed to create worker:', error);
     return NextResponse.json({ error: 'Failed to create worker' }, { status: 500 });

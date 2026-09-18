@@ -109,6 +109,11 @@ interface Worker {
     startTime: string;
     endTime: string;
   } | null;
+  shifts?: {
+    name: string;
+    startTime: string;
+    endTime: string;
+  }[] | null;
   joinedAt: string;
   paymentMode?: string;
 }
@@ -762,7 +767,15 @@ export default function WorkersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {worker.shift ? (
+                      {(worker.shifts && worker.shifts.length > 0) ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold">{worker.shifts[0].name}</span>
+                          <span className="text-[10px] text-muted-foreground">{worker.shifts[0].startTime} - {worker.shifts[0].endTime}</span>
+                          {worker.shifts.length > 1 && (
+                            <span className="text-[10px] font-medium text-primary">+{worker.shifts.length - 1} more</span>
+                          )}
+                        </div>
+                      ) : worker.shift ? (
                         <div className="flex flex-col">
                           <span className="text-xs font-bold">{worker.shift.name}</span>
                           <span className="text-[10px] text-muted-foreground">{worker.shift.startTime} - {worker.shift.endTime}</span>

@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData, OvertimeRuleInput } from '@/lib/payroll-calculator';
 import { requireContractorPermission } from '@/lib/require-permission';
-import { shiftNetHours, countExpectedDays, aggregateAttendanceWithBands, computeWorkedHours, toDateKey } from '@/lib/attendance-utils';
+import {
+  shiftNetHours,
+  countExpectedDays,
+  aggregateAttendanceWithBands,
+  computeWorkedHours,
+  expectedDaysAndHoursForShifts,
+  resolveShiftForDate,
+  toDateKey,
+} from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 import { syncBiometricToDatabase } from '@/lib/biometric-attendance';
 import { startOfDay, endOfDay } from 'date-fns';
 
@@ -85,7 +94,11 @@ export async function PUT(
 
       const workers = await prisma.worker.findMany({
         where: workerWhere,
-        include: { designation: { include: { overtimeRules: true } }, shift: true }
+        include: {
+          designation: { include: { overtimeRules: true } },
+          shift: true,
+          workerShifts: { include: { shift: true } },
+        }
       });
 
       // 3. Fetch active salary components
@@ -131,6 +144,14 @@ export async function PUT(
       for (const worker of workers) {
         if (!worker.designation) continue;
 
+        // All shifts the worker holds; the one whose workingDays include a
+        // record's date drives that day's hours/overtime.
+        const allShifts = collectShifts(worker);
+        const shiftForRecord = (date: Date) =>
+          allShifts.length <= 1
+            ? (worker.shift as any)
+            : resolveShiftForDate(allShifts, date, worker.shiftId);
+
         // Pull attendance for this worker across the period and aggregate it
         // into the figures the calculator needs.
         const attendanceRecords = await prisma.attendance.findMany({
@@ -145,11 +166,12 @@ export async function PUT(
         // Overtime itself is re-derived per day type from the raw punches
         // in aggregateAttendanceWithBands below.
         const recomputedRecords = attendanceRecords.map((a) => {
-          if (a.checkIn && a.checkOut && worker.shift) {
+          const dayShift = shiftForRecord(new Date(a.date));
+          if (a.checkIn && a.checkOut && dayShift) {
             const w = computeWorkedHours(
               new Date(a.checkIn),
               new Date(a.checkOut),
-              worker.shift as any,
+              dayShift,
             );
             return {
               ...a,
@@ -166,7 +188,8 @@ export async function PUT(
         // using the designation's per-day-type rules (caps included).
         const agg = aggregateAttendanceWithBands(recomputedRecords as any, {
           shift: worker.shift as any,
-          workingDays: worker.shift?.workingDays,
+          shifts: allShifts as any,
+          resolveShift: (r) => shiftForRecord(new Date(r.date)),
           holidayDates,
           rules: worker.designation.overtimeRules,
         });
@@ -182,12 +205,20 @@ export async function PUT(
           isActive: r.isActive,
         }));
 
-        const hoursPerDay = shiftNetHours(worker.shift);
-        const expectedDays = countExpectedDays(
+        // Expected days/hours: with several shifts each expected day
+        // contributes its own shift's net hours; single-shift workers keep
+        // the legacy countExpectedDays x shiftNetHours behaviour.
+        let hoursPerDay = shiftNetHours(worker.shift);
+        let expectedDays = countExpectedDays(
           period.startDate,
           period.endDate,
           worker.shift?.workingDays,
         );
+        if (allShifts.length > 1) {
+          const expected = expectedDaysAndHoursForShifts(allShifts, period.startDate, period.endDate);
+          expectedDays = expected.days;
+          hoursPerDay = expected.days > 0 ? expected.hours / expected.days : 0;
+        }
         const daysInPeriod = Math.max(
           1,
           Math.round((period.endDate.getTime() - period.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,

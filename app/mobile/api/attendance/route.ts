@@ -7,9 +7,10 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
-import { computeWorkedHours } from '@/lib/attendance-utils';
+import { computeWorkedHours, resolveShiftForDate } from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 import { getRecords } from '@/lib/biometric-service';
-import { transformRecordsToAttendance } from '@/lib/biometric-attendance';
+import { transformRecordsToAttendance, toWorkerForTransform } from '@/lib/biometric-attendance';
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,8 +40,10 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             enrollId: true,
+            shiftId: true,
             designation: { select: { title: true } },
             shift: true,
+            workerShifts: { select: { shift: true } },
           },
         });
 
@@ -63,7 +66,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        let attendances = transformRecordsToAttendance(collected, workers);
+        let attendances = transformRecordsToAttendance(collected, workers.map(toWorkerForTransform));
 
         if (workerId) attendances = attendances.filter((a) => a.worker.id === workerId);
         if (date) {
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     const worker = await prisma.worker.findUnique({
       where: { id: workerId },
-      include: { shift: true }
+      include: { shift: true, workerShifts: { include: { shift: true } } }
     });
 
     if (!worker) {
@@ -170,6 +173,10 @@ export async function POST(request: NextRequest) {
 
     const today = new Date();
     const todayStart = startOfDay(today);
+
+    // Multi-shift workers: the shift whose workingDays include today
+    // applies (single-shift workers resolve to their only shift).
+    const activeShift = resolveShiftForDate(collectShifts(worker), today, worker.shiftId);
 
     let attendance = await prisma.attendance.findUnique({
       where: {
@@ -190,7 +197,7 @@ export async function POST(request: NextRequest) {
           data: {
             contractorId,
             workerId,
-            shiftId: worker.shiftId,
+            shiftId: activeShift?.id ?? null,
             date: todayStart,
             checkIn: today,
             status: 'Present'
@@ -201,7 +208,7 @@ export async function POST(request: NextRequest) {
           where: { id: attendance.id },
           data: {
             checkIn: today,
-            shiftId: worker.shiftId,
+            shiftId: activeShift?.id ?? null,
             status: 'Present'
           }
         });
@@ -217,7 +224,7 @@ export async function POST(request: NextRequest) {
 
       const checkIn = new Date(attendance.checkIn);
       const checkOut = today;
-      const worked = computeWorkedHours(checkIn, checkOut, worker.shift);
+      const worked = computeWorkedHours(checkIn, checkOut, activeShift);
 
       attendance = await prisma.attendance.update({
         where: { id: attendance.id },

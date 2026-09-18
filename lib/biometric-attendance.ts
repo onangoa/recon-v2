@@ -1,5 +1,6 @@
 import { startOfDay, endOfDay, differenceInMinutes, isWithinInterval } from 'date-fns';
-import { computeWorkedHours, ShiftShape } from './attendance-utils';
+import { computeWorkedHours, resolveShiftForDate, ShiftShape } from './attendance-utils';
+import { collectShifts } from './worker-shifts';
 import { getRecords } from './biometric-service';
 import type { BiometricRecord } from './biometric-service';
 import { prisma } from './prisma';
@@ -19,7 +20,11 @@ export interface WorkerForTransform {
   name: string;
   enrollId: string | null;
   designation: { title: string } | null;
-  shift: ShiftShape | null;
+  /** All shifts the worker holds (primary first). The one whose
+   * workingDays include the record's weekday applies to that day. */
+  shifts: ShiftShape[];
+  /** Worker.shiftId — the preferred shift when several match a day. */
+  preferredShiftId?: string | null;
 }
 
 export interface AttendanceLogView {
@@ -27,6 +32,27 @@ export interface AttendanceLogView {
   type: string;
   timestamp: string;
   deviceName: string | null;
+}
+
+/** Build a WorkerForTransform from a prisma worker row that includes
+ * `shift` and `workerShifts`. */
+export function toWorkerForTransform(worker: {
+  id: string;
+  name: string;
+  enrollId: string | null;
+  designation: { title: string } | null;
+  shiftId?: string | null;
+  shift: (ShiftShape & { id: string }) | null;
+  workerShifts: { shift: ShiftShape & { id: string } }[];
+}): WorkerForTransform {
+  return {
+    id: worker.id,
+    name: worker.name,
+    enrollId: worker.enrollId,
+    designation: worker.designation,
+    shifts: collectShifts(worker),
+    preferredShiftId: worker.shiftId ?? null,
+  };
 }
 
 export interface AttendanceView {
@@ -110,7 +136,8 @@ export function transformRecordsToAttendance(
   const out: AttendanceView[] = [];
 
   for (const group of groups.values()) {
-    const built = buildSession(group.records, group.worker.shift);
+    const dayShift = resolveShiftForDate(group.worker.shifts, group.date, group.worker.preferredShiftId);
+    const built = buildSession(group.records, dayShift);
     out.push({
       id: `${group.worker.id}_${group.date.toISOString()}`,
       date: group.date.toISOString(),
@@ -127,11 +154,11 @@ export function transformRecordsToAttendance(
         name: group.worker.name,
         designation: group.worker.designation,
       },
-      shift: group.worker.shift
+      shift: dayShift
         ? {
-            name: (group.worker.shift as any).name || 'Shift',
-            startTime: group.worker.shift.startTime,
-            endTime: group.worker.shift.endTime,
+            name: dayShift.name || 'Shift',
+            startTime: dayShift.startTime,
+            endTime: dayShift.endTime,
           }
         : null,
       logs: built.logs,
@@ -252,10 +279,9 @@ export async function syncBiometricToDatabase(
       shiftId: true,
       designation: { select: { title: true } },
       shift: true,
+      workerShifts: { select: { shift: true } },
     },
   });
-
-  const workerShiftId = new Map(workers.map((w) => [w.id, w.shiftId]));
 
   const pageSize = 500;
   const collected: BiometricRecord[] = [];
@@ -276,13 +302,7 @@ export async function syncBiometricToDatabase(
     }
   }
 
-  const workersForTransform: WorkerForTransform[] = workers.map((w) => ({
-    id: w.id,
-    name: w.name,
-    enrollId: w.enrollId,
-    designation: w.designation,
-    shift: (w.shift as unknown as ShiftShape) || null,
-  }));
+  const workersForTransform: WorkerForTransform[] = workers.map(toWorkerForTransform);
 
   let views = transformRecordsToAttendance(collected, workersForTransform);
 
@@ -297,6 +317,10 @@ export async function syncBiometricToDatabase(
     const date = new Date(v.date);
     const checkIn = v.checkIn ? new Date(v.checkIn) : null;
     const checkOut = v.checkOut ? new Date(v.checkOut) : null;
+    const transformWorker = workersForTransform.find((w) => w.id === v.worker.id);
+    const resolvedShiftId = transformWorker
+      ? (resolveShiftForDate(transformWorker.shifts, date, transformWorker.preferredShiftId)?.id ?? null)
+      : null;
 
     try {
       await prisma.attendance.upsert({
@@ -304,7 +328,7 @@ export async function syncBiometricToDatabase(
         create: {
           contractorId,
           workerId: v.worker.id,
-          shiftId: workerShiftId.get(v.worker.id) || null,
+          shiftId: resolvedShiftId,
           date,
           checkIn,
           checkOut,
@@ -318,6 +342,7 @@ export async function syncBiometricToDatabase(
         update: {
           checkIn,
           checkOut,
+          shiftId: resolvedShiftId,
           totalHours: v.totalHours,
           overtimeHours: v.overtimeHours,
           lateHours: v.lateHours,

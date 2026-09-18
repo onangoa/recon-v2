@@ -36,6 +36,9 @@ interface Designation {
 interface Shift {
   id: string;
   name: string;
+  startTime?: string;
+  endTime?: string;
+  workingDays?: string;
 }
 
 interface Device {
@@ -68,7 +71,7 @@ export default function CreateWorkerPage() {
     phone: '',
     nationalId: '',
     designationId: '',
-    shiftId: '',
+    shiftIds: [] as string[],
     status: 'Active',
     paymentMode: 'manual',
     paymentPhone: '',
@@ -76,6 +79,15 @@ export default function CreateWorkerPage() {
     joinedAt: new Date().toISOString().split('T')[0],
     idDocumentUrl: '',
   });
+
+  const toggleShift = (shiftId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      shiftIds: prev.shiftIds.includes(shiftId)
+        ? prev.shiftIds.filter((s) => s !== shiftId)
+        : [...prev.shiftIds, shiftId],
+    }));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -371,18 +383,33 @@ export default function CreateWorkerPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Assigned Shift</label>
-              <select
-                value={formData.shiftId}
-                onChange={(e) => setFormData({...formData, shiftId: e.target.value})}
-                disabled={isSubmitting}
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              >
-                <option value="">No shift assigned</option>
-                {shifts.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Assigned Shifts</label>
+              {shifts.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1 h-[42px]">
+                  <AlertCircle className="w-3 h-3" /> No shifts configured. Add one under Shifts.
+                </p>
+              ) : (
+                <div className="rounded-md border border-gray-300 bg-white px-4 py-2.5 space-y-1.5 max-h-44 overflow-y-auto">
+                  {shifts.map((s) => (
+                    <label key={s.id} className="flex items-center gap-2.5 cursor-pointer py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={formData.shiftIds.includes(s.id)}
+                        onChange={() => toggleShift(s.id)}
+                        disabled={isSubmitting}
+                        className="size-4 accent-primary cursor-pointer disabled:opacity-50"
+                      />
+                      <span className="text-sm text-gray-700 flex-1">{s.name}</span>
+                      {(s.startTime || s.endTime) && (
+                        <span className="text-[10px] text-muted-foreground">{s.startTime} - {s.endTime}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground italic">
+                A worker can hold several shifts — the one covering a day drives attendance &amp; overtime for that day.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Joining Date</label>

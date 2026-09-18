@@ -7,6 +7,12 @@ import {
   mobileError,
   mobileList,
 } from '@/lib/mobile-auth';
+import {
+  normalizeShiftIdsInput,
+  validateShiftOwnership,
+  withShiftsArray,
+  workerShiftInclude,
+} from '@/lib/worker-shifts';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +43,7 @@ export async function GET(request: NextRequest) {
     const [workers, total] = await Promise.all([
       prisma.worker.findMany({
         where,
-        include: { designation: true, shift: true },
+        include: { designation: true, shift: true, ...workerShiftInclude },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -45,7 +51,7 @@ export async function GET(request: NextRequest) {
       prisma.worker.count({ where }),
     ]);
 
-    return mobileList(workers, total, {
+    return mobileList(workers.map(withShiftsArray), total, {
       page,
       limit,
       pages: Math.ceil(total / limit),
@@ -77,6 +83,12 @@ export async function POST(request: NextRequest) {
     // /web/api/biometric/enroll when the worker is enrolled to a device
     // (unique per device, first free slot).
 
+    const shiftIds = normalizeShiftIdsInput(body) || [];
+    const ownedShiftIds = await validateShiftOwnership(shiftIds, contractorId);
+    if (ownedShiftIds === null) {
+      return mobileError('Invalid shift ID', 400);
+    }
+
     const worker = await prisma.worker.create({
       data: {
         name: body.name,
@@ -85,7 +97,10 @@ export async function POST(request: NextRequest) {
         nationalId: body.nationalId,
         enrollId: body.enrollId || null,
         designationId: designationId,
-        shiftId: body.shiftId || null,
+        shiftId: ownedShiftIds[0] || null,
+        workerShifts: {
+          create: ownedShiftIds.map((shiftId) => ({ shiftId })),
+        },
         paymentMode: body.paymentMode || 'manual',
         paymentPhone: body.paymentPhone || null,
         paymentAccount: body.paymentAccount || null,
@@ -96,6 +111,7 @@ export async function POST(request: NextRequest) {
       include: {
         designation: true,
         shift: true,
+        ...workerShiftInclude,
       },
     });
 
@@ -109,7 +125,7 @@ export async function POST(request: NextRequest) {
       details: { name: worker.name, designation: worker.designation?.title },
     });
 
-    return mobileSuccess(worker, 'Worker created');
+    return mobileSuccess(withShiftsArray(worker), 'Worker created');
   } catch (error) {
     console.error('Mobile create worker error:', error);
     return mobileError('Failed to create worker', 500);

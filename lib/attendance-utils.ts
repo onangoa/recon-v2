@@ -4,6 +4,8 @@ import type { Attendance } from '../prisma/generated/client';
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 export interface ShiftShape {
+  id?: string;        // present when resolved from a persisted Shift
+  name?: string;
   startTime: string;   // "HH:mm"
   endTime: string;     // "HH:mm"
   breakDuration: number; // minutes
@@ -156,12 +158,13 @@ export function shiftNetHours(shift: ShiftShape | null | undefined): number {
   return Math.max(0, minutes - shift.breakDuration) / 60;
 }
 
-/** Parse a free-form working-days string ("Mon,Tue,...") into a set of 0-6 indexes. */
+/** Parse a working-days string ("Mon,Tue,..." or a JSON array like
+ * '["MON","TUE"]') into a set of 0-6 indexes. */
 export function parseWorkingDays(workingDays: string | null | undefined): Set<number> | null {
   if (!workingDays) return null;
   const tokens = workingDays
     .split(/[,\s]+/)
-    .map(t => t.trim().toLowerCase())
+    .map(t => t.trim().toLowerCase().replace(/[\[\]"']/g, ''))
     .filter(Boolean);
   if (tokens.length === 0) return null;
   const set = new Set<number>();
@@ -189,6 +192,96 @@ export function countExpectedDays(
     cur.setDate(cur.getDate() + 1);
   }
   return count;
+}
+
+// ---------------------------------------------------------------------------
+// Multi-shift resolution (a worker may hold several shifts, e.g. Mon-Fri
+// plus Sunday; the one whose workingDays include the date applies)
+// ---------------------------------------------------------------------------
+
+/**
+ * The shift that applies to a worker on the given date: the one whose
+ * workingDays include that weekday. A single shift always applies
+ * (legacy behaviour). When several shifts match the weekday (or none do),
+ * the preferred (primary) shift wins, falling back to the first listed.
+ */
+export function resolveShiftForDate(
+  shifts: (ShiftShape | null | undefined)[],
+  date: Date,
+  preferredId?: string | null,
+): ShiftShape | null {
+  const valid = shifts.filter((s): s is ShiftShape => !!s);
+  if (valid.length === 0) return null;
+  if (valid.length === 1) return valid[0];
+
+  const day = date.getDay();
+  const matching = valid.filter((s) => {
+    const mask = parseWorkingDays(s.workingDays);
+    return !mask || mask.has(day);
+  });
+  if (matching.length === 0) {
+    const preferred = preferredId ? valid.find((s) => s.id === preferredId) : undefined;
+    return preferred || valid[0];
+  }
+  if (matching.length === 1) return matching[0];
+  const preferred = preferredId ? matching.find((s) => s.id === preferredId) : undefined;
+  return preferred || matching[0];
+}
+
+/**
+ * The combined working-days string of a worker's shifts: the union of all
+ * their masks (null when any shift works every day). Used to classify a
+ * day as weekday vs rest day for overtime banding.
+ */
+export function unionWorkingDays(
+  shifts: (ShiftShape | null | undefined)[],
+): string | null {
+  const valid = shifts.filter((s): s is ShiftShape => !!s);
+  if (valid.length === 0) return null;
+  const names = new Set<string>();
+  for (const s of valid) {
+    const mask = parseWorkingDays(s.workingDays);
+    if (!mask) return null;
+    for (let i = 0; i < DAY_KEYS.length; i++) {
+      if (mask.has(i)) names.add(DAY_KEYS[i]);
+    }
+  }
+  return names.size > 0 ? Array.from(names).join(',') : null;
+}
+
+/**
+ * Expected working days and hours within [start, end] for a worker's
+ * shifts: each day counts when a shift's workingDays include it, and
+ * contributes that shift's net hours. Mirrors countExpectedDays for
+ * single-shift workers (hours = days x net hours of the shift).
+ */
+export function expectedDaysAndHoursForShifts(
+  shifts: (ShiftShape | null | undefined)[],
+  start: Date,
+  end: Date,
+): { days: number; hours: number } {
+  const valid = shifts.filter((s): s is ShiftShape => !!s);
+  if (valid.length === 0) return { days: 0, hours: 0 };
+
+  let days = 0;
+  let hours = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  const stop = new Date(end);
+  stop.setHours(0, 0, 0, 0);
+  while (cur <= stop) {
+    const day = cur.getDay();
+    const matching = valid.filter((s) => {
+      const mask = parseWorkingDays(s.workingDays);
+      return !mask || mask.has(day);
+    });
+    if (matching.length > 0) {
+      days++;
+      hours += shiftNetHours(matching[0]);
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { days, hours };
 }
 
 export interface AttendanceAggregate {
@@ -449,13 +542,30 @@ export function aggregateAttendanceWithBands(
   records: Attendance[],
   options: {
     shift?: ShiftShape | null | undefined;
+    /**
+     * All shifts the worker holds (multi-shift workers). When more than
+     * one is given, each record's overtime window uses the shift resolved
+     * for that record's date and rest days are classified against the
+     * union of the shifts' working days.
+     */
+    shifts?: (ShiftShape | null | undefined)[];
+    /** Per-record shift resolver; overrides `shift`/`shifts` resolution. */
+    resolveShift?: (record: Attendance) => ShiftShape | null | undefined;
     workingDays?: string | null;
     holidayDates?: Set<string>;
     rules?: OvertimeRuleShape[] | null;
   } = {},
 ): AttendanceBandsAggregate {
+  const allShifts = (options.shifts || []).filter((s): s is ShiftShape => !!s);
+  const defaultShift =
+    options.shift !== undefined ? options.shift : allShifts.length > 0 ? allShifts[0] : undefined;
   const ctx: DayTypeContext = {
-    workingDays: options.workingDays !== undefined ? options.workingDays : options.shift?.workingDays,
+    workingDays:
+      options.workingDays !== undefined
+        ? options.workingDays
+        : allShifts.length > 1
+          ? unionWorkingDays(allShifts)
+          : (defaultShift?.workingDays ?? undefined),
     holidayDates: options.holidayDates || new Set<string>(),
   };
   const rules = rulesByDayType(options.rules);
@@ -474,11 +584,17 @@ export function aggregateAttendanceWithBands(
     lateHours += r.lateHours || 0;
     lateDays += r.lateDays || 0;
 
-    if (options.shift) {
+    const recordShift = options.resolveShift
+      ? options.resolveShift(r)
+      : allShifts.length > 1
+        ? resolveShiftForDate(allShifts, new Date(r.date))
+        : defaultShift;
+
+    if (recordShift) {
       const bands = bucketOvertimeForRecord(
         new Date(r.checkIn!),
         new Date(r.checkOut!),
-        options.shift,
+        recordShift,
         ctx,
         rules,
       );

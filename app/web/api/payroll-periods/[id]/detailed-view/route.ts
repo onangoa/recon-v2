@@ -6,8 +6,12 @@ import {
   countExpectedDays,
   bucketOvertimeForRecord,
   rulesByDayType,
+  expectedDaysAndHoursForShifts,
+  resolveShiftForDate,
+  unionWorkingDays,
   toDateKey,
 } from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 import { startOfDay, endOfDay } from 'date-fns';
 
 /** Round to the nearest 0.5 (per the proposed detailed-view format). */
@@ -42,6 +46,7 @@ export async function GET(
               include: {
                 designation: { include: { overtimeRules: true } },
                 shift: true,
+                workerShifts: { include: { shift: true } },
               },
             },
           },
@@ -98,10 +103,14 @@ export async function GET(
       const worker = slip.worker;
       const designation = slip.designation || worker.designation;
       const shift = worker.shift;
+      // Multi-shift workers: each day uses the shift covering that weekday.
+      const allShifts = collectShifts(worker);
+      const shiftForDate = (date: Date) =>
+        allShifts.length <= 1 ? shift : resolveShiftForDate(allShifts, date, worker.shiftId);
       const rules = rulesByDayType(worker.designation?.overtimeRules);
 
       const ctx = {
-        workingDays: shift?.workingDays,
+        workingDays: allShifts.length > 1 ? unionWorkingDays(allShifts) : shift?.workingDays,
         holidayDates,
       };
 
@@ -116,15 +125,18 @@ export async function GET(
         const record = dayMap?.get(day.key);
         const complete = record != null && record.status !== 'Absent' && record.checkIn != null && record.checkOut != null;
         let overtimeHours = 0;
-        if (complete && shift) {
-          const bands = bucketOvertimeForRecord(
-            new Date(record.checkIn!),
-            new Date(record.checkOut!),
-            shift,
-            ctx,
-            rules,
-          );
-          overtimeHours = roundToHalf(bands.weekday + bands.rest_day + bands.public_holiday);
+        if (complete) {
+          const dayShift = shiftForDate(new Date(day.key + 'T00:00:00'));
+          if (dayShift) {
+            const bands = bucketOvertimeForRecord(
+              new Date(record.checkIn!),
+              new Date(record.checkOut!),
+              dayShift,
+              ctx,
+              rules,
+            );
+            overtimeHours = roundToHalf(bands.weekday + bands.rest_day + bands.public_holiday);
+          }
         }
         if (complete) presentDays++;
         totalOvertimeHours += overtimeHours;
@@ -135,8 +147,13 @@ export async function GET(
       // Headline overtime hourly rate (weekday rule → shift config → 1x),
       // derived the same way the payroll calculator derives its rates.
       const salary = designation?.salary || 0;
-      const hoursPerDay = shiftNetHours(shift) || 8;
-      const expectedDays = countExpectedDays(period.startDate, period.endDate, shift?.workingDays) || daysInPeriod;
+      let hoursPerDay = shiftNetHours(shift) || 8;
+      let expectedDays = countExpectedDays(period.startDate, period.endDate, shift?.workingDays) || daysInPeriod;
+      if (allShifts.length > 1) {
+        const expected = expectedDaysAndHoursForShifts(allShifts, period.startDate, period.endDate);
+        expectedDays = expected.days || daysInPeriod;
+        hoursPerDay = expected.days > 0 ? (expected.hours / expected.days) || 8 : 8;
+      }
       const frequency = (designation?.paymentFrequency || 'monthly').toLowerCase();
       let dailyRate: number;
       if (frequency === 'daily') {

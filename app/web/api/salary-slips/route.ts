@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PayrollCalculator, SalaryComponentData, AttendancePayrollInput, RateConfig, OvertimeRuleInput } from '@/lib/payroll-calculator';
-import { shiftNetHours, countExpectedDays } from '@/lib/attendance-utils';
+import { shiftNetHours, countExpectedDays, expectedDaysAndHoursForShifts } from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 import { requireContractorPermission } from '@/lib/require-permission';
 
 export async function GET(request: NextRequest) {
@@ -58,7 +59,11 @@ export async function POST(request: NextRequest) {
     // Fetch worker and designation
     const worker = await prisma.worker.findUnique({
       where: { id: workerId },
-      include: { designation: { include: { overtimeRules: true } }, shift: true }
+      include: {
+        designation: { include: { overtimeRules: true } },
+        shift: true,
+        workerShifts: { include: { shift: true } },
+      }
     });
 
     if (!worker) {
@@ -102,12 +107,20 @@ export async function POST(request: NextRequest) {
         ? await prisma.payrollPeriod.findFirst({ where: { id: payrollPeriodId, contractorId } })
         : null;
 
-      const hoursPerDay = shiftNetHours(worker.shift);
+      const allShifts = collectShifts(worker);
       const startDate = period?.startDate;
       const endDate = period?.endDate;
-      const expectedDays = startDate && endDate
+      // Multi-shift workers: each expected day contributes its own shift's
+      // net hours. Single-shift workers keep the legacy behaviour.
+      let hoursPerDay = shiftNetHours(worker.shift);
+      let expectedDays = startDate && endDate
         ? countExpectedDays(startDate, endDate, worker.shift?.workingDays)
         : (workingDays || 0);
+      if (allShifts.length > 1 && startDate && endDate) {
+        const expected = expectedDaysAndHoursForShifts(allShifts, startDate, endDate);
+        expectedDays = expected.days;
+        hoursPerDay = expected.days > 0 ? expected.hours / expected.days : 0;
+      }
       const daysInPeriod = startDate && endDate
         ? Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
         : expectedDays;

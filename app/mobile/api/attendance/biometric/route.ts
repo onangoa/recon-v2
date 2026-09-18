@@ -5,7 +5,8 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
-import { computeWorkedHours } from '@/lib/attendance-utils';
+import { computeWorkedHours, resolveShiftForDate } from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 
 const BREAK_THRESHOLD_MINUTES = 60;
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       // most recently updated worker holding this id (latest enrollment).
       const worker = await prisma.worker.findFirst({
         where: { enrollId: String(enroll_id) },
-        include: { shift: true },
+        include: { shift: true, workerShifts: { include: { shift: true } } },
         orderBy: { updatedAt: 'desc' },
       });
 
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest) {
         errors.push({ enroll_id, error: `Worker with enroll_id ${enroll_id} not found` });
         continue;
       }
+
+      // Multi-shift workers: the shift whose workingDays include the log's
+      // weekday applies (single-shift workers resolve to their only shift).
+      const activeShift = resolveShiftForDate(collectShifts(worker), logDate, worker.shiftId);
 
       const existingAttendance = await prisma.attendance.findUnique({
         where: {
@@ -88,7 +93,7 @@ export async function POST(request: NextRequest) {
             data: {
               contractorId: worker.contractorId,
               workerId: worker.id,
-              shiftId: worker.shiftId,
+              shiftId: activeShift?.id ?? null,
               date: logDate,
               checkIn: logTime,
               status: 'Present',
@@ -181,7 +186,7 @@ export async function POST(request: NextRequest) {
             data: {
               contractorId: worker.contractorId,
               workerId: worker.id,
-              shiftId: worker.shiftId,
+              shiftId: activeShift?.id ?? null,
               date: logDate,
               checkOut: logTime,
               status: 'Present',
@@ -213,7 +218,7 @@ export async function POST(request: NextRequest) {
               ? new Date(existingAttendance.checkIn)
               : logTime;
 
-            const worked = computeWorkedHours(checkInTime, logTime, worker.shift);
+            const worked = computeWorkedHours(checkInTime, logTime, activeShift);
 
             await prisma.attendance.update({
               where: { id: existingAttendance.id },
@@ -254,7 +259,7 @@ export async function POST(request: NextRequest) {
             : logTime;
 
           if (logTime > checkInTime) {
-            const worked = computeWorkedHours(checkInTime, logTime, worker.shift);
+            const worked = computeWorkedHours(checkInTime, logTime, activeShift);
 
             await prisma.attendance.update({
               where: { id: existingAttendance.id },

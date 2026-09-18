@@ -4,7 +4,7 @@ import { requirePermission } from '@/lib/require-permission';
 import { getCurrentContractor } from '@/lib/auth';
 import { startOfDay, endOfDay } from 'date-fns';
 import { getRecords } from '@/lib/biometric-service';
-import { transformRecordsToAttendance } from '@/lib/biometric-attendance';
+import { transformRecordsToAttendance, toWorkerForTransform } from '@/lib/biometric-attendance';
 
 interface DesigStat {
   designationId: string | null;
@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
       designationId: true,
       designation: { select: { title: true } },
       shift: true,
+      shiftId: true,
+      workerShifts: { select: { shift: true } },
     },
   });
   const workerDesigIdMap = new Map(allWorkers.map((w) => [w.id, w.designationId]));
@@ -70,13 +72,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (devices.length > 0) {
-      const workersForTransform = allWorkers.map((w) => ({
-        id: w.id,
-        name: w.name,
-        enrollId: w.enrollId,
-        designation: w.designation,
-        shift: (w.shift as any) || null,
-      }));
+      const workersForTransform = allWorkers.map(toWorkerForTransform);
 
       const pageSize = 500;
       const collected: Awaited<ReturnType<typeof getRecords>>['records'] = [];

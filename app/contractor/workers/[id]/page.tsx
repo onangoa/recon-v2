@@ -44,6 +44,7 @@ interface WorkerData {
   joinedAt?: string | null;
   designation?: { title: string | null } | null;
   shift?: { name: string; startTime: string; endTime: string } | null;
+  shifts?: { name: string; startTime: string; endTime: string }[] | null;
 }
 
 const paymentModeLabel = (mode?: string | null) => {
@@ -207,9 +208,18 @@ export default function ViewWorkerPage({ params }: { params: Promise<{ id: strin
                 <dd className="text-sm font-medium text-gray-900">{worker.designation?.title || 'Unassigned'}</dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Shift</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Shifts</dt>
                 <dd className="text-sm font-medium text-gray-900">
-                  {worker.shift ? (
+                  {(worker.shifts && worker.shifts.length > 0) ? (
+                    <span className="flex flex-col gap-0.5">
+                      {worker.shifts.map((s, i) => (
+                        <span key={i} className="flex flex-col">
+                          <span className="font-bold">{s.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{s.startTime} - {s.endTime}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ) : worker.shift ? (
                     <span className="flex flex-col gap-0.5">
                       <span className="font-bold">{worker.shift.name}</span>
                       <span className="text-[10px] text-muted-foreground">{worker.shift.startTime} - {worker.shift.endTime}</span>

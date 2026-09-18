@@ -62,6 +62,7 @@ interface Shift {
   overtimeRateAmount: number;
   _count?: {
     workers: number;
+    workerShifts: number;
   };
 }
 
@@ -460,7 +461,7 @@ export default function ShiftsPage() {
                         <span className="text-muted-foreground flex items-center gap-1.5">
                           <Users className="size-3.5" /> Assigned Workers
                         </span>
-                        <Badge variant="secondary">{shift._count?.workers || 0}</Badge>
+                        <Badge variant="secondary">{shift._count?.workerShifts ?? shift._count?.workers ?? 0}</Badge>
                       </div>
 
                       {shift.allowOvertime && (

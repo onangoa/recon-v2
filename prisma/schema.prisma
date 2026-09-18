@@ -140,6 +140,7 @@ model Worker {
   attendances           Attendance[]
   payrollPeriodsCreated PayrollPeriod[] @relation("CreatedBy")
   salarySlips           SalarySlip[]
+  workerShifts          WorkerShift[]
   contractor            Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   shift                 Shift?          @relation(fields: [shiftId], references: [id])
   designation           Designation?    @relation(fields: [designationId], references: [id])
@@ -164,10 +165,29 @@ model Shift {
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   attendances            Attendance[]
-  contractor             Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  contractor             Contractor     @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   workers                Worker[]
+  workerShifts           WorkerShift[]
 
   @@index([contractorId])
+}
+
+/// Shift assignments: a worker may hold several shifts (e.g. a Mon-Fri
+/// shift plus a Sunday shift). The first assignment is mirrored on
+/// Worker.shiftId (the primary shift) so legacy single-shift code paths
+/// (attendance snapshots, payroll) keep working. A shift applies to a
+/// given day when its workingDays include that weekday.
+model WorkerShift {
+  id        String   @id @default(cuid())
+  workerId  String
+  shiftId   String
+  createdAt DateTime @default(now())
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  shift     Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@unique([workerId, shiftId])
+  @@index([workerId])
+  @@index([shiftId])
 }
 
 model Attendance {

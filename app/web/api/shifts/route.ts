@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       where: { contractorId },
       include: {
         _count: {
-          select: { workers: true }
+          select: { workers: true, workerShifts: true }
         }
       },
       orderBy: { createdAt: 'desc' }

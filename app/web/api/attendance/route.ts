@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
-import { computeWorkedHours } from '@/lib/attendance-utils';
+import { computeWorkedHours, resolveShiftForDate } from '@/lib/attendance-utils';
+import { collectShifts } from '@/lib/worker-shifts';
 import { getRecords } from '@/lib/biometric-service';
-import { transformRecordsToAttendance } from '@/lib/biometric-attendance';
+import { transformRecordsToAttendance, toWorkerForTransform } from '@/lib/biometric-attendance';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,8 +38,10 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
             id: true,
             name: true,
             enrollId: true,
+            shiftId: true,
             designation: { select: { title: true } },
             shift: true,
+            workerShifts: { select: { shift: true } },
           },
         });
 
@@ -65,7 +68,7 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
           }
         }
 
-        let attendances = transformRecordsToAttendance(collected, workers);
+        let attendances = transformRecordsToAttendance(collected, workers.map(toWorkerForTransform));
 
         // Apply the same filters the DB query used to.
         if (workerId) attendances = attendances.filter((a) => a.worker.id === workerId);
@@ -160,7 +163,7 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
 
     const worker = await prisma.worker.findUnique({
       where: { id: workerId },
-      include: { shift: true }
+      include: { shift: true, workerShifts: { include: { shift: true } } }
     });
 
     if (!worker) {
@@ -173,6 +176,10 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
 
     const today = new Date();
     const todayStart = startOfDay(today);
+
+    // Multi-shift workers: the shift whose workingDays include today
+    // applies (single-shift workers resolve to their only shift).
+    const activeShift = resolveShiftForDate(collectShifts(worker), today, worker.shiftId);
 
     let attendance = await prisma.attendance.findUnique({
       where: {
@@ -193,7 +200,7 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
           data: {
             contractorId,
             workerId,
-            shiftId: worker.shiftId,
+            shiftId: activeShift?.id ?? null,
             date: todayStart,
             checkIn: today,
             status: 'Present'
@@ -204,7 +211,7 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
           where: { id: attendance.id },
           data: {
             checkIn: today,
-            shiftId: worker.shiftId,
+            shiftId: activeShift?.id ?? null,
             status: 'Present'
           }
         });
@@ -221,7 +228,7 @@ const permCheck = await requireContractorPermission(request, 'attendance:create'
       // Calculate hours, overtime and lateness
       const checkIn = new Date(attendance.checkIn);
       const checkOut = today;
-      const worked = computeWorkedHours(checkIn, checkOut, worker.shift);
+      const worked = computeWorkedHours(checkIn, checkOut, activeShift);
 
       attendance = await prisma.attendance.update({
         where: { id: attendance.id },
