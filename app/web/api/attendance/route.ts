@@ -18,6 +18,16 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
     const date = searchParams.get('date');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const search = (searchParams.get('search') || '').trim();
+
+    // Pagination is opt-in: callers that send `page` get a
+    // { attendances, pagination } envelope; legacy callers (e.g. the
+    // payroll period page) keep receiving the plain array.
+    const pageParam = searchParams.get('page');
+    const paginated = pageParam !== null;
+    const page = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '10', 10) || 10));
+    const skip = (page - 1) * limit;
 
     // ---- Biometric API source (preferred) ----
     // Attendance logs are pulled live from the device API (/api/getRecords)
@@ -86,12 +96,38 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
           attendances = attendances.filter((a) => isWithinInterval(new Date(a.date), { start: lo, end: hi }));
         }
 
+        if (search) {
+          const q = search.toLowerCase();
+          attendances = attendances.filter(
+            (a) =>
+              a.worker.name.toLowerCase().includes(q) ||
+              (a.notes ?? '').toLowerCase().includes(q)
+          );
+        }
+
+        if (paginated) {
+          // transformRecordsToAttendance orders newest date first, then by
+          // worker name, so slicing is stable.
+          const total = attendances.length;
+          return NextResponse.json({
+            attendances: attendances.slice(skip, skip + limit),
+            pagination: { total, pages: Math.ceil(total / limit) || 1, page, limit },
+          });
+        }
         return NextResponse.json(attendances);
       }
     }
 
     // ---- Database fallback ----
-    const where: any = { contractorId };
+    const searchFilter = search
+      ? {
+          OR: [
+            { worker: { name: { contains: search } } },
+            { notes: { contains: search } },
+          ],
+        }
+      : {};
+    const where: any = { contractorId, ...searchFilter };
     if (workerId) where.workerId = workerId;
     if (date) {
       const day = new Date(date);
@@ -106,19 +142,25 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
       };
     }
 
-    const attendances = await prisma.attendance.findMany({
-      where,
-      include: {
-        worker: {
-          select: { name: true, designation: { select: { title: true } } }
+    const [attendances, total] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        include: {
+          worker: {
+            select: { name: true, designation: { select: { title: true } } }
+          },
+          shift: true,
+          logs: {
+            orderBy: { timestamp: 'asc' }
+          }
         },
-        shift: true,
-        logs: {
-          orderBy: { timestamp: 'asc' }
-        }
-      },
-      orderBy: { date: 'desc' }
-    });
+        // Secondary sort by worker name keeps pages stable when several
+        // workers share the same date (mirrors the biometric path).
+        orderBy: [{ date: 'desc' }, { worker: { name: 'asc' } }],
+        ...(paginated ? { skip, take: limit } : {}),
+      }),
+      paginated ? prisma.attendance.count({ where }) : Promise.resolve(0),
+    ]);
 
     // Re-compute hours/overtime on the fly using the current shift config
     // so records stored with a previous (possibly outdated) formula
@@ -141,6 +183,12 @@ const permCheck = await requireContractorPermission(request, 'attendance:read');
       return a;
     });
 
+    if (paginated) {
+      return NextResponse.json({
+        attendances: recomputed,
+        pagination: { total, pages: Math.ceil(total / limit) || 1, page, limit },
+      });
+    }
     return NextResponse.json(recomputed);
   } catch (error) {
     console.error('Failed to fetch attendance:', error);

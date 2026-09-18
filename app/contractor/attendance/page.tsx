@@ -5,6 +5,7 @@ import {
   Fingerprint, 
   Search, 
   Calendar, 
+  CalendarDays,
   Clock, 
   Filter,
   Download,
@@ -33,6 +34,13 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -96,7 +104,7 @@ interface Attendance {
   logs: AttendanceLog[];
 }
 
-type FilterMode = 'all' | 'today' | 'range';
+type FilterMode = 'all' | 'today' | 'day' | 'range';
 
 export default function AttendancePage() {
   const { activeSite } = useSite();
@@ -104,23 +112,33 @@ export default function AttendancePage() {
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const [filterMode, setFilterMode] = useState<FilterMode>('today');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>();
+  const [dayPickerOpen, setDayPickerOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
-  const buildQuery = () => {
+  const buildQuery = (opts?: { paginated?: boolean }) => {
     const params = new URLSearchParams();
     if (activeSite?.contractorId) {
       params.set('contractorId', activeSite.contractorId);
     }
     if (filterMode === 'today') {
       params.set('date', todayStr);
+    } else if (filterMode === 'day' && selectedDay) {
+      params.set('date', format(selectedDay, 'yyyy-MM-dd'));
     } else if (filterMode === 'range' && dateRange?.from) {
       params.set('startDate', format(dateRange.from, 'yyyy-MM-dd'));
       if (dateRange.to) {
@@ -129,16 +147,25 @@ export default function AttendancePage() {
         params.set('endDate', format(dateRange.from, 'yyyy-MM-dd'));
       }
     }
+    if (debouncedSearch) {
+      params.set('search', debouncedSearch);
+    }
+    if (opts?.paginated) {
+      params.set('page', String(currentPage));
+      params.set('limit', String(limit));
+    }
     return params.toString();
   };
 
   const fetchAttendance = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/web/api/attendance?${buildQuery()}`);
+      const res = await fetch(`/web/api/attendance?${buildQuery({ paginated: true })}`);
       if (!res.ok) throw new Error('Failed to fetch attendance');
       const data = await res.json();
-      setAttendances(data);
+      setAttendances(data.attendances ?? []);
+      setTotalCount(data.pagination?.total ?? 0);
+      setTotalPages(data.pagination?.pages ?? 1);
     } catch (error) {
       console.error(error);
       toast({
@@ -151,68 +178,110 @@ export default function AttendancePage() {
     }
   };
 
+  // Debounce the search box so the server isn't queried per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Any filter change returns to the first page.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeSite, filterMode, dateRange, selectedDay, debouncedSearch, limit]);
+
   useEffect(() => {
     if (activeSite?.contractorId) {
       if (filterMode === 'range' && !dateRange?.from) {
         return;
       }
+      if (filterMode === 'day' && !selectedDay) {
+        return;
+      }
       fetchAttendance();
     }
-  }, [activeSite, filterMode, dateRange]);
+  }, [activeSite, filterMode, dateRange, selectedDay, debouncedSearch, currentPage, limit]);
 
   const openDetails = (attendance: Attendance) => {
     setSelectedAttendance(attendance);
     setIsDetailsOpen(true);
   };
 
-  const filteredLogs = attendances.filter(log => 
-    log.worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.notes?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleExportCSV = () => {
-    if (filteredLogs.length === 0) {
-      toast({ title: "No data", description: "Nothing to export.", variant: "destructive" });
-      return;
-    }
-    const data = filteredLogs.map(log => ({
-      'Date': format(new Date(log.date), 'yyyy-MM-dd'),
-      'Worker': log.worker.name,
-      'Designation': log.worker.designation?.title || 'N/A',
-      'Shift': log.shift?.name || 'N/A',
-      'Clock In': log.checkIn ? format(new Date(log.checkIn), 'HH:mm') : '--:--',
-      'Clock Out': log.checkOut ? format(new Date(log.checkOut), 'HH:mm') : 'Ongoing',
-      'Total Hours': log.totalHours.toFixed(2),
-      'Overtime Hours': log.overtimeHours.toFixed(2),
-      'Status': log.status,
-    }));
-    exportToCSV(data, `attendance-${new Date().toISOString().split('T')[0]}`);
-    toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+  // Exports should cover every record under the current filters, not just
+  // the visible page — fetch the full (unpaginated) set on demand.
+  const fetchAllForExport = async (): Promise<Attendance[]> => {
+    const res = await fetch(`/web/api/attendance?${buildQuery()}`);
+    if (!res.ok) throw new Error('Failed to fetch attendance');
+    return await res.json();
   };
 
-  const handleExportPDF = () => {
-    if (filteredLogs.length === 0) {
-      toast({ title: "No data", description: "Nothing to export.", variant: "destructive" });
-      return;
+  const handleExportCSV = async () => {
+    try {
+      const rows = await fetchAllForExport();
+      if (rows.length === 0) {
+        toast({ title: "No data", description: "Nothing to export.", variant: "destructive" });
+        return;
+      }
+      const data = rows.map(log => ({
+        'Date': format(new Date(log.date), 'yyyy-MM-dd'),
+        'Worker': log.worker.name,
+        'Designation': log.worker.designation?.title || 'N/A',
+        'Shift': log.shift?.name || 'N/A',
+        'Clock In': log.checkIn ? format(new Date(log.checkIn), 'HH:mm') : '--:--',
+        'Clock Out': log.checkOut ? format(new Date(log.checkOut), 'HH:mm') : 'Ongoing',
+        'Total Hours': log.totalHours.toFixed(2),
+        'Overtime Hours': log.overtimeHours.toFixed(2),
+        'Status': log.status,
+      }));
+      exportToCSV(data, `attendance-${new Date().toISOString().split('T')[0]}`);
+      toast({ title: "Exported", description: "CSV file downloaded", variant: "success" });
+    } catch (error) {
+      toast({ title: "Export failed", description: getErrorMessage(error, 'Unable to export attendance.'), variant: "destructive" });
     }
-    const headers = ['Date', 'Worker', 'Designation', 'Shift', 'Clock In', 'Clock Out', 'Hours', 'Overtime', 'Status'];
-    const rows = filteredLogs.map(log => [
-      format(new Date(log.date), 'yyyy-MM-dd'),
-      log.worker.name,
-      log.worker.designation?.title || 'N/A',
-      log.shift?.name || 'N/A',
-      log.checkIn ? format(new Date(log.checkIn), 'HH:mm') : '--:--',
-      log.checkOut ? format(new Date(log.checkOut), 'HH:mm') : 'Ongoing',
-      log.totalHours.toFixed(2),
-      log.overtimeHours.toFixed(2),
-      log.status,
-    ]);
-    exportToPDF('Attendance Report', headers, rows, `attendance-${new Date().toISOString().split('T')[0]}`, { 6: { halign: 'center' }, 7: { halign: 'center' } });
-    toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
   };
+
+  const handleExportPDF = async () => {
+    try {
+      const rows = await fetchAllForExport();
+      if (rows.length === 0) {
+        toast({ title: "No data", description: "Nothing to export.", variant: "destructive" });
+        return;
+      }
+      const headers = ['Date', 'Worker', 'Designation', 'Shift', 'Clock In', 'Clock Out', 'Hours', 'Overtime', 'Status'];
+      const data = rows.map(log => [
+        format(new Date(log.date), 'yyyy-MM-dd'),
+        log.worker.name,
+        log.worker.designation?.title || 'N/A',
+        log.shift?.name || 'N/A',
+        log.checkIn ? format(new Date(log.checkIn), 'HH:mm') : '--:--',
+        log.checkOut ? format(new Date(log.checkOut), 'HH:mm') : 'Ongoing',
+        log.totalHours.toFixed(2),
+        log.overtimeHours.toFixed(2),
+        log.status,
+      ]);
+      exportToPDF('Attendance Report', headers, data, `attendance-${new Date().toISOString().split('T')[0]}`, { 6: { halign: 'center' }, 7: { halign: 'center' } });
+      toast({ title: "Exported", description: "PDF file downloaded", variant: "success" });
+    } catch (error) {
+      toast({ title: "Export failed", description: getErrorMessage(error, 'Unable to export attendance.'), variant: "destructive" });
+    }
+  };
+
+  // Windowed page numbers (1 … n-1 n n+1 … last) so "All records" with
+  // hundreds of pages doesn't render hundreds of buttons.
+  const pageItems = useMemo<(number | '…')[]>(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const items: (number | '…')[] = [1];
+    if (currentPage > 3) items.push('…');
+    for (let p = Math.max(2, currentPage - 1); p <= Math.min(totalPages - 1, currentPage + 1); p++) {
+      items.push(p);
+    }
+    if (currentPage < totalPages - 2) items.push('…');
+    items.push(totalPages);
+    return items;
+  }, [currentPage, totalPages]);
 
   const filterLabel = useMemo(() => {
     if (filterMode === 'today') return `Today · ${format(new Date(), 'PPP')}`;
+    if (filterMode === 'day' && selectedDay) return format(selectedDay, 'PPP');
     if (filterMode === 'range' && dateRange?.from) {
       if (dateRange.to && format(dateRange.to, 'yyyy-MM-dd') !== format(dateRange.from, 'yyyy-MM-dd')) {
         return `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d, yyyy')}`;
@@ -244,7 +313,7 @@ export default function AttendancePage() {
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2" disabled={filteredLogs.length === 0}>
+              <Button variant="outline" className="gap-2" disabled={loading || attendances.length === 0}>
                 <Download className="size-4" />
                 <span>Export</span>
               </Button>
@@ -280,10 +349,40 @@ export default function AttendancePage() {
                   variant={filterMode === 'today' ? 'default' : 'outline'}
                   size="sm"
                   className="h-9 gap-2"
-                  onClick={() => { setFilterMode('today'); setDateRange(undefined); }}
+                  onClick={() => { setFilterMode('today'); setDateRange(undefined); setSelectedDay(undefined); }}
                 >
                   <Calendar className="size-4" /> Today
                 </Button>
+                <Popover open={dayPickerOpen} onOpenChange={setDayPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={filterMode === 'day' ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-9 gap-2"
+                      onClick={() => setFilterMode('day')}
+                    >
+                      <CalendarDays className="size-4" /> Date
+                      {filterMode === 'day' && selectedDay && (
+                        <span className="text-xs ml-1 hidden sm:inline">
+                          {format(selectedDay, 'MMM d')}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDay}
+                      onSelect={(day) => {
+                        if (day) {
+                          setSelectedDay(day);
+                          setFilterMode('day');
+                          setDayPickerOpen(false);
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -328,16 +427,16 @@ export default function AttendancePage() {
                   variant={filterMode === 'all' ? 'default' : 'outline'}
                   size="sm"
                   className="h-9 gap-2"
-                  onClick={() => { setFilterMode('all'); setDateRange(undefined); }}
+                  onClick={() => { setFilterMode('all'); setDateRange(undefined); setSelectedDay(undefined); }}
                 >
                   All
                 </Button>
-                {(filterMode !== 'today' || dateRange) && (
+                {(filterMode !== 'today' || dateRange || selectedDay) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-9 gap-1 text-muted-foreground"
-                    onClick={() => { setFilterMode('today'); setDateRange(undefined); }}
+                    onClick={() => { setFilterMode('today'); setDateRange(undefined); setSelectedDay(undefined); }}
                   >
                     <X className="size-3" /> Reset
                   </Button>
@@ -365,7 +464,7 @@ export default function AttendancePage() {
               <Clock className="h-8 w-8 animate-spin text-primary opacity-20" />
               <p className="text-sm text-muted-foreground italic">Syncing logs...</p>
             </div>
-          ) : filteredLogs.length === 0 ? (
+          ) : attendances.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Fingerprint className="mx-auto h-12 w-12 opacity-10 mb-4" />
               <p>No attendance records found for the selected period.</p>
@@ -385,7 +484,7 @@ export default function AttendancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.map((log) => (
+                {attendances.map((log) => (
                   <TableRow key={log.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell>
                       <span className="text-xs font-bold text-muted-foreground">
@@ -449,6 +548,79 @@ export default function AttendancePage() {
             </Table>
           )}
         </CardContent>
+
+        {/* Pagination */}
+        {!loading && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 md:px-6 py-4 border-t border-gray-100 bg-muted/5">
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-muted-foreground italic">
+                {totalCount > 0 ? (
+                  <>Showing <span className="font-bold">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold">{Math.min(currentPage * limit, totalCount)}</span> of <span className="font-bold">{totalCount}</span> records</>
+                ) : (
+                  'No records'
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Rows</span>
+                <Select
+                  value={String(limit)}
+                  onValueChange={(v) => setLimit(Number(v))}
+                >
+                  <SelectTrigger className="h-8 w-[70px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1 || loading}
+                  className="gap-1 h-8 px-3"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {pageItems.map((p, i) =>
+                    p === '…' ? (
+                      <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={currentPage === p ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(p)}
+                        disabled={loading}
+                        className={`h-8 w-8 p-0 ${currentPage === p ? 'bg-primary text-white' : ''}`}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || loading}
+                  className="gap-1 h-8 px-3"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
