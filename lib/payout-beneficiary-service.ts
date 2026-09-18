@@ -6,6 +6,7 @@
  *  - destination: mobile number / paybill shortcode / till number / bank account
  *  - accountRef:  secondary reference (paybill account number)
  *  - bankCode:    destination bank for PesaLink
+ *  - mobileNumber: notification mobile for account-based bank payouts
  */
 import { prisma } from './prisma';
 
@@ -19,6 +20,7 @@ export interface SavePayoutBeneficiaryInput {
   accountRef?: string | null;
   bankCode?: string | null;
   recipientName?: string | null;
+  mobileNumber?: string | null;
   isFavorite?: boolean;
 }
 
@@ -28,6 +30,7 @@ export interface RecentPayoutRecipient {
   accountRef: string | null;
   bankCode: string | null;
   recipientName: string | null;
+  mobileNumber: string | null;
   usageCount: number;
   lastUsedAt: Date;
 }
@@ -67,6 +70,7 @@ export async function savePayoutBeneficiary(
         accountRef: input.accountRef ?? existing.accountRef,
         bankCode: input.bankCode ?? existing.bankCode,
         recipientName: input.recipientName ?? existing.recipientName,
+        mobileNumber: input.mobileNumber ?? existing.mobileNumber,
         usageCount: { increment: 1 },
         lastUsedAt: new Date(),
       },
@@ -82,6 +86,7 @@ export async function savePayoutBeneficiary(
       accountRef: input.accountRef || null,
       bankCode: input.bankCode || null,
       recipientName: input.recipientName || null,
+      mobileNumber: input.mobileNumber || null,
       isFavorite: input.isFavorite ?? false,
       usageCount: 1,
       lastUsedAt: new Date(),
@@ -174,12 +179,19 @@ export async function getRecentPayoutRecipients(
       }
     }
 
+    // Notification mobile for account-based bank payouts (pesalink/ift):
+    // the destination is the bank account, so the SMS mobile rides along
+    // on the transaction's phoneNumber. Other channels ARE the phone.
+    const mobileNumber =
+      channel === 'pesalink' || channel === 'ift' ? tx.phoneNumber || null : null;
+
     const key = beneficiaryKey(channel, destination);
     const existing = grouped.get(key);
     if (existing) {
       existing.usageCount += 1;
       existing.recipientName = existing.recipientName || tx.recipientName;
       existing.bankCode = existing.bankCode || bankCode;
+      existing.mobileNumber = existing.mobileNumber || mobileNumber;
     } else {
       grouped.set(key, {
         channel,
@@ -187,6 +199,7 @@ export async function getRecentPayoutRecipients(
         accountRef: null,
         bankCode,
         recipientName: tx.recipientName,
+        mobileNumber,
         usageCount: 1,
         lastUsedAt: tx.createdAt,
       });

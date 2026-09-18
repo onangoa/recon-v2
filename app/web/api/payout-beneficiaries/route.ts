@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       accountRef: body.accountRef || null,
       bankCode: body.bankCode || null,
       recipientName: body.recipientName || null,
+      mobileNumber: body.mobileNumber || null,
       isFavorite: body.isFavorite ?? false,
     });
 

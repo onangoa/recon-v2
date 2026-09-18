@@ -7,8 +7,9 @@
  *  #1 Wallet top-up confirmed (M-Pesa STK callback / Co-op Bank IPN)
  *  #3 Payout approved / rejected (incl. payout destination + company)
  *  #5 Payout sent to recipient (incl. which company sent it)
- * Worker payroll payouts never send payout SMS (#3/#5 are skipped for
- * them — same markers as the payout-fee exemption).
+ * Worker payroll payouts send #5 to the worker when the payment
+ * completes (manual disbursement or M-Pesa callback); #3 still skips
+ * payroll — the owner tracks approvals in the app.
  */
 import { prisma } from './prisma';
 import { sendSmsSafe, normalizeKenyanMobile } from './sms-service';
@@ -143,8 +144,8 @@ async function buildPayoutContext(transactionId: string) {
   });
   if (!transaction) return null;
 
-  // Worker payroll payouts never send payout SMS (workers are notified by
-  // the payment channel itself; the owner tracks payroll in the app)
+  // Worker payroll payouts skip #3 (the owner tracks approvals in the app);
+  // #5 notifyPayoutSentToRecipient handles them separately.
   if (isPayrollPayout(transaction)) return null;
 
   let meta: Record<string, any> = {};
@@ -235,6 +236,13 @@ function describePayoutChannelForRecipient(transaction: {
  * including which company it is from. Sent when a payout completes
  * (M-Pesa B2C/B2B/Pochi callbacks, bank transfer callbacks, or manual
  * immediate payouts) — only when the destination phone is known.
+ *
+ * Worker payroll payouts (manual disbursement or M-Pesa payout of a
+ * salary slip) also notify the worker here: the SMS names the payroll
+ * period instead of the payout channel. The worker's mobile comes from
+ * metadata.workerPhone (set at disbursement for till/paybill workers
+ * whose phoneNumber column carries the account reference) or the
+ * transaction's phoneNumber.
  */
 export async function notifyPayoutSentToRecipient(transactionId: string): Promise<void> {
   try {
@@ -244,9 +252,6 @@ export async function notifyPayoutSentToRecipient(transactionId: string): Promis
     });
     if (!transaction) return;
 
-    // Worker payroll payouts never send payment SMS to the recipient
-    if (isPayrollPayout(transaction)) return;
-
     let meta: Record<string, any> = {};
     try {
       meta = transaction.metadata ? JSON.parse(transaction.metadata) : {};
@@ -255,6 +260,29 @@ export async function notifyPayoutSentToRecipient(transactionId: string): Promis
     }
 
     const company = transaction.wallet?.contractor?.companyName;
+
+    if (isPayrollPayout(transaction)) {
+      // Worker payroll payment: "Paid KES X for <period>. Ref ..."
+      const phone = meta.workerPhone || transaction.phoneNumber;
+      if (!company || !phone) return;
+
+      // description = "Payroll: <worker name> - <period name>"
+      const periodName = transaction.description?.includes(' - ')
+        ? transaction.description.split(' - ').slice(1).join(' - ')
+        : '';
+      const receipt = transaction.mpesaReceiptNumber || transaction.receiptNumber;
+      const ref = receipt
+        ? ` Ref ${receipt}.`
+        : transaction.reference
+          ? ` Ref ${transaction.reference}.`
+          : '';
+      await deliver(
+        phone,
+        `${company} has paid you ${formatKes(transaction.amount)}${periodName ? ` for ${periodName}` : ''}.${ref}`
+      );
+      return;
+    }
+
     const phone = meta.mobileNumber || transaction.phoneNumber;
     if (!company || !phone) return;
 

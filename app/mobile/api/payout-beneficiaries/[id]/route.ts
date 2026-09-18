@@ -41,6 +41,7 @@ export async function PATCH(
         accountRef: body.accountRef ?? existing.accountRef,
         bankCode: body.bankCode ?? existing.bankCode,
         recipientName: body.recipientName ?? existing.recipientName,
+        mobileNumber: body.mobileNumber ?? existing.mobileNumber,
         isFavorite: body.isFavorite ?? existing.isFavorite,
       },
     });

@@ -5,6 +5,7 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
+import { notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
 
 export async function POST(
   request: NextRequest,
@@ -96,7 +97,10 @@ export async function POST(
             transactionType: 'PAYROLL_MANUAL',
             accountReference: worker.name,
             phoneNumber: worker.phone,
-            metadata: JSON.stringify({ category: 'payroll' }),
+            metadata: JSON.stringify({
+              category: 'payroll',
+              workerPhone: worker.paymentPhone || worker.phone || null,
+            }),
           },
         });
 
@@ -109,6 +113,10 @@ export async function POST(
           where: { id: slip.id },
           data: { status: 'paid' },
         });
+
+        // Manual payment is complete the moment it is recorded — tell
+        // the worker now (best-effort, never throws).
+        await notifyPayoutSentToRecipient(transaction.id);
 
         results.manual++;
         results.transactions.push({
@@ -181,7 +189,13 @@ export async function POST(
           transactionDesc: `Payroll: ${worker.name} - ${period.name}`,
           remarks: payoutType,
           phoneNumber: (worker.paymentMode === 'phone' || worker.paymentMode === 'pochi') ? phoneNumber : undefined,
-          metadata: JSON.stringify({ category: 'payroll' }),
+          metadata: JSON.stringify({
+            category: 'payroll',
+            // SMS mobile for every mode: till/paybill workers have no
+            // phoneNumber on the transaction, so the worker's mobile
+            // rides along in metadata for the completion SMS.
+            workerPhone: worker.paymentPhone || worker.phone || null,
+          }),
         },
       });
 

@@ -27,7 +27,7 @@ All recipients are normalized to `2547XXXXXXXX` / `2541XXXXXXXX`
 | 2 | Bank payout / withdrawal created (`pending_approval`) | Approver (superadmin) | `ReconSMI: Payout of KES 45,000 to J. Wanjiku (Co-op Bank) by BuildRight Ltd needs approval.` | Pending |
 | 3 | Payout approved / rejected | Requester (wallet owner) | `ReconSMI: BuildRight Ltd payout of KES 45,000 to J. Wanjiku via Co-op Bank A/C *8130 approved and processing.` / `...was rejected. Reason: Insufficient balance.` | **IMPLEMENTED** (skipped for worker payroll payouts) |
 | 4 | Payroll disbursement initiated (`pending_approval`) | Approver | `ReconSMI: Oct 2026 payroll for BuildRight Ltd (38 workers, KES 512,400) needs approval.` | Pending |
-| 5 | Payout / salary sent (payout completed) | Payout recipient | `ReconSMI: BuildRight Ltd has sent you KES 45,000 via M-Pesa. Ref QK7H2X9PLM.` | **IMPLEMENTED** (skipped when the destination phone is unknown, e.g. paybill/till or bank-account-only payouts, and for worker payroll payouts — workers are notified by the payment channel itself) |
+| 5 | Payout / salary sent (payout completed) | Payout recipient | `ReconSMI: BuildRight Ltd has sent you KES 45,000 via M-Pesa. Ref QK7H2X9PLM.` | **IMPLEMENTED** (skipped when the destination phone is unknown, e.g. paybill/till or bank payouts without a notification mobile; worker payroll payouts notify the worker: `BuildRight Ltd has paid you KES 12,500 for Sep 1 - 15. Ref PAYROLL-...`) |
 
 ### B. Compliance & safety
 
@@ -101,8 +101,10 @@ Sample messages:
 
 When a payout **completes**, the recipient gets an SMS stating which
 company sent the money and via which channel. Skipped automatically when
-the destination phone is unknown (paybill/till or bank-account-only
-payouts) or the wallet has no contractor.
+the destination phone is unknown (paybill/till) or the wallet has no
+contractor. Account-based bank payouts (pesalink/ift) carry a
+notification mobile (`mobileNumber` on the payout request, saved on the
+beneficiary) so the recipient is SMS'd there when the transfer completes.
 
 | Channel | Message channel text |
 |---|---|
@@ -122,15 +124,25 @@ Hooks (all resolve the recipient phone from the transaction):
 | M-Pesa Pochi success callback | `handleB2PochiCallback` in `lib/mpesa-service.ts` |
 | Bank funds-transfer success callback (payout) | `handleBankFundsTransferCallback` in `lib/bank-service.ts` |
 | Manual immediate payout | Both wallets transactions routes (`app/{web,mobile}/api/wallets/[id]/transactions/route.ts`) |
+| Manual payroll disbursement (slip marked paid) | Both payroll disburse routes (`app/{web,mobile}/api/payroll-periods/[id]/disburse/route.ts`) |
 
 Helper: `notifyPayoutSentToRecipient` (best-effort; M-Pesa receipt
-reference appended when available). Worker payroll payouts are excluded
-(same markers as the payout-fee exemption: `PAYROLL-` reference,
-`Payroll:` description or `category: 'payroll'` metadata) — the worker
-approval/rejection and payment-sent helpers all skip them, so a payroll
-run never sends per-worker SMS; workers are notified by the payment
-channel itself and the owner tracks the run in the app.
+reference appended when available).
 
-Sample message:
+Worker payroll payouts (same markers as the payout-fee exemption:
+`PAYROLL-` reference, `Payroll:` description or `category: 'payroll'`
+metadata) get a worker-specific payment SMS when the money is paid:
+manual disbursements notify the worker immediately (the payment is
+complete the moment it is recorded) and M-Pesa payroll payouts notify
+on the success callback. The worker's mobile is
+`metadata.workerPhone` (set at disbursement for every payment mode,
+including till/paybill workers whose transaction phone column carries
+the account reference) falling back to the transaction's phone. The
+approved/rejected helper (#3) still skips payroll — the owner tracks
+the run in the app.
+
+Sample messages:
 
 - `BuildRight Ltd has sent you KES 45,000 via M-Pesa. Ref QK7H2X9PLM.`
+- `BuildRight Ltd has sent you KES 45,000 via KCB A/C *8130.` (pesalink payout with a notification mobile)
+- `BuildRight Ltd has paid you KES 12,500 for Sep 1 - 15. Ref PAYROLL-3f2a9c1d-8b41e2af.` (worker payroll)

@@ -858,6 +858,8 @@ model Wallet {
 /// channel: phone | pochi | paybill | till | pesalink | ift | mpesa (bank-to-M-Pesa).
 /// destination: the mobile number / shortcode / till number / bank account.
 /// accountRef: secondary reference (e.g. the account number for a paybill).
+/// mobileNumber: notification mobile for account-based bank payouts
+/// (pesalink/ift) — the recipient gets an SMS when the payout completes.
 model PayoutBeneficiary {
   id            String     @id @default(cuid())
   contractorId  String
@@ -867,6 +869,7 @@ model PayoutBeneficiary {
   accountRef    String?
   bankCode      String?
   recipientName String?
+  mobileNumber  String?
   isFavorite    Boolean    @default(false)
   usageCount    Int        @default(0)
   lastUsedAt    DateTime?

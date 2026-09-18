@@ -119,6 +119,7 @@ interface PayoutBeneficiary {
   accountRef: string | null;
   bankCode: string | null;
   recipientName: string | null;
+  mobileNumber: string | null;
   isFavorite: boolean;
   usageCount: number;
 }
@@ -129,6 +130,7 @@ interface RecentRecipient {
   accountRef: string | null;
   bankCode: string | null;
   recipientName: string | null;
+  mobileNumber: string | null;
   usageCount: number;
   saved: boolean;
 }
@@ -195,6 +197,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [bankPayoutAccount, setBankPayoutAccount] = useState('');
   const [bankPayoutBankCode, setBankPayoutBankCode] = useState('');
   const [bankPayoutMobile, setBankPayoutMobile] = useState('');
+  const [bankPayoutNotifyMobile, setBankPayoutNotifyMobile] = useState('');
   const [bankPayoutMemo, setBankPayoutMemo] = useState('');
   const [isBankPaying, setIsBankPaying] = useState(false);
 
@@ -243,6 +246,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     accountRef?: string;
     bankCode?: string;
     recipientName?: string;
+    mobileNumber?: string;
   }) => {
     try {
       const response = await fetch('/web/api/payout-beneficiaries', {
@@ -294,16 +298,18 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     setPaymentRecipientName(b.recipientName || '');
   };
 
-  const applyBankBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; bankCode?: string | null; recipientName?: string | null }) => {
+  const applyBankBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; bankCode?: string | null; recipientName?: string | null; mobileNumber?: string | null }) => {
     setBankPayoutChannel(b.channel);
     if (b.channel === 'mpesa') {
       setBankPayoutMobile(b.destination);
       setBankPayoutAccount('');
       setBankPayoutBankCode('');
+      setBankPayoutNotifyMobile('');
     } else {
       setBankPayoutAccount(b.destination);
       setBankPayoutBankCode(b.bankCode || '');
       setBankPayoutMobile('');
+      setBankPayoutNotifyMobile(b.mobileNumber || '');
     }
     setBankPayoutRecipientName(b.recipientName || '');
   };
@@ -662,7 +668,9 @@ const handleBankDeposit = async () => {
           amount: parseFloat(bankPayoutAmount),
           destinationAccount: bankPayoutChannel === 'mpesa' ? undefined : bankPayoutAccount,
           bankCode: bankPayoutChannel !== 'mpesa' ? (bankPayoutBankCode || undefined) : undefined,
-          mobileNumber: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : undefined,
+          // For bank-to-M-Pesa this is the destination itself; for
+          // pesalink/ift it is the mobile that gets the completion SMS.
+          mobileNumber: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : (bankPayoutNotifyMobile || undefined),
           description: bankPayoutMemo || `Bank payout (${bankPayoutChannel.toUpperCase()})`,
           recipientName: bankPayoutRecipientName || undefined,
           proofDocumentUrl: proof?.url || undefined,
@@ -685,6 +693,7 @@ const handleBankDeposit = async () => {
           destination: bankPayoutChannel === 'mpesa' ? bankPayoutMobile : bankPayoutAccount,
           bankCode: bankPayoutChannel === 'pesalink' && bankPayoutBankCode ? bankPayoutBankCode : undefined,
           recipientName: bankPayoutRecipientName || undefined,
+          mobileNumber: bankPayoutChannel !== 'mpesa' ? (bankPayoutNotifyMobile || undefined) : undefined,
         });
       }
 
@@ -692,6 +701,7 @@ const handleBankDeposit = async () => {
       setBankPayoutAccount('');
       setBankPayoutBankCode('');
       setBankPayoutMobile('');
+      setBankPayoutNotifyMobile('');
       setBankPayoutMemo('');
       setBankPayoutRecipientName('');
       setBankPayoutProofFile(null);
@@ -1337,6 +1347,19 @@ const handleBankDeposit = async () => {
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label>Notification Mobile No.</Label>
+                            <span className="text-[10px] italic text-muted-foreground">Gets an SMS when the payout completes</span>
+                          </div>
+                          <Input
+                            type="tel"
+                            placeholder="07XXXXXXXX or 2547XXXXXXXX"
+                            value={bankPayoutNotifyMobile}
+                            onChange={(e) => setBankPayoutNotifyMobile(e.target.value)}
+                            className="bg-muted/30 border-none h-11"
+                          />
                         </div>
                       </>
                     )}
