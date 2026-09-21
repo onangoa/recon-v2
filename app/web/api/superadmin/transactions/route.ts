@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireSuperadmin } from '@/lib/require-permission';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const adminCheck = await requireSuperadmin(request);
   if (!adminCheck.authorized) return adminCheck.error;
   try {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const adminCheck = await requireSuperadmin(request);
   if (!adminCheck.authorized) return adminCheck.error;
   try {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
           amount: parseFloat(amount),
           type,
           description,
-          referenceNumber,
+          reference: referenceNumber || null,
           status: status || 'completed',
         },
       });

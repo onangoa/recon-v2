@@ -14,7 +14,8 @@ import {
   LogOut,
   ChevronsUpDown,
   UserCircle,
-  SearchCheck
+  SearchCheck,
+  Scale
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -55,6 +56,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Contractors', href: '/superadmin/contractors', icon: Users },
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
     { label: 'Payment Review', href: '/superadmin/transactions/review', icon: SearchCheck },
+    { label: 'Wallet Ledger', href: '/superadmin/transactions/wallets', icon: Scale },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
     { label: 'Profile', href: '/superadmin/profile', icon: UserCircle },
     { label: 'Settings', href: '/superadmin/settings', icon: Settings },

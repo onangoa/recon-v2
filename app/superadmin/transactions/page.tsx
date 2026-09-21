@@ -63,7 +63,7 @@ interface Transaction {
   amount: number;
   type: 'credit' | 'debit';
   description: string;
-  referenceNumber: string;
+  reference: string;
   status: 'completed' | 'pending' | 'failed';
   createdAt: string;
 }
@@ -135,7 +135,7 @@ export default function TransactionsPage() {
 
   const filteredTx = Array.isArray(transactions) ? transactions.filter(t => 
     t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.referenceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.wallet?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
@@ -266,7 +266,7 @@ export default function TransactionsPage() {
                 filteredTx.map((tx) => (
                   <TableRow key={tx.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-mono text-[10px] text-muted-foreground">
-                      {tx.referenceNumber || tx.id.substring(0, 12)}
+                      {tx.reference || tx.id.substring(0, 12)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

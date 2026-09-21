@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(amount),
           type,
           description,
-          referenceNumber,
+          reference: referenceNumber || null,
           status: status || 'completed',
         },
       });
