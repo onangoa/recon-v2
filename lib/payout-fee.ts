@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { SETTLED_STATUSES } from './transaction-ledger';
 
 // Flat transaction fee charged on outgoing wallet payouts (bank transfers,
 // M-Pesa payouts and manual payouts). Payroll disbursements are exempt.
@@ -46,8 +47,9 @@ export function isPayrollPayout(tx: {
 
 /**
  * Charge the flat payout fee against the payout's wallet. Idempotent:
- * replayed callbacks or retries never charge twice. Returns the fee
- * charged (0 when exempt or already charged).
+ * replayed callbacks or retries never charge twice, and the fee is only
+ * ever charged once the payout itself has succeeded. Returns the fee
+ * charged (0 when exempt, already charged, or payout not settled).
  */
 export async function chargePayoutFee(payout: {
   id: string;
@@ -64,6 +66,19 @@ export async function chargePayoutFee(payout: {
     select: { id: true },
   });
   if (existing) return 0;
+
+  // The fee is only deducted after a successful payout — never while the
+  // transaction is still pending, held or failed.
+  const payoutRow = await prisma.transaction.findUnique({
+    where: { id: payout.id },
+    select: { status: true },
+  });
+  if (!payoutRow || !SETTLED_STATUSES.includes(payoutRow.status)) {
+    console.warn(
+      `Payout fee not charged: payout ${payout.id} has not succeeded (status: ${payoutRow?.status ?? 'not found'})`
+    );
+    return 0;
+  }
 
   const fee = await getPayoutFee();
   if (!fee || fee <= 0) return 0;

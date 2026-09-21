@@ -558,6 +558,16 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
     });
 
     if (isSuccess) {
+      // Mark the payout successful before touching the wallet balance or
+      // charging the fee, so money only moves on a settled transaction.
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'completed',
+          receiptNumber: callbackData?.TransactionReference || callbackData?.TransactionID || messageReference,
+        },
+      });
+
       if (transaction.type === 'credit') {
         // Top-up: increase wallet balance
         await prisma.wallet.update({
@@ -576,14 +586,6 @@ export async function handleBankFundsTransferCallback(callbackData: any) {
           console.log(`Charged payout fee of ${feeCharged} for transaction ${transaction.id}`);
         }
       }
-
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: 'completed',
-          receiptNumber: callbackData?.TransactionReference || callbackData?.TransactionID || messageReference,
-        },
-      });
 
       // SMS: confirm the bank-funded top-up to the wallet owner
       if (transaction.type === 'credit') {

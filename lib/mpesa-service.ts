@@ -590,6 +590,10 @@ export const handleB2CCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
+      // Mark the payout successful before touching the wallet balance or
+      // charging the fee, so money only moves on a settled transaction.
+      await updateTransaction(transaction.id, updateData);
+
       // Update wallet balance (DECREASE for payouts) only if amount is valid
       if (amount && !isNaN(amount)) {
         const numericAmount = parseFloat(amount);
@@ -623,10 +627,8 @@ export const handleB2CCallback = async (callbackData: any) => {
         ResultCode,
         ResultDesc
       });
+      await updateTransaction(transaction.id, updateData);
     }
-
-    // Update transaction
-    await updateTransaction(transaction.id, updateData);
 
     // SMS: tell the payout recipient which company sent the money
     if (ResultCode === 0) {
@@ -821,6 +823,10 @@ export const handleB2BCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
+      // Mark the payout successful before touching the wallet balance or
+      // charging the fee, so money only moves on a settled transaction.
+      await updateTransaction(transaction.id, updateData);
+
       // Update wallet balance (DECREASE for payouts) only if amount is valid
       if (amount && !isNaN(amount)) {
         const numericAmount = parseFloat(amount);
@@ -854,10 +860,8 @@ export const handleB2BCallback = async (callbackData: any) => {
         ResultCode,
         ResultDesc
       });
+      await updateTransaction(transaction.id, updateData);
     }
-
-    // Update transaction
-    await updateTransaction(transaction.id, updateData);
 
     // SMS: tell the payout recipient which company sent the money
     if (ResultCode === 0) {
@@ -1039,6 +1043,10 @@ export const handleB2PochiCallback = async (callbackData: any) => {
         transactionCompletedDateTime
       });
 
+      // Mark the payout successful before touching the wallet balance or
+      // charging the fee, so money only moves on a settled transaction.
+      await updateTransaction(transaction.id, updateData);
+
       // Update wallet balance (DECREASE for payouts) only if amount is valid
       if (amount && !isNaN(amount)) {
         const numericAmount = parseFloat(amount);
@@ -1072,10 +1080,8 @@ export const handleB2PochiCallback = async (callbackData: any) => {
         ResultCode,
         ResultDesc
       });
+      await updateTransaction(transaction.id, updateData);
     }
-
-    // Update transaction
-    await updateTransaction(transaction.id, updateData);
 
     // SMS: tell the payout recipient which company sent the money
     if (ResultCode === 0) {
