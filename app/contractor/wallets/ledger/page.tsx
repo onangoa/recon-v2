@@ -3,8 +3,8 @@ import { WalletLedgerView } from '@/components/wallet-ledger-view';
 export default function WalletLedgerPage() {
   return (
     <WalletLedgerView
-      walletsPath="/web/api/superadmin/wallets"
-      ledgerPathTemplate="/web/api/superadmin/wallets/{id}/transactions"
+      walletsPath="/web/api/wallets/reconciliation"
+      ledgerPathTemplate="/web/api/wallets/{id}/ledger"
     />
   );
 }

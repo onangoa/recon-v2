@@ -32,7 +32,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Clock,
-  Fingerprint
+  Fingerprint,
+  Scale
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -154,6 +155,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Suppliers', href: '/contractor/suppliers', icon: Handshake, permission: 'suppliers:read' },
     { label: 'Wallets', href: '/contractor/wallets', icon: Wallet, permission: 'wallets:read' },
     { label: 'Wallet Approvals', href: '/contractor/wallets/approvals', icon: ShieldCheck, permission: 'approve' },
+    { label: 'Wallet Ledger', href: '/contractor/wallets/ledger', icon: Scale, permission: 'wallets:read' },
     { label: 'Site Uploads', href: '/contractor/uploads', icon: Upload, permission: 'documents:read' },
     { label: 'Machines & Equipment', href: '/contractor/equipment', icon: Hammer, permission: 'equipment:read' },
     { label: 'Purchase Orders', href: '/contractor/purchase-orders', icon: ClipboardList, permission: 'purchase_orders:read' },
@@ -171,8 +173,17 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
   const visibleNavItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
 
+  // Highlight only the most specific visible nav item matching the current
+  // path, so nested routes (e.g. /contractor/wallets/ledger) do not also
+  // highlight their parent (/contractor/wallets).
   const isActive = (href: string) => {
-    return pathname === href || (href !== '/contractor' && pathname.startsWith(href + '/'));
+    const matched = visibleNavItems.filter(
+      (item) => pathname === item.href || pathname.startsWith(item.href + '/')
+    );
+    return (
+      matched.some((item) => item.href === href) &&
+      matched.every((item) => item.href.length <= href.length)
+    );
   };
 
   return (

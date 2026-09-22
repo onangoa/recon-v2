@@ -53,3 +53,210 @@ export function getChannel(tx: LedgerTransactionSource): LedgerChannel {
   }
   return 'internal';
 }
+
+// ---------------------------------------------------------------------------
+// Ledger building (shared by the superadmin and contractor wallet-ledger
+// APIs, so both sides always reconcile identically)
+// ---------------------------------------------------------------------------
+
+export interface LedgerSourceTransaction {
+  id: string;
+  type: string;
+  status: string;
+  amount: number;
+  description: string | null;
+  transactionDesc: string | null;
+  reference: string | null;
+  receiptNumber: string | null;
+  mpesaReceiptNumber: string | null;
+  mpesaTransactionId: string | null;
+  transactionType: string | null;
+  accountReference: string | null;
+  phoneNumber: string | null;
+  remarks: string | null;
+  recipientName: string | null;
+  createdAt: Date;
+}
+
+export interface LedgerRow {
+  id: string;
+  type: string;
+  status: string;
+  channel: LedgerChannel;
+  direction: LedgerDirection | null;
+  settled: boolean;
+  amount: number;
+  description: string | null;
+  transactionDesc: string | null;
+  reference: string | null;
+  receiptNumber: string | null;
+  mpesaReceiptNumber: string | null;
+  mpesaTransactionId: string | null;
+  transactionType: string | null;
+  accountReference: string | null;
+  phoneNumber: string | null;
+  remarks: string | null;
+  recipientName: string | null;
+  createdAt: Date;
+  balanceAfter: number;
+}
+
+export interface ChannelTotals {
+  credit: number;
+  debit: number;
+  creditCount: number;
+  debitCount: number;
+}
+
+export interface LedgerSummary {
+  storedBalance: number;
+  totalCredit: number;
+  totalDebit: number;
+  computedBalance: number;
+  variance: number;
+  balanced: boolean;
+  transactionCount: number;
+  settledCount: number;
+  pendingCount: number;
+  byChannel: Record<string, ChannelTotals>;
+  statusCounts: Record<string, number>;
+}
+
+/**
+ * Walk a wallet's transactions chronologically, attaching direction, channel
+ * and the running balance after every settled (balance-affecting) row, and
+ * reconcile the computed ledger total against the stored wallet balance.
+ * `transactions` must be ordered oldest-first.
+ */
+export function buildWalletLedger(
+  transactions: LedgerSourceTransaction[],
+  storedBalance: number
+): { rows: LedgerRow[]; summary: LedgerSummary } {
+  let runningBalance = 0;
+  const rows: LedgerRow[] = transactions.map((tx) => {
+    const direction = getDirection(tx);
+    const settled = direction !== null && isSettled(tx.status);
+    if (settled && direction) {
+      runningBalance += direction === 'credit' ? tx.amount : -tx.amount;
+    }
+    return {
+      id: tx.id,
+      type: tx.type,
+      status: tx.status,
+      channel: getChannel(tx),
+      direction,
+      settled,
+      amount: tx.amount,
+      description: tx.description,
+      transactionDesc: tx.transactionDesc,
+      reference: tx.reference,
+      receiptNumber: tx.receiptNumber,
+      mpesaReceiptNumber: tx.mpesaReceiptNumber,
+      mpesaTransactionId: tx.mpesaTransactionId,
+      transactionType: tx.transactionType,
+      accountReference: tx.accountReference,
+      phoneNumber: tx.phoneNumber,
+      remarks: tx.remarks,
+      recipientName: tx.recipientName,
+      createdAt: tx.createdAt,
+      balanceAfter: runningBalance,
+    };
+  });
+
+  const settledRows = rows.filter((tx) => tx.settled);
+  const totalCredit = settledRows
+    .filter((tx) => tx.direction === 'credit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const totalDebit = settledRows
+    .filter((tx) => tx.direction === 'debit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const byChannel: Record<string, ChannelTotals> = {
+    mpesa: { credit: 0, debit: 0, creditCount: 0, debitCount: 0 },
+    bank: { credit: 0, debit: 0, creditCount: 0, debitCount: 0 },
+    internal: { credit: 0, debit: 0, creditCount: 0, debitCount: 0 },
+  };
+  for (const tx of settledRows) {
+    const bucket = byChannel[tx.channel];
+    if (tx.direction === 'credit') {
+      bucket.credit += tx.amount;
+      bucket.creditCount += 1;
+    } else {
+      bucket.debit += tx.amount;
+      bucket.debitCount += 1;
+    }
+  }
+
+  const statusCounts: Record<string, number> = {};
+  for (const tx of rows) {
+    statusCounts[tx.status] = (statusCounts[tx.status] ?? 0) + 1;
+  }
+
+  const computedBalance = totalCredit - totalDebit;
+  const variance = storedBalance - computedBalance;
+
+  return {
+    rows,
+    summary: {
+      storedBalance,
+      totalCredit,
+      totalDebit,
+      computedBalance,
+      variance,
+      balanced: Math.abs(variance) < BALANCE_TOLERANCE,
+      transactionCount: rows.length,
+      settledCount: settledRows.length,
+      pendingCount: rows.length - settledRows.length,
+      byChannel,
+      statusCounts,
+    },
+  };
+}
+
+export function sumsByWallet(
+  rows: Array<{ walletId: string; _sum: { amount: number | null } }>
+): Map<string, number> {
+  return new Map(rows.map((row) => [row.walletId, row._sum.amount ?? 0]));
+}
+
+export interface WalletReconciliation {
+  id: string;
+  name: string;
+  description: string | null;
+  balance: number;
+  currency: string;
+  status: string;
+  contractor: { id: string; companyName: string } | null;
+  transactionCount: number;
+  totalCredit: number;
+  totalDebit: number;
+  computedBalance: number;
+  variance: number;
+  balanced: boolean;
+}
+
+export function formatWalletReconciliation(
+  wallet: {
+    id: string;
+    name: string;
+    description: string | null;
+    balance: number;
+    currency: string;
+    status: string;
+    contractor: { id: string; companyName: string } | null;
+    transactionCount: number;
+  },
+  totalCredit: number,
+  totalDebit: number
+): WalletReconciliation {
+  const computedBalance = totalCredit - totalDebit;
+  const variance = wallet.balance - computedBalance;
+  return {
+    ...wallet,
+    totalCredit,
+    totalDebit,
+    computedBalance,
+    variance,
+    balanced: Math.abs(variance) < BALANCE_TOLERANCE,
+  };
+}

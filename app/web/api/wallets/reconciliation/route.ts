@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireSuperadmin } from '@/lib/require-permission';
+import { requirePermission } from '@/lib/require-permission';
 import {
   CREDIT_TYPES,
   DEBIT_TYPES,
@@ -9,15 +9,21 @@ import {
   formatWalletReconciliation,
 } from '@/lib/transaction-ledger';
 
-// All wallets (contractor and system) with each wallet's ledger reconciled
-// against its stored balance, so superadmins can see at a glance which
-// wallets balance and which have a discrepancy.
+// The signed-in contractor's wallets with each wallet's ledger reconciled
+// against its stored balance (contractor-scoped mirror of the superadmin
+// wallets reconciliation endpoint).
 export async function GET(request: NextRequest) {
-  const adminCheck = await requireSuperadmin(request);
-  if (!adminCheck.authorized) return adminCheck.error;
+  const permCheck = await requirePermission(request, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
+    const contractorId = permCheck.contractorId;
+    if (!contractorId) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    }
+
     const [wallets, creditSums, debitSums] = await Promise.all([
       prisma.wallet.findMany({
+        where: { contractorId },
         orderBy: { createdAt: 'desc' },
         include: {
           contractor: { select: { id: true, companyName: true } },
@@ -26,12 +32,20 @@ export async function GET(request: NextRequest) {
       }),
       prisma.transaction.groupBy({
         by: ['walletId'],
-        where: { type: { in: CREDIT_TYPES }, status: { in: SETTLED_STATUSES } },
+        where: {
+          type: { in: CREDIT_TYPES },
+          status: { in: SETTLED_STATUSES },
+          wallet: { contractorId },
+        },
         _sum: { amount: true },
       }),
       prisma.transaction.groupBy({
         by: ['walletId'],
-        where: { type: { in: DEBIT_TYPES }, status: { in: SETTLED_STATUSES } },
+        where: {
+          type: { in: DEBIT_TYPES },
+          status: { in: SETTLED_STATUSES },
+          wallet: { contractorId },
+        },
         _sum: { amount: true },
       }),
     ]);
@@ -67,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Fetch superadmin wallets error:', error);
+    console.error('Fetch contractor wallet reconciliation error:', error);
     return NextResponse.json({ error: 'Failed to fetch wallets' }, { status: 500 });
   }
 }

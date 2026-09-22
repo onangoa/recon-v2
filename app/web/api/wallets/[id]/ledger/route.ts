@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireSuperadmin } from '@/lib/require-permission';
+import { requirePermission } from '@/lib/require-permission';
 import { buildWalletLedger } from '@/lib/transaction-ledger';
 
-// Full per-wallet ledger for the superadmin wallet trace view: every bank,
-// M-Pesa and internal transaction in chronological order with a running
-// balance, plus a reconciliation of the ledger against the stored balance.
+// Full per-wallet ledger for the contractor wallet trace view (scoped to the
+// signed-in contractor's wallets): every bank, M-Pesa and internal
+// transaction in chronological order with a running balance, plus a
+// reconciliation of the ledger against the stored balance.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminCheck = await requireSuperadmin(request);
-  if (!adminCheck.authorized) return adminCheck.error;
+  const permCheck = await requirePermission(request, 'wallets:read');
+  if (!permCheck.authorized) return permCheck.error;
   try {
-    const { id } = await params;
+    const contractorId = permCheck.contractorId;
+    if (!contractorId) {
+      return NextResponse.json({ error: 'Contractor not found' }, { status: 404 });
+    }
 
-    const wallet = await prisma.wallet.findUnique({
-      where: { id },
+    const resolvedParams = await params;
+    const wallet = await prisma.wallet.findFirst({
+      where: { id: resolvedParams.id, contractorId },
       include: { contractor: { select: { id: true, companyName: true } } },
     });
     if (!wallet) {
@@ -24,7 +29,7 @@ export async function GET(
     }
 
     const transactions = await prisma.transaction.findMany({
-      where: { walletId: id },
+      where: { walletId: wallet.id },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -46,7 +51,7 @@ export async function GET(
       summary,
     });
   } catch (error) {
-    console.error('Fetch wallet ledger error:', error);
+    console.error('Fetch contractor wallet ledger error:', error);
     return NextResponse.json({ error: 'Failed to fetch wallet transactions' }, { status: 500 });
   }
 }
