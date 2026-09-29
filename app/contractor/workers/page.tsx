@@ -170,7 +170,7 @@ type CategoryViewMode = 'total' | 'calendar';
 export default function WorkersPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { sites: contractorSites } = useSite();
+  const { sites: contractorSites, activeSite, isLoading: sitesLoading } = useSite();
 
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -183,9 +183,12 @@ export default function WorkersPage() {
   const limit = 10;
 
   // ---- Filter & stats ----
+  // site filter: 'current' = the switched (active) site + workers without
+  // any site — the default per-site view; '' = all sites; 'unassigned' =
+  // only workers without a site; otherwise a specific site id.
   const [designations, setDesignations] = useState<DesignationOption[]>([]);
   const [filterDesignationId, setFilterDesignationId] = useState<string>('');
-  const [filterSiteId, setFilterSiteId] = useState<string>('');
+  const [filterSiteId, setFilterSiteId] = useState<string>('current');
   const [byDesignation, setByDesignation] = useState<ByDesignationStat[]>([]);
   const [totalActive, setTotalActive] = useState(0);
 
@@ -213,6 +216,7 @@ export default function WorkersPage() {
   const [selectedDeviceSn, setSelectedDeviceSn] = useState<string>('');
 
   const fetchWorkers = async () => {
+    if (sitesLoading) return; // wait until the active site is resolved
     setIsLoading(true);
     setError(null);
     try {
@@ -220,7 +224,14 @@ export default function WorkersPage() {
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (filterDesignationId === 'unassigned') url += `&unassigned=1`;
       else if (filterDesignationId) url += `&designationId=${filterDesignationId}`;
-      if (filterSiteId) url += `&siteId=${filterSiteId}`;
+      if (filterSiteId === 'current') {
+        // Default view: the switched site's workers plus unassigned ones.
+        if (activeSite) url += `&siteId=${activeSite.id}&includeUnassigned=1`;
+      } else if (filterSiteId === 'unassigned') {
+        url += `&siteId=unassigned`;
+      } else if (filterSiteId) {
+        url += `&siteId=${filterSiteId}`;
+      }
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch workers');
@@ -301,7 +312,8 @@ export default function WorkersPage() {
   useEffect(() => {
     if (currentPage !== 1) setCurrentPage(1);
     else fetchWorkers();
-  }, [filterDesignationId, filterSiteId]);
+    // activeSite?.id: re-apply the 'current' view when the site is switched.
+  }, [filterDesignationId, filterSiteId, activeSite?.id]);
 
   useEffect(() => {
     fetchWorkers();
@@ -702,8 +714,11 @@ export default function WorkersPage() {
                   disabled={isLoading}
                   className="h-10 pl-10 pr-8 rounded-md bg-background border-none text-sm shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 appearance-none"
                 >
+                  <option value="current">
+                    {activeSite ? `${activeSite.name} + unassigned` : 'This site + unassigned'}
+                  </option>
                   <option value="">All sites</option>
-                  <option value="unassigned">Unassigned</option>
+                  <option value="unassigned">Unassigned only</option>
                   {contractorSites.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
@@ -711,11 +726,11 @@ export default function WorkersPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(filterDesignationId || filterSiteId || searchQuery) && (
+              {(filterDesignationId || filterSiteId !== 'current' || searchQuery) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setFilterDesignationId(''); setFilterSiteId(''); setSearchQuery(''); }}
+                  onClick={() => { setFilterDesignationId(''); setFilterSiteId('current'); setSearchQuery(''); }}
                   disabled={isLoading}
                   className="gap-1 text-muted-foreground"
                 >

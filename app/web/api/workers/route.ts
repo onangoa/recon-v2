@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const designationId = searchParams.get('designationId');
     const unassigned = searchParams.get('unassigned');
     const siteId = searchParams.get('siteId');
+    const includeUnassigned = searchParams.get('includeUnassigned');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
@@ -51,14 +52,22 @@ export async function GET(request: NextRequest) {
     }
     if (siteId) {
       // `siteId=unassigned` narrows to workers not yet enrolled to a site.
+      // `includeUnassigned=1` widens a site filter to that site's workers
+      // plus workers without any site (the per-site list default view).
+      // Composed as an AND clause so it combines with the search OR above.
       if (siteId === 'unassigned') {
-        baseWhere.siteId = null;
+        baseWhere.AND = [...(baseWhere.AND || []), { siteId: null }];
       } else {
         const owns = await verifySiteOwnership(contractor.id, siteId);
         if (!owns) {
           return NextResponse.json({ error: 'Site not found' }, { status: 404 });
         }
-        baseWhere.siteId = siteId;
+        baseWhere.AND = [
+          ...(baseWhere.AND || []),
+          includeUnassigned === '1' || includeUnassigned === 'true'
+            ? { OR: [{ siteId }, { siteId: null }] }
+            : { siteId },
+        ];
       }
     }
 
