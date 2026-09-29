@@ -103,12 +103,12 @@ export async function DELETE(
       include: {
         _count: {
           select: {
-            materials: true,
             tasks: true,
             equipment: true,
             visitors: true,
             documents: true,
             metrics: true,
+            workers: true,
           }
         }
       }
@@ -118,17 +118,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Site not found' }, { status: 404 });
     }
 
-    const totalRelated = 
-      site._count.materials + 
-      site._count.tasks + 
-      site._count.equipment + 
-      site._count.visitors + 
-      site._count.documents + 
-      site._count.metrics;
+    const totalRelated =
+      site._count.tasks +
+      site._count.equipment +
+      site._count.visitors +
+      site._count.documents +
+      site._count.metrics +
+      site._count.workers;
 
     if (totalRelated > 0) {
-      return NextResponse.json({ 
-        error: 'Cannot delete site with related records. Please remove all materials, tasks, and other associated data first.' 
+      return NextResponse.json({
+        error: 'Cannot delete site with related records. Please remove all tasks, equipment, workers enrolled to this site, and other associated data first.'
       }, { status: 400 });
     }
 

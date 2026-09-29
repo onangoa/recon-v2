@@ -122,6 +122,10 @@ model BiometricDevice {
 model Worker {
   id                    String          @id @default(cuid())
   contractorId          String
+  /// Site the worker is enrolled to. New workers default to the active
+  /// site on the create form; existing rows are backfilled by
+  /// scripts/assign-workers-to-sites.ts (attendance-based).
+  siteId                String?
   name                  String
   email                 String?
   phone                 String?
@@ -144,11 +148,13 @@ model Worker {
   salarySlips           SalarySlip[]
   workerShifts          WorkerShift[]
   contractor            Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  site                  Site?           @relation(fields: [siteId], references: [id], onDelete: SetNull)
   shift                 Shift?          @relation(fields: [shiftId], references: [id])
   designation           Designation?    @relation(fields: [designationId], references: [id])
 
   @@unique([contractorId, nationalId])
   @@index([contractorId])
+  @@index([siteId])
   @@index([designationId])
   @@index([shiftId])
 }
@@ -443,6 +449,7 @@ model Site {
   visitorEntities Visitor[]
   visitors        VisitorLog[]
   biometricDevices BiometricDevice[]
+  workers         Worker[]
 
   @@index([projectId])
   @@index([contractorId])

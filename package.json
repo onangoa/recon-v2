@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "prisma:seed": "prisma db seed",
     "devices:assign-sites": "tsx scripts/assign-devices-to-sites.ts",
+    "workers:assign-sites": "tsx scripts/assign-workers-to-sites.ts",
     "shifts:backfill": "tsx scripts/backfill-worker-shifts.ts",
     "test:bank": "tsx scripts/test-bank-api.ts",
     "test:bank:live": "tsx scripts/test-bank-api.ts --live",

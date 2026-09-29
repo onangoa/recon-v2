@@ -13,6 +13,10 @@ import {
   withShiftsArray,
   workerShiftInclude,
 } from '@/lib/worker-shifts';
+import { verifySiteOwnership } from '@/lib/contractor-isolation';
+
+/** Include clause for the worker's enrolled site (flat list responses). */
+const siteInclude = { site: { select: { id: true, name: true } } };
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
     const [workers, total] = await Promise.all([
       prisma.worker.findMany({
         where,
-        include: { designation: true, shift: true, ...workerShiftInclude },
+        include: { designation: true, shift: true, ...siteInclude, ...workerShiftInclude },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -89,6 +93,26 @@ export async function POST(request: NextRequest) {
       return mobileError('Invalid shift ID', 400);
     }
 
+    // Workers are enrolled per site: an explicit siteId (or the request's
+    // site-id header) must belong to the contractor; otherwise the
+    // contractor's primary site (or first site) is used.
+    let siteId: string | null = body.siteId
+      ? String(body.siteId)
+      : permCheck.siteId || null;
+    if (siteId) {
+      const owns = await verifySiteOwnership(contractorId, siteId);
+      if (!owns) {
+        return mobileError('Invalid site ID', 400);
+      }
+    } else {
+      const fallbackSite = await prisma.site.findFirst({
+        where: { contractorId },
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+        select: { id: true },
+      });
+      siteId = fallbackSite?.id ?? null;
+    }
+
     // National ID must be unique within the contractor's account. Checked
     // up front so the user gets a named, actionable message instead of a
     // raw unique-constraint error.
@@ -114,6 +138,7 @@ export async function POST(request: NextRequest) {
         nationalId,
         enrollId: body.enrollId || null,
         designationId: designationId,
+        siteId,
         shiftId: ownedShiftIds[0] || null,
         workerShifts: {
           create: ownedShiftIds.map((shiftId) => ({ shiftId })),
@@ -128,6 +153,7 @@ export async function POST(request: NextRequest) {
       include: {
         designation: true,
         shift: true,
+        ...siteInclude,
         ...workerShiftInclude,
       },
     });

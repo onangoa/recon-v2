@@ -13,6 +13,10 @@ import {
   withShiftsArray,
   workerShiftInclude,
 } from '@/lib/worker-shifts';
+import { verifySiteOwnership } from '@/lib/contractor-isolation';
+
+/** Include clause for the worker's enrolled site (flat list responses). */
+const siteInclude = { site: { select: { id: true, name: true } } };
 
 export async function GET(
   request: NextRequest,
@@ -28,6 +32,7 @@ export async function GET(
       include: {
         designation: true,
         shift: true,
+        ...siteInclude,
         ...workerShiftInclude,
       },
     });
@@ -85,6 +90,19 @@ export async function PUT(
       }
     }
 
+    // Site enrollment: `siteId` present (string) must belong to the
+    // contractor; an empty value unassigns; undefined leaves it unchanged.
+    let siteId: string | null | undefined;
+    if (body.siteId !== undefined) {
+      siteId = String(body.siteId).trim() || null;
+      if (siteId) {
+        const owns = await verifySiteOwnership(worker.contractorId, siteId);
+        if (!owns) {
+          return mobileError('Invalid site ID', 400);
+        }
+      }
+    }
+
     // National ID must stay unique within the contractor's account
     // (this worker itself excluded). undefined = leave unchanged.
     const nationalId =
@@ -117,6 +135,7 @@ export async function PUT(
         nationalId,
         enrollId: body.enrollId !== undefined ? body.enrollId : undefined,
         designationId,
+        siteId,
         shiftId: shiftIds ? (shiftIds[0] || null) : undefined,
         paymentMode: body.paymentMode,
         paymentPhone: body.paymentPhone !== undefined ? body.paymentPhone : undefined,
@@ -127,6 +146,7 @@ export async function PUT(
       include: {
         designation: true,
         shift: true,
+        ...siteInclude,
         ...workerShiftInclude,
       },
     });

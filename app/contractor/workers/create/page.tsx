@@ -196,6 +196,7 @@ export default function CreateWorkerPage() {
         body: JSON.stringify({
           ...formData,
           idDocumentUrl: idDocUrl,
+          siteId: activeSite?.id || '',
           contractorId: 'placeholder-id',
         }),
       });
@@ -369,7 +370,21 @@ export default function CreateWorkerPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 border-t pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 border-t pt-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Site (Enrollment)</label>
+              <input
+                type="text"
+                value={activeSite?.name || ''}
+                readOnly
+                disabled={isSubmitting}
+                placeholder="No active site"
+                className="w-full rounded-md border border-gray-300 bg-muted/50 px-4 py-2.5 text-sm text-gray-700"
+              />
+              <p className="mt-1 text-xs text-muted-foreground italic">
+                Workers are enrolled to the active site. Change the site in the sidebar; reassign later from Edit Worker.
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Job Designation *</label>
               <select

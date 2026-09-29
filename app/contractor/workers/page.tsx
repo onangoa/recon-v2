@@ -92,6 +92,7 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
+import { useSite } from '@/hooks/use-site';
 
 interface Worker {
   id: string;
@@ -101,6 +102,10 @@ interface Worker {
   nationalId: string | null;
   enrollId: string | null;
   status: string;
+  site: {
+    id: string;
+    name: string;
+  } | null;
   designation: {
     title: string;
   } | null;
@@ -165,12 +170,13 @@ type CategoryViewMode = 'total' | 'calendar';
 export default function WorkersPage() {
   const router = useRouter();
   const { toast } = useToast();
-  
+  const { sites: contractorSites } = useSite();
+
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -179,6 +185,7 @@ export default function WorkersPage() {
   // ---- Filter & stats ----
   const [designations, setDesignations] = useState<DesignationOption[]>([]);
   const [filterDesignationId, setFilterDesignationId] = useState<string>('');
+  const [filterSiteId, setFilterSiteId] = useState<string>('');
   const [byDesignation, setByDesignation] = useState<ByDesignationStat[]>([]);
   const [totalActive, setTotalActive] = useState(0);
 
@@ -213,6 +220,7 @@ export default function WorkersPage() {
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (filterDesignationId === 'unassigned') url += `&unassigned=1`;
       else if (filterDesignationId) url += `&designationId=${filterDesignationId}`;
+      if (filterSiteId) url += `&siteId=${filterSiteId}`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch workers');
@@ -293,7 +301,7 @@ export default function WorkersPage() {
   useEffect(() => {
     if (currentPage !== 1) setCurrentPage(1);
     else fetchWorkers();
-  }, [filterDesignationId]);
+  }, [filterDesignationId, filterSiteId]);
 
   useEffect(() => {
     fetchWorkers();
@@ -686,13 +694,28 @@ export default function WorkersPage() {
                   ))}
                 </select>
               </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <select
+                  value={filterSiteId}
+                  onChange={(e) => setFilterSiteId(e.target.value)}
+                  disabled={isLoading}
+                  className="h-10 pl-10 pr-8 rounded-md bg-background border-none text-sm shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 appearance-none"
+                >
+                  <option value="">All sites</option>
+                  <option value="unassigned">Unassigned</option>
+                  {contractorSites.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2">
-              {(filterDesignationId || searchQuery) && (
+              {(filterDesignationId || filterSiteId || searchQuery) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setFilterDesignationId(''); setSearchQuery(''); }}
+                  onClick={() => { setFilterDesignationId(''); setFilterSiteId(''); setSearchQuery(''); }}
                   disabled={isLoading}
                   className="gap-1 text-muted-foreground"
                 >
@@ -740,6 +763,7 @@ export default function WorkersPage() {
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Worker</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Designation</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Site</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Shift</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">ID / Phone</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
@@ -764,6 +788,11 @@ export default function WorkersPage() {
                     <TableCell>
                       <Badge variant="outline" className="text-[10px] font-semibold">
                         {worker.designation?.title || 'Unassigned'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] font-semibold">
+                        {worker.site?.name || 'Unassigned'}
                       </Badge>
                     </TableCell>
                     <TableCell>

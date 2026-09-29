@@ -49,6 +49,12 @@ interface Device {
   online?: boolean;
 }
 
+interface SiteOption {
+  id: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
 export default function EditWorkerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
@@ -64,6 +70,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDeviceSn, setSelectedDeviceSn] = useState<string>('');
+  const [sites, setSites] = useState<SiteOption[]>([]);
 
   const onlineDevices = devices.filter((d) => d.isActive && d.online);
 
@@ -72,6 +79,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     email: '',
     phone: '',
     nationalId: '',
+    siteId: '',
     designationId: '',
     shiftIds: [] as string[],
     status: 'Active',
@@ -95,11 +103,12 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [workerRes, designRes, shiftRes, devRes] = await Promise.all([
+        const [workerRes, designRes, shiftRes, devRes, siteRes] = await Promise.all([
           fetch(`/web/api/workers/${id}`),
           fetch('/web/api/designations'),
           fetch(`/web/api/shifts?contractorId=${activeSite?.contractorId || ''}`),
           fetch('/web/api/biometric/devices?status=1'),
+          fetch('/web/api/sites'),
         ]);
 
         if (!workerRes.ok) throw new Error('Failed to fetch worker');
@@ -111,6 +120,13 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
         if (shiftRes.ok) {
           const shiftData = await shiftRes.json();
           shiftList = Array.isArray(shiftData) ? shiftData : (shiftData.shifts || []);
+        }
+        if (siteRes.ok) {
+          const siteData = await siteRes.json();
+          const siteList: SiteOption[] = Array.isArray(siteData)
+            ? siteData
+            : (siteData.sites || []);
+          setSites(siteList.map((s: any) => ({ id: s.id, name: s.name, isPrimary: s.isPrimary })));
         }
         if (devRes.ok) {
           const devData = await devRes.json();
@@ -132,6 +148,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
           email: worker.email || '',
           phone: worker.phone || '',
           nationalId: worker.nationalId || '',
+          siteId: worker.siteId || '',
           designationId: worker.designationId || '',
           shiftIds: assignedShiftIds,
           status: worker.status,
@@ -372,7 +389,7 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Email Address</label>
               <input
@@ -392,6 +409,23 @@ export default function EditWorkerPage({ params }: { params: Promise<{ id: strin
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Site (Enrollment)</label>
+              <select
+                value={formData.siteId}
+                onChange={(e) => setFormData({...formData, siteId: e.target.value})}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="">Unassigned</option>
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}{s.isPrimary ? ' (Primary)' : ''}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground italic">
+                The site this worker is enrolled to.
+              </p>
             </div>
           </div>
 

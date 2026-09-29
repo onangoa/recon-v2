@@ -10,6 +10,10 @@ import {
   withShiftsArray,
   workerShiftInclude,
 } from '@/lib/worker-shifts';
+import { verifySiteOwnership } from '@/lib/contractor-isolation';
+
+/** Include clause for the worker's enrolled site (flat list responses). */
+const siteInclude = { site: { select: { id: true, name: true } } };
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +29,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const designationId = searchParams.get('designationId');
     const unassigned = searchParams.get('unassigned');
+    const siteId = searchParams.get('siteId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
@@ -44,13 +49,25 @@ export async function GET(request: NextRequest) {
     if (unassigned === '1' || unassigned === 'true') {
       baseWhere.designationId = null;
     }
+    if (siteId) {
+      // `siteId=unassigned` narrows to workers not yet enrolled to a site.
+      if (siteId === 'unassigned') {
+        baseWhere.siteId = null;
+      } else {
+        const owns = await verifySiteOwnership(contractor.id, siteId);
+        if (!owns) {
+          return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+        }
+        baseWhere.siteId = siteId;
+      }
+    }
 
     const where = withContractorFilter({ where: baseWhere }, contractor.id).where;
 
     const [workers, total] = await Promise.all([
       prisma.worker.findMany({
         where,
-        include: { designation: true, shift: true, ...workerShiftInclude },
+        include: { designation: true, shift: true, ...siteInclude, ...workerShiftInclude },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' }
@@ -129,6 +146,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid shift ID' }, { status: 400 });
     }
 
+    // Workers are enrolled per site: an explicit siteId must belong to the
+    // contractor; when omitted the contractor's primary site (or first
+    // site) is used so every new worker lands on a site.
+    let siteId: string | null = body.siteId ? String(body.siteId) : null;
+    if (siteId) {
+      const owns = await verifySiteOwnership(contractorId, siteId);
+      if (!owns) {
+        return NextResponse.json({ error: 'Invalid site ID' }, { status: 400 });
+      }
+    } else {
+      const fallbackSite = await prisma.site.findFirst({
+        where: { contractorId },
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+        select: { id: true },
+      });
+      siteId = fallbackSite?.id ?? null;
+    }
+
     // National ID must be unique within the contractor's account. Checked
     // up front so the user gets a named, actionable message instead of a
     // raw unique-constraint error.
@@ -156,6 +191,7 @@ export async function POST(request: NextRequest) {
         nationalId,
         enrollId: body.enrollId || null,
         designationId: designationId,
+        siteId,
         shiftId: ownedShiftIds[0] || null,
         workerShifts: {
           create: ownedShiftIds.map((shiftId) => ({ shiftId })),
@@ -171,6 +207,7 @@ export async function POST(request: NextRequest) {
       include: {
         designation: true,
         shift: true,
+        ...siteInclude,
         ...workerShiftInclude,
       },
     });
