@@ -17,7 +17,8 @@ export type ActivityModule =
   | 'TEAM'
   | 'SETTINGS'
   | 'SHIFTS'
-  | 'ATTENDANCE';
+  | 'ATTENDANCE'
+  | 'REPORTS';
 
 interface LogActivityOptions {
   userId: string;

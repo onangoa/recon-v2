@@ -205,6 +205,12 @@ export default function ReportsPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" className="gap-2">
+            <Link href="/contractor/reports/daily">
+              <Calendar className="w-4 h-4" />
+              <span>Daily Site Report</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="gap-2">
             <Link href="/contractor/reports/transactions">
               <CreditCard className="w-4 h-4" />
               <span>Transactions Report</span>

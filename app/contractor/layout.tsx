@@ -33,7 +33,8 @@ import {
   ShieldCheck,
   Clock,
   Fingerprint,
-  Scale
+  Scale,
+  CalendarCheck
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -168,6 +169,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Shifts', href: '/contractor/shifts', icon: Clock, permission: 'shifts:read' },
     { label: 'Attendance', href: '/contractor/attendance', icon: Fingerprint, permission: 'attendance:read' },
     { label: 'Reports', href: '/contractor/reports', icon: BarChart3, permission: 'reports:read' },
+    { label: 'Daily Reports', href: '/contractor/reports/daily', icon: CalendarCheck, permission: 'reports:read' },
     { label: 'Settings', href: '/contractor/settings', icon: Settings, permission: 'settings:read' },
   ];
 
@@ -187,8 +189,8 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <Sidebar collapsible="icon" variant="inset" className="border-r border-border">
+    <div className="flex min-h-screen w-full bg-background print:block">
+      <Sidebar collapsible="icon" variant="inset" className="border-r border-border print:hidden">
         <SidebarHeader className="border-b border-border/50 pb-4">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -355,8 +357,8 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
+      <SidebarInset className="flex flex-col flex-1 overflow-hidden print:min-h-screen print:overflow-visible">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6 print:hidden">
           <div className="flex items-center gap-4 flex-1">
             <SidebarTrigger className="-ml-1 text-primary" />
             <div className="h-4 w-px bg-border mx-2"></div>
@@ -385,8 +387,8 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8 print:overflow-visible print:bg-white print:p-0">
+          <div className="mx-auto max-w-7xl print:max-w-none">
             {children}
           </div>
         </main>

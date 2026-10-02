@@ -161,6 +161,15 @@ body {
   @apply bg-background text-foreground;
 }
 
+/* Keep badge/status colors and borders when printing report documents. */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: white;
+  }
+}
+
 /* Documentation page styles */
 .docs-content {
   color: var(--foreground);

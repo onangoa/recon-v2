@@ -450,6 +450,7 @@ model Site {
   visitors        VisitorLog[]
   biometricDevices BiometricDevice[]
   workers         Worker[]
+  dailyReports    DailyReport[]
 
   @@index([projectId])
   @@index([contractorId])
@@ -957,4 +958,112 @@ model PlatformConfig {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// Daily Site Progress & Next-Day Planning Report - one per site per day.
+/// The structure follows the client's proposal template (see
+/// flutter/NEW PROPOSAL.docx): Section A (Today's Performance) is captured
+/// on DailyReportActivity, Section B (Next Day's Target) on
+/// DailyReportTarget, and the Materials section (deliveries received /
+/// materials required) on DailyReportDelivery / DailyReportMaterial.
+/// Visitors and safety incidents shown on the report are pulled live from
+/// the Visitor / SafetyIncident records for the day - not copied here.
+model DailyReport {
+  id         String   @id @default(cuid())
+  siteId     String
+  /// Calendar day the report covers (stored at midnight, site-local time).
+  reportDate DateTime
+  /// Draft | Submitted
+  status     String   @default("Draft")
+  /// Materials section attachments (JSON [{ url, name }] - upload evidence).
+  uploads    Json?
+  /// User id of the report author (snapshot for audit purposes).
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  site       Site                  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  activities DailyReportActivity[]
+  targets    DailyReportTarget[]
+  deliveries DailyReportDelivery[]
+  materials  DailyReportMaterial[]
+
+  @@unique([siteId, reportDate])
+  @@index([siteId])
+  @@index([reportDate])
+}
+
+/// Section A - Today's Performance activity (max 3 per report).
+model DailyReportActivity {
+  id         String  @id @default(cuid())
+  reportId   String
+  /// Slot number 1-3.
+  position   Int     @default(1)
+  /// Max 5 words; picked from the previous day's target titles on the form.
+  title      String
+  description String?
+  /// Planned workforce snapshot (JSON [{ category, count }]) auto-picked
+  /// from the previous day's targets - read-only on the form.
+  plannedWorkforce Json?
+  /// Actual labour assigned (JSON [{ category, count }]).
+  actualWorkforce   Json?
+  /// Auto-calculated server-side: sum(actual count x designation salary).
+  labourCost        Float   @default(0)
+  /// achieved | partially_achieved | not_achieved
+  verdict           String?
+  remarks           String?
+  /// Photo evidence (JSON [{ url, name }], max 2).
+  photos            Json?
+  report            DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+/// Section B - Next Day's Target activity (max 2 per report).
+model DailyReportTarget {
+  id          String  @id @default(cuid())
+  reportId    String
+  /// Slot number 1-2.
+  position    Int     @default(1)
+  /// Max 5 words.
+  title       String
+  description String?
+  /// Target workforce (JSON [{ category, count }]).
+  workforce   Json?
+  remarks     String?
+  /// Image/document uploads (JSON [{ url, name }], max 2).
+  uploads     Json?
+  report      DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+/// Materials section - deliveries line items (editable table on the form).
+model DailyReportDelivery {
+  id       String  @id @default(cuid())
+  reportId String
+  /// Row order within the editable table.
+  position Int     @default(1)
+  item     String
+  quantity Float   @default(0)
+  unit     String?
+  supplier String?
+  notes    String?
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+/// Materials section - materials required line items (editable table).
+model DailyReportMaterial {
+  id       String  @id @default(cuid())
+  reportId String
+  /// Row order within the editable table.
+  position Int     @default(1)
+  item     String
+  quantity Float   @default(0)
+  unit     String?
+  notes    String?
+  report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
