@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { DAILY_REPORT_FULL_INCLUDE } from '@/lib/daily-report-data';
 
 // ---------------------------------------------------------------------------
 // Single Daily Site Progress & Next-Day Planning Report API
@@ -43,21 +44,6 @@ function normalizeFiles(value: unknown, max: number): FileEntry[] {
     .map((e) => ({ url: e.url, name: typeof e.name === 'string' ? e.name : undefined }));
 }
 
-const FULL_INCLUDE = {
-  activities: { orderBy: { position: 'asc' as const } },
-  targets: { orderBy: { position: 'asc' as const } },
-  deliveries: { orderBy: { position: 'asc' as const } },
-  materials: { orderBy: { position: 'asc' as const } },
-  site: {
-    select: {
-      id: true,
-      name: true,
-      location: true,
-      contractor: { select: { companyName: true, logo: true } },
-    },
-  },
-};
-
 async function getOwnReport(contractorId: string, id: string) {
   const report = await prisma.dailyReport.findUnique({
     where: { id },
@@ -86,7 +72,7 @@ export async function GET(
     const dayEnd = endOfDay(report.reportDate);
     const [fullReport, designations, attendance, visitors, incidents, deliveries, prevReport] =
       await Promise.all([
-        prisma.dailyReport.findUnique({ where: { id }, include: FULL_INCLUDE }),
+        prisma.dailyReport.findUnique({ where: { id }, include: DAILY_REPORT_FULL_INCLUDE }),
         prisma.designation.findMany({
           where: { contractorId, isActive: true },
           orderBy: { title: 'asc' },
@@ -278,7 +264,7 @@ export async function PUT(
         deliveries: { deleteMany: {}, create: deliveryRows },
         materials: { deleteMany: {}, create: materialRows },
       },
-      include: FULL_INCLUDE,
+      include: DAILY_REPORT_FULL_INCLUDE,
     });
 
     await ActivityLogger.log({

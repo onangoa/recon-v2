@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
-  Printer,
+  Download,
   Loader2,
   AlertCircle,
   Users,
@@ -17,9 +17,11 @@ import { differenceInCalendarDays, format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useSite } from '@/hooks/use-site';
 import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/toast-utils';
 import { DailyReportDocument } from '@/components/daily-report-document';
 import {
+  downloadDailyReportsPdf,
   formatDayLabel,
   formatKes,
   parseISODate,
@@ -30,11 +32,13 @@ import {
 function PrintToolbar({
   from,
   to,
-  onPrint,
+  isExporting,
+  onExport,
 }: {
   from: string;
   to: string;
-  onPrint: () => void;
+  isExporting: boolean;
+  onExport: () => void;
 }) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
@@ -46,7 +50,7 @@ function PrintToolbar({
           </Link>
         </Button>
         <p className="text-sm text-muted-foreground italic">
-          Printing{' '}
+          Previewing{' '}
           <span className="font-bold not-italic text-foreground">
             {formatDayLabel(from)}
           </span>
@@ -56,9 +60,17 @@ function PrintToolbar({
           </span>
         </p>
       </div>
-      <Button onClick={onPrint} className="gap-2 bg-primary hover:bg-primary/90 text-white">
-        <Printer className="w-4 h-4" />
-        <span>Print</span>
+      <Button
+        onClick={onExport}
+        disabled={isExporting}
+        className="gap-2 bg-primary hover:bg-primary/90 text-white"
+      >
+        {isExporting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Download className="w-4 h-4" />
+        )}
+        <span>Export PDF</span>
       </Button>
     </div>
   );
@@ -90,14 +102,14 @@ function DailyReportPrintView() {
   const searchParams = useSearchParams();
   const { activeSite } = useSite();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [reports, setReports] = useState<DailyReportFull[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const autoPrintedRef = useRef(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const siteId = searchParams.get('siteId') || activeSite?.id || '';
   const from = searchParams.get('from') || toDateKey(new Date());
   const to = searchParams.get('to') || from;
-  const autoPrint = searchParams.get('autoPrint') === '1';
 
   useEffect(() => {
     if (!siteId) return;
@@ -109,17 +121,29 @@ function DailyReportPrintView() {
         setReports(json.reports || []);
       })
       .catch((err: any) => {
-        setError(getErrorMessage(err, 'Unable to load the reports for printing.'));
+        setError(getErrorMessage(err, 'Unable to load the reports for preview.'));
       });
   }, [siteId, from, to]);
 
-  useEffect(() => {
-    if (autoPrint && reports && !autoPrintedRef.current) {
-      autoPrintedRef.current = true;
-      const timer = setTimeout(() => window.print(), 500);
-      return () => clearTimeout(timer);
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      await downloadDailyReportsPdf({ siteId, from, to });
+      toast({
+        title: 'PDF exported',
+        description: 'The daily report PDF has been downloaded.',
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Export failed',
+        description: getErrorMessage(err, 'Could not export the PDF. Please try again.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
     }
-  }, [autoPrint, reports]);
+  };
 
   const summary = useMemo(() => {
     if (!reports) return null;
@@ -159,7 +183,7 @@ function DailyReportPrintView() {
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground italic">
-          Preparing reports for printing...
+          Preparing reports for preview...
         </p>
       </div>
     );
@@ -168,7 +192,7 @@ function DailyReportPrintView() {
   if (reports.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-        <Printer className="h-8 w-8 opacity-20" />
+        <Download className="h-8 w-8 opacity-20" />
         <p className="text-sm italic">
           No daily reports found between {formatDayLabel(from)} and {formatDayLabel(to)}.
         </p>
@@ -186,7 +210,12 @@ function DailyReportPrintView() {
 
   return (
     <div className="space-y-6">
-      <PrintToolbar from={from} to={to} onPrint={() => window.print()} />
+      <PrintToolbar
+        from={from}
+        to={to}
+        isExporting={isExporting}
+        onExport={handleExportPdf}
+      />
 
       <div className="mx-auto w-full max-w-[900px] print:max-w-none">
         {/* ---------------- Cover page ---------------- */}
@@ -304,7 +333,7 @@ export default function DailyReportPrintPage() {
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground italic">
-            Preparing reports for printing...
+            Preparing reports for preview...
           </p>
         </div>
       }

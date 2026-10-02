@@ -6,7 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Printer,
+  Download,
   CalendarDays,
   CalendarRange,
   Loader2,
@@ -55,8 +55,10 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSite } from '@/hooks/use-site';
+import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/toast-utils';
 import {
+  downloadDailyReportsPdf,
   formatKes,
   toDateKey,
   VERDICT_BADGE_CLASSES,
@@ -74,12 +76,14 @@ interface ReportSummary {
 
 export default function DailyReportsPage() {
   const { activeSite } = useSite();
+  const { toast } = useToast();
   const [tab, setTab] = useState('daily');
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [monthAnchor, setMonthAnchor] = useState(() => startOfMonth(new Date()));
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   const weekStart = weekAnchor;
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
@@ -122,13 +126,29 @@ export default function DailyReportsPage() {
     return map;
   }, [reports]);
 
-  const printHref = (from: Date, to: Date) => {
-    const params = new URLSearchParams({
-      siteId: activeSite?.id || '',
-      from: toDateKey(from),
-      to: toDateKey(to),
-    });
-    return `/contractor/reports/daily/print?${params.toString()}`;
+  const exportPdf = async (key: string, from: Date, to: Date) => {
+    if (!activeSite || exporting) return;
+    setExporting(key);
+    try {
+      await downloadDailyReportsPdf({
+        siteId: activeSite.id,
+        from: toDateKey(from),
+        to: toDateKey(to),
+      });
+      toast({
+        title: 'PDF exported',
+        description: 'The daily report PDF has been downloaded.',
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Export failed',
+        description: getErrorMessage(err, 'Could not export the PDF. Please try again.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(null);
+    }
   };
 
   const today = new Date();
@@ -189,19 +209,33 @@ export default function DailyReportsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {tab === 'daily' && weekReportCount > 0 && (
-            <Button asChild variant="outline" className="gap-2">
-              <Link href={printHref(weekStart, weekEnd)}>
-                <Printer className="w-4 h-4" />
-                <span>Print Merged Week</span>
-              </Link>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={exporting !== null}
+              onClick={() => exportPdf(`week-${toDateKey(weekStart)}-${toDateKey(weekEnd)}`, weekStart, weekEnd)}
+            >
+              {exporting?.startsWith('week-') ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>Export Week PDF</span>
             </Button>
           )}
           {tab === 'weekly' && monthReportCount > 0 && (
-            <Button asChild variant="outline" className="gap-2">
-              <Link href={printHref(monthStart, monthEnd)}>
-                <Printer className="w-4 h-4" />
-                <span>Print Merged Weekly Reports</span>
-              </Link>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={exporting !== null}
+              onClick={() => exportPdf(`month-${toDateKey(monthStart)}-${toDateKey(monthEnd)}`, monthStart, monthEnd)}
+            >
+              {exporting?.startsWith('month-') ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>Export Merged Weekly PDF</span>
             </Button>
           )}
           <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
@@ -401,13 +435,21 @@ export default function DailyReportsPage() {
                                     </span>
                                   </Link>
                                 </Button>
-                                <Button asChild variant="ghost" size="sm" className="gap-1 text-primary">
-                                  <Link href={printHref(day, day)}>
-                                    <Printer className="w-4 h-4" />
-                                    <span className="text-xs font-bold hidden sm:inline">
-                                      Print
-                                    </span>
-                                  </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="gap-1 text-primary"
+                                  disabled={exporting !== null}
+                                  onClick={() => exportPdf(`day-${key}`, day, day)}
+                                >
+                                  {exporting === `day-${key}` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Download className="w-4 h-4" />
+                                  )}
+                                  <span className="text-xs font-bold hidden sm:inline">
+                                    PDF
+                                  </span>
                                 </Button>
                               </div>
                             ) : isToday ? (
@@ -481,8 +523,8 @@ export default function DailyReportsPage() {
                   Weekly Reports
                 </CardTitle>
                 <CardDescription className="text-sm italic">
-                  Each week merges its daily reports. Print one week, or all weeks of{' '}
-                  {format(monthStart, 'MMMM yyyy')} merged together.
+                  Each week merges its daily reports. Export one week, or all
+                  weeks of {format(monthStart, 'MMMM yyyy')} merged into one PDF.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -590,15 +632,30 @@ export default function DailyReportsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {weekReports.length > 0 ? (
-                              <Button asChild variant="ghost" size="sm" className="gap-1 text-primary">
-                                <Link href={printHref(week.start, week.end)}>
-                                  <Printer className="w-4 h-4" />
-                                  <span className="text-xs font-bold">Print Week</span>
-                                </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1 text-primary"
+                                disabled={exporting !== null}
+                                onClick={() =>
+                                  exportPdf(
+                                    `week-${toDateKey(week.start)}-${toDateKey(week.end)}`,
+                                    week.start,
+                                    week.end
+                                  )
+                                }
+                              >
+                                {exporting ===
+                                `week-${toDateKey(week.start)}-${toDateKey(week.end)}` ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Download className="w-4 h-4" />
+                                )}
+                                <span className="text-xs font-bold">Export Week PDF</span>
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground/50 italic">
-                                Nothing to print
+                                Nothing to export
                               </span>
                             )}
                           </TableCell>

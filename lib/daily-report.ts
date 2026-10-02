@@ -205,3 +205,36 @@ export function computeLabourCost(
     total: lines.reduce((sum, line) => sum + line.cost, 0),
   };
 }
+
+/**
+ * Download the PDF export of one day's report or a merged range (a week or
+ * several weeks of daily reports) as a file.
+ */
+export async function downloadDailyReportsPdf(params: {
+  siteId: string;
+  from: string;
+  to: string;
+}) {
+  const search = new URLSearchParams({
+    siteId: params.siteId,
+    from: params.from,
+    to: params.to,
+  });
+  const res = await fetch(`/web/api/daily-reports/pdf?${search.toString()}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || 'Failed to export PDF');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download =
+    params.from === params.to
+      ? `Daily-Report-${params.from}.pdf`
+      : `Daily-Reports-${params.from}_to_${params.to}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

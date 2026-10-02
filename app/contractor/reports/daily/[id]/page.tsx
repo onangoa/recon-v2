@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Pencil,
   Printer,
+  Download,
   Trash2,
   Loader2,
   AlertCircle,
@@ -34,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/toast-utils';
 import { DailyReportDocument } from '@/components/daily-report-document';
 import {
+  downloadDailyReportsPdf,
   formatDayLabel,
   toDateKey,
   type DailyReportFull,
@@ -51,6 +53,7 @@ export default function DailyReportDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -123,6 +126,30 @@ export default function DailyReportDetailPage() {
   const reportDay = toDateKey(new Date(report.reportDate));
   const printHref = `/contractor/reports/daily/print?siteId=${report.siteId}&from=${reportDay}&to=${reportDay}`;
 
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      await downloadDailyReportsPdf({
+        siteId: report.siteId,
+        from: reportDay,
+        to: reportDay,
+      });
+      toast({
+        title: 'PDF exported',
+        description: 'The daily report PDF has been downloaded.',
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Export failed',
+        description: getErrorMessage(err, 'Could not export the PDF. Please try again.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -167,8 +194,21 @@ export default function DailyReportDetailPage() {
           <Button asChild variant="outline" className="gap-2">
             <Link href={printHref}>
               <Printer className="w-4 h-4" />
-              <span>Print</span>
+              <span>Preview</span>
             </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={isExporting}
+            onClick={handleExportPdf}
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>Export PDF</span>
           </Button>
           <Button asChild variant="outline" className="gap-2">
             <Link href={`/contractor/reports/daily/${report.id}/edit`}>
