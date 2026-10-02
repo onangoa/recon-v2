@@ -992,11 +992,12 @@ model DailyReport {
   @@index([reportDate])
 }
 
-/// Section A - Today's Performance activity (max 3 per report).
+/// Section A - Today's Performance activity (one row per activity; the
+/// form allows any number of activities per day).
 model DailyReportActivity {
   id         String  @id @default(cuid())
   reportId   String
-  /// Slot number 1-3.
+  /// Row order within the report.
   position   Int     @default(1)
   /// Max 5 words; picked from the previous day's target titles on the form.
   title      String
@@ -1018,11 +1019,12 @@ model DailyReportActivity {
   @@index([reportId])
 }
 
-/// Section B - Next Day's Target activity (max 2 per report).
+/// Section B - Next Day's Target activity (one row per planned activity;
+/// the form allows any number of targets per day).
 model DailyReportTarget {
   id          String  @id @default(cuid())
   reportId    String
-  /// Slot number 1-2.
+  /// Row order within the report.
   position    Int     @default(1)
   /// Max 5 words.
   title       String

@@ -120,36 +120,30 @@ export function DailyReportForm({
   const { toast } = useToast();
 
   const [activities, setActivities] = useState<ActivityState[]>(() => {
-    const base = [emptyActivity(), emptyActivity(), emptyActivity()];
-    existing?.activities?.forEach((activity, index) => {
-      if (index < 3 && activity.title) {
-        base[index] = {
-          title: activity.title,
-          description: activity.description || '',
-          actual: (activity.actualWorkforce || []) as WorkforceEntry[],
-          verdict: activity.verdict || '',
-          remarks: activity.remarks || '',
-          photos: (activity.photos || []) as FileEntry[],
-        };
-      }
-    });
-    return base;
+    const existingActivities = (existing?.activities || [])
+      .filter((activity) => activity.title)
+      .map((activity) => ({
+        title: activity.title,
+        description: activity.description || '',
+        actual: (activity.actualWorkforce || []) as WorkforceEntry[],
+        verdict: activity.verdict || '',
+        remarks: activity.remarks || '',
+        photos: (activity.photos || []) as FileEntry[],
+      }));
+    return existingActivities.length > 0 ? existingActivities : [emptyActivity()];
   });
 
   const [targets, setTargets] = useState<TargetState[]>(() => {
-    const base = [emptyTarget(), emptyTarget()];
-    existing?.targets?.forEach((target, index) => {
-      if (index < 2 && target.title) {
-        base[index] = {
-          title: target.title,
-          description: target.description || '',
-          workforce: (target.workforce || []) as WorkforceEntry[],
-          remarks: target.remarks || '',
-          uploads: (target.uploads || []) as FileEntry[],
-        };
-      }
-    });
-    return base;
+    const existingTargets = (existing?.targets || [])
+      .filter((target) => target.title)
+      .map((target) => ({
+        title: target.title,
+        description: target.description || '',
+        workforce: (target.workforce || []) as WorkforceEntry[],
+        remarks: target.remarks || '',
+        uploads: (target.uploads || []) as FileEntry[],
+      }));
+    return existingTargets.length > 0 ? existingTargets : [emptyTarget()];
   });
 
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>(() =>
@@ -237,10 +231,26 @@ export function DailyReportForm({
     );
   };
 
+  const removeActivity = (index: number) => {
+    setActivities((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addActivity = () => {
+    setActivities((prev) => [...prev, emptyActivity()]);
+  };
+
   const setTarget = (index: number, patch: Partial<TargetState>) => {
     setTargets((prev) =>
       prev.map((target, i) => (i === index ? { ...target, ...patch } : target))
     );
+  };
+
+  const removeTarget = (index: number) => {
+    setTargets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addTarget = () => {
+    setTargets((prev) => [...prev, emptyTarget()]);
   };
 
   const save = async (status: 'Draft' | 'Submitted') => {
@@ -574,18 +584,30 @@ export function DailyReportForm({
             const planned = plannedForTitle(activity.title.trim());
             const cost = costTables[index];
             return (
-              <div
-                key={index}
-                className="rounded-xl border border-border bg-background overflow-hidden"
-              >
-                <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between">
-                  <p className="text-sm font-black uppercase tracking-wider text-primary">
-                    Activity {index + 1}
-                  </p>
-                  <span className="text-[10px] text-muted-foreground italic">
-                    Title max 5 words
-                  </span>
-                </div>
+                <div
+                  key={index}
+                  className="rounded-xl border border-border bg-background overflow-hidden"
+                >
+                  <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between gap-2">
+                    <p className="text-sm font-black uppercase tracking-wider text-primary">
+                      Activity {index + 1}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-muted-foreground italic hidden sm:block">
+                        Title max 5 words
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeActivity(index)}
+                        title="Remove activity"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -772,12 +794,25 @@ export function DailyReportForm({
                       (photos) => setActivity(index, { photos })
                     )}
                   </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+              );
+            })}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 h-9"
+              onClick={addActivity}
+            >
+              <Plus className="h-4 w-4" /> Add Activity
+            </Button>
+            <p className="text-[10px] text-muted-foreground italic">
+              Add as many activities as were carried out today — there is no fixed limit.
+            </p>
+          </CardContent>
+        </Card>
 
       {/* ---------------- B. NEXT DAY'S TARGET ---------------- */}
       <Card className="border-none shadow-md overflow-hidden">
@@ -793,15 +828,25 @@ export function DailyReportForm({
         </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6">
           {targets.map((target, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-border bg-background overflow-hidden"
-            >
-              <div className="px-4 py-3 bg-muted/30 border-b border-border">
-                <p className="text-sm font-black uppercase tracking-wider text-primary">
-                  Activity {index + 1}
-                </p>
-              </div>
+              <div
+                key={index}
+                className="rounded-xl border border-border bg-background overflow-hidden"
+              >
+                <div className="px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between gap-2">
+                  <p className="text-sm font-black uppercase tracking-wider text-primary">
+                    Activity {index + 1}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeTarget(index)}
+                    title="Remove target"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -864,6 +909,19 @@ export function DailyReportForm({
               </div>
             </div>
           ))}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2 h-9"
+            onClick={addTarget}
+          >
+            <Plus className="h-4 w-4" /> Add Target Activity
+          </Button>
+          <p className="text-[10px] text-muted-foreground italic">
+            Add as many target activities as planned for the next day.
+          </p>
         </CardContent>
       </Card>
 

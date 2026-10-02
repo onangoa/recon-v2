@@ -13,8 +13,10 @@ import { requireContractorPermission } from '@/lib/require-permission';
 // ---------------------------------------------------------------------------
 
 const VERDICTS = ['achieved', 'partially_achieved', 'not_achieved'];
-const MAX_ACTIVITIES = 3;
-const MAX_TARGETS = 2;
+// The form lets the user add as many activities / next-day targets as the
+// day needs - these caps are only defensive payload limits.
+const MAX_ACTIVITIES = 50;
+const MAX_TARGETS = 50;
 const MAX_PHOTOS = 2;
 
 type WorkforceEntry = { category: string; count: number };
