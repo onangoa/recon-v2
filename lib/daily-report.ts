@@ -131,6 +131,17 @@ export const VERDICT_OPTIONS = [
   { value: 'not_achieved', label: 'Not Achieved' },
 ] as const;
 
+/** Proposal limit: activity titles are "5 word max" in both sections. */
+export const MAX_TITLE_WORDS = 5;
+
+export function countWords(value: string): number {
+  return value.trim().split(/\s+/).filter(Boolean).length;
+}
+
+export function isTitleWithinWordLimit(value: string): boolean {
+  return countWords(value) <= MAX_TITLE_WORDS;
+}
+
 export const VERDICT_LABELS: Record<string, string> = {
   achieved: 'Achieved',
   partially_achieved: 'Partially Achieved',

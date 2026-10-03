@@ -52,6 +52,8 @@ import {
   computeLabourCost,
   formatDayLabel,
   formatKes,
+  isTitleWithinWordLimit,
+  MAX_TITLE_WORDS,
   parseISODate,
   toDateKey,
   VERDICT_OPTIONS,
@@ -298,6 +300,18 @@ export function DailyReportForm({
       toast({
         title: 'Add at least one activity',
         description: "Fill in an activity under Today's Performance before submitting.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const invalidTitle = [...filledActivities, ...filledTargets].find((entry) =>
+      !isTitleWithinWordLimit(entry.title)
+    );
+    if (invalidTitle) {
+      toast({
+        title: 'Title is too long',
+        description: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle.title}".`,
         variant: 'destructive',
       });
       return;
@@ -641,9 +655,11 @@ export function DailyReportForm({
                               maxLength={60}
                               className="bg-muted/30 border-none h-10"
                               value={activity.title}
-                              onChange={(e) =>
-                                setActivity(index, { title: e.target.value })
-                              }
+                              onChange={(e) => {
+                                if (isTitleWithinWordLimit(e.target.value)) {
+                                  setActivity(index, { title: e.target.value });
+                                }
+                              }}
                             />
                           )}
                         </div>
@@ -653,7 +669,11 @@ export function DailyReportForm({
                           maxLength={60}
                           className="bg-muted/30 border-none h-10 font-bold"
                           value={activity.title}
-                          onChange={(e) => setActivity(index, { title: e.target.value })}
+                          onChange={(e) => {
+                            if (isTitleWithinWordLimit(e.target.value)) {
+                              setActivity(index, { title: e.target.value });
+                            }
+                          }}
                         />
                       )}
                     </div>
@@ -861,7 +881,11 @@ export function DailyReportForm({
                       maxLength={60}
                       className="bg-muted/30 border-none h-10 font-bold"
                       value={target.title}
-                      onChange={(e) => setTarget(index, { title: e.target.value })}
+                      onChange={(e) => {
+                        if (isTitleWithinWordLimit(e.target.value)) {
+                          setTarget(index, { title: e.target.value });
+                        }
+                      }}
                     />
                   </div>
                   <div className="space-y-1.5">
