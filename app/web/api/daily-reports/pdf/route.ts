@@ -26,7 +26,8 @@ import {
 // several weeks of merged daily reports.
 // ---------------------------------------------------------------------------
 
-const PRIMARY: [number, number, number] = [41, 128, 185];
+// Brand brown - matches the purchase order PDF table headers.
+const PRIMARY: [number, number, number] = [139, 69, 19];
 const GRAY: [number, number, number] = [110, 110, 110];
 const GREEN: [number, number, number] = [16, 185, 129];
 const AMBER: [number, number, number] = [217, 119, 6];
@@ -451,7 +452,6 @@ function drawCover(
     siteLocation: string;
     isSingleDay: boolean;
     periodLabel: string;
-    preparedBy: string;
     stats: {
       reportCount: number;
       activities: number;
@@ -464,7 +464,7 @@ function drawCover(
     };
   }
 ) {
-  const { contractorName, siteName, siteLocation, isSingleDay, periodLabel, preparedBy, stats } =
+  const { contractorName, siteName, siteLocation, isSingleDay, periodLabel, stats } =
     options;
 
   doc.setFont('helvetica', 'normal');
@@ -528,18 +528,7 @@ function drawCover(
   doc.text(formatKes(stats.labourCost), 155, y, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const signatureY = 235;
-  const columns = [35, 105, 175];
-  const labels = [`Prepared By: ${preparedBy || ''}`, 'Reviewed By:', 'Approved By:'];
-  doc.setDrawColor(120);
-  doc.setLineWidth(0.4);
-  columns.forEach((x, index) => {
-    doc.line(x, signatureY, x + 40, signatureY);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...GRAY);
-    doc.text(labels[index], x, signatureY + 5);
-  });
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GRAY);
   doc.setFontSize(8);
   doc.text(`Printed on ${format(new Date(), 'EEEE, d MMMM yyyy HH:mm')}`, PAGE_W / 2, 285, {
@@ -579,15 +568,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid date range' }, { status: 400 });
     }
 
-    const [reports, designations, user] = await Promise.all([
+    const [reports, designations] = await Promise.all([
       getRangeReports(siteId, fromDay, toDay),
       prisma.designation.findMany({
         where: { contractorId, isActive: true },
         select: { title: true, salary: true },
-      }),
-      prisma.user.findUnique({
-        where: { id: permCheck.userId || '' },
-        select: { name: true },
       }),
     ]);
 
@@ -635,7 +620,6 @@ export async function GET(request: NextRequest) {
       siteLocation: first.site?.location || '',
       isSingleDay,
       periodLabel,
-      preparedBy: user?.name || '',
       stats,
     });
     for (const report of reports) {
