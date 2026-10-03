@@ -829,7 +829,7 @@ export function DailyReportForm({
               <Plus className="h-4 w-4" /> Add Activity
             </Button>
             <p className="text-[10px] text-muted-foreground italic">
-              Add as many activities as were carried out today — there is no fixed limit.
+              Add as many activities as were carried out today.
             </p>
           </CardContent>
         </Card>
