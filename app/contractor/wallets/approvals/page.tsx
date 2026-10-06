@@ -104,7 +104,7 @@ function ApprovalsContent() {
   const [rejectReason, setRejectReason] = useState('');
   const [transactionToReject, setTransactionToReject] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
-  const [isApprovingSingle, setIsApprovingSingle] = useState(false);
+  const [approvingTransactionId, setApprovingTransactionId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -300,7 +300,7 @@ function ApprovalsContent() {
   };
 
   const handleApproveSingle = async (transactionId: string) => {
-    setIsApprovingSingle(true);
+    setApprovingTransactionId(transactionId);
     try {
       const response = await fetch('/web/api/wallets/transactions/approvals', {
         method: 'POST',
@@ -335,7 +335,7 @@ function ApprovalsContent() {
         variant: "destructive",
       });
     } finally {
-      setIsApprovingSingle(false);
+      setApprovingTransactionId(null);
     }
   };
 
@@ -588,9 +588,9 @@ function ApprovalsContent() {
                             size="icon"
                             className="h-8 w-8 text-emerald-600 hover:bg-emerald-50"
                             onClick={() => handleApproveSingle(tx.id)}
-                            disabled={isApprovingSingle}
+                            disabled={approvingTransactionId !== null}
                           >
-                            {isApprovingSingle ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            {approvingTransactionId === tx.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                           </Button>
                           <Button
                             variant="ghost"
@@ -600,6 +600,7 @@ function ApprovalsContent() {
                               setTransactionToReject(tx.id);
                               setRejectDialogOpen(true);
                             }}
+                            disabled={approvingTransactionId !== null}
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>

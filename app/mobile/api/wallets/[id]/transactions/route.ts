@@ -215,6 +215,9 @@ export async function POST(
           transactionDesc: description || `${transactionType} Payment to ${referenceNumber}`,
           remarks: payoutType,
           phoneNumber: payoutType === 'phone' || payoutType === 'pochi' ? referenceNumber : undefined,
+          metadata: (payoutType === 'paybill' || payoutType === 'till') && mobileNumber
+            ? JSON.stringify({ mobileNumber })
+            : undefined,
           recipientName: recipientName || null,
           proofDocumentUrl: proofDocumentUrl || null,
           proofDocumentName: proofDocumentName || null,

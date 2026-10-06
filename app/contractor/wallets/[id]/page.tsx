@@ -11,6 +11,7 @@ import {
   PlusCircle, 
   ArrowUpRight, 
   ArrowDownLeft, 
+  ArrowLeftRight, 
   History,
   Info,
   DollarSign,
@@ -108,6 +109,7 @@ interface Transaction {
   status: string;
   reference: string | null;
   receiptNumber: string | null;
+  transactionType?: string | null;
   createdAt: Date;
 }
 
@@ -179,6 +181,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [paymentRecipient, setPaymentRecipient] = useState('');
   const [paymentAccountNumber, setPaymentAccountNumber] = useState('');
   const [paymentMemo, setPaymentMemo] = useState('');
+  const [paymentNotifyMobile, setPaymentNotifyMobile] = useState('');
   const [payoutType, setPayoutType] = useState('phone');
   const [isMakingPayment, setIsMakingPayment] = useState(false);
 
@@ -201,8 +204,15 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
   const [bankPayoutMemo, setBankPayoutMemo] = useState('');
   const [isBankPaying, setIsBankPaying] = useState(false);
 
-  // Recipient name + proof document fields shared across all 4 payment forms
-  const [depositRecipientName, setDepositRecipientName] = useState('');
+  // Internal wallet-to-wallet transfer
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferWallets, setTransferWallets] = useState<Wallet[]>([]);
+  const [transferDestination, setTransferDestination] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferMemo, setTransferMemo] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  // Recipient name + proof document fields shared across the payment forms
   const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
   const [paymentRecipientName, setPaymentRecipientName] = useState('');
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
@@ -238,6 +248,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     fetchBeneficiaries();
+    fetchTransferWallets();
   }, []);
 
   const persistBeneficiary = async (payload: {
@@ -291,10 +302,11 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const applyMpesaBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; recipientName?: string | null }) => {
+  const applyMpesaBeneficiary = (b: { channel: string; destination: string; accountRef?: string | null; recipientName?: string | null; mobileNumber?: string | null }) => {
     setPayoutType(b.channel);
     setPaymentRecipient(b.destination);
     setPaymentAccountNumber(b.channel === 'paybill' ? (b.accountRef || '') : '');
+    setPaymentNotifyMobile(b.mobileNumber || '');
     setPaymentRecipientName(b.recipientName || '');
   };
 
@@ -458,7 +470,6 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           amount: parseFloat(depositAmount),
           description: depositMemo || `Deposit to Wallet`,
           referenceNumber: depositSource, // Phone for STK Push
-          recipientName: depositRecipientName || undefined,
           proofDocumentUrl: proof?.url || undefined,
           proofDocumentName: proof?.fileName || undefined,
         }),
@@ -476,7 +487,6 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setDepositAmount('');
       setDepositSource('');
       setDepositMemo('');
-      setDepositRecipientName('');
       setDepositProofFile(null);
       setShowAddFunds(false);
       fetchTransactions(); // Show the pending transaction
@@ -525,6 +535,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           description: paymentMemo || `Payment to ${paymentRecipient}`,
           referenceNumber: paymentRecipient,
           accountNumber: payoutType === 'paybill' && paymentAccountNumber ? paymentAccountNumber : undefined,
+          mobileNumber: payoutType === 'paybill' || payoutType === 'till' ? (paymentNotifyMobile || undefined) : undefined,
           recipientName: paymentRecipientName || undefined,
           proofDocumentUrl: proof?.url || undefined,
           proofDocumentName: proof?.fileName || undefined,
@@ -545,6 +556,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
           channel: payoutType,
           destination: paymentRecipient,
           accountRef: payoutType === 'paybill' && paymentAccountNumber ? paymentAccountNumber : undefined,
+          mobileNumber: payoutType === 'paybill' || payoutType === 'till' ? (paymentNotifyMobile || undefined) : undefined,
           recipientName: paymentRecipientName || undefined,
         });
       }
@@ -553,6 +565,7 @@ export default function WalletDetailPage({ params }: { params: Promise<{ id: str
       setPaymentRecipient('');
       setPaymentAccountNumber('');
       setPaymentMemo('');
+      setPaymentNotifyMobile('');
       setPaymentRecipientName('');
       setPaymentProofFile(null);
       setSelectedMpesaBeneficiary('');
@@ -715,6 +728,87 @@ const handleBankDeposit = async () => {
       toast({ title: "Error", description: getErrorMessage(err, "Unable to create the bank payout. Please check your connection and try again."), variant: "destructive" });
     } finally {
       setIsBankPaying(false);
+    }
+  };
+
+  const fetchTransferWallets = async () => {
+    try {
+      const response = await fetch('/web/api/wallets');
+      if (!response.ok) return;
+      const data = await response.json();
+      const wallets: Wallet[] = Array.isArray(data) ? data : [];
+      setTransferWallets(
+        wallets.filter((w) => w.id !== walletId && w.status === 'active')
+      );
+    } catch {
+      return;
+    }
+  };
+
+  const handleTransfer = async () => {
+    const amount = parseFloat(transferAmount);
+    if (!transferDestination || !transferAmount) {
+      toast({
+        title: "Validation Error",
+        description: "Destination wallet and amount are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Enter a transfer amount greater than zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (wallet && amount > wallet.balance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `Available balance: ${wallet.currency} ${wallet.balance.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const response = await fetch(`/web/api/wallets/${walletId}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationWalletId: transferDestination,
+          amount,
+          description: transferMemo || undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(getApiError(data, "Unable to complete the wallet transfer. Please verify the details and try again."));
+
+      const destinationWallet = transferWallets.find((w) => w.id === transferDestination);
+      toast({
+        title: "Transfer Completed",
+        description: `${wallet?.currency || 'KES'} ${amount.toLocaleString()} moved to ${destinationWallet?.name || 'the destination wallet'}.`,
+        variant: "success",
+      });
+
+      setTransferDestination('');
+      setTransferAmount('');
+      setTransferMemo('');
+      setShowTransfer(false);
+      fetchTransactions();
+      fetchWalletData();
+      fetchTransferWallets();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(err, "Unable to complete the wallet transfer. Please check your connection and try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -906,9 +1000,9 @@ const handleBankDeposit = async () => {
                          <TableCell className="text-center">
                            <Badge variant={tx.type === 'credit' || tx.type === 'STK_PUSH' || tx.type === 'C2B' ? 'default' : 
                                          tx.type === 'debit' || ['B2C', 'B2B', 'B2POCHI'].includes(tx.type) ? 'destructive' : 'secondary'} 
-                                   className="text-[10px] py-0">
-                             {tx.type.replace('_', ' ')}
-                           </Badge>
+                                    className="text-[10px] py-0">
+                              {tx.transactionType === 'INTERNAL_TRANSFER' ? 'Internal Transfer' : tx.type.replace('_', ' ')}
+                            </Badge>
                          </TableCell>
                          <TableCell className="text-xs">{tx.description || '-'}</TableCell>
                          <TableCell className="text-center">
@@ -1037,16 +1131,6 @@ const handleBankDeposit = async () => {
                         value={depositMemo}
                         onChange={(e) => setDepositMemo(e.target.value)}
                         className="bg-muted/30 border-none" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Payment Recipient Name</Label>
-                      <Input
-                        type="text"
-                        placeholder="Enter recipient name"
-                        value={depositRecipientName}
-                        onChange={(e) => setDepositRecipientName(e.target.value)}
-                        className="bg-muted/30 border-none h-11"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1199,6 +1283,83 @@ const handleBankDeposit = async () => {
                         </Button>
                       </>
                     )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showTransfer} onOpenChange={setShowTransfer}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5 gap-2 h-11 shadow-sm">
+                    <ArrowLeftRight className="w-4 h-4" /> Transfer to Another Wallet
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="text-primary flex items-center gap-2">
+                      <ArrowLeftRight className="w-5 h-5" /> Internal Wallet Transfer
+                    </DialogTitle>
+                    <DialogDescription>
+                      Move funds instantly between your wallets. No payout fee applies.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Destination Wallet *</Label>
+                      <Select value={transferDestination} onValueChange={setTransferDestination}>
+                        <SelectTrigger className="bg-muted/30 border-none h-11">
+                          <SelectValue placeholder={transferWallets.length === 0 ? 'No other wallets available' : 'Select destination wallet'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {transferWallets.map((w) => (
+                            <SelectItem key={w.id} value={w.id}>
+                              <span className="flex items-center justify-between gap-3">
+                                <span className="truncate">{w.name}</span>
+                                <span className="text-[10px] text-muted-foreground font-mono">{w.currency} {w.balance.toFixed(2)}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Amount ({wallet.currency}) *</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(e.target.value)}
+                        className="bg-muted/30 border-none h-11 font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description (Optional)</Label>
+                      <Textarea
+                        placeholder="e.g. Moving site funds"
+                        value={transferMemo}
+                        onChange={(e) => setTransferMemo(e.target.value)}
+                        className="bg-muted/30 border-none"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Available balance: {wallet.currency} {wallet.balance.toFixed(2)}
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowTransfer(false)}>Cancel</Button>
+                    <Button
+                      className="font-bold"
+                      onClick={handleTransfer}
+                      disabled={
+                        isTransferring ||
+                        !transferDestination ||
+                        transferWallets.length === 0 ||
+                        wallet.balance < parseFloat(transferAmount || '0') ||
+                        parseFloat(transferAmount || '0') <= 0
+                      }
+                    >
+                      {isTransferring && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Transfer Funds
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -1562,11 +1723,11 @@ const handleBankDeposit = async () => {
                     </div>
                     <div className="space-y-2">
                       <Label>
-                        {payoutType === 'phone' || payoutType === 'pochi' ? 'Recipient Mobile No.' : payoutType === 'paybill' ? 'Business Short Code' : 'Till Number'} *
+                        {payoutType === 'phone' || payoutType === 'pochi' ? 'Recipient Mobile No.' : payoutType === 'paybill' ? 'PayBill Number' : 'Till Number'} *
                       </Label>
                       <Input 
                         type="text" 
-                        placeholder={payoutType === 'phone' || payoutType === 'pochi' ? '2547XXXXXXXX' : payoutType === 'paybill' ? 'Enter business short code' : 'Enter till number'} 
+                        placeholder={payoutType === 'phone' || payoutType === 'pochi' ? '2547XXXXXXXX' : payoutType === 'paybill' ? 'Enter PayBill number' : 'Enter till number'} 
                         value={paymentRecipient}
                         onChange={(e) => setPaymentRecipient(e.target.value)}
                         className="bg-muted/30 border-none h-11" 
@@ -1583,6 +1744,21 @@ const handleBankDeposit = async () => {
                           className="bg-muted/30 border-none h-11" 
                         />
                         <p className="text-[10px] text-muted-foreground italic">Leave blank if the paybill doesn't require an account number</p>
+                      </div>
+                    )}
+                    {(payoutType === 'paybill' || payoutType === 'till') && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Notification Mobile No.</Label>
+                          <span className="text-[10px] italic text-muted-foreground">For SMS notifications</span>
+                        </div>
+                        <Input
+                          type="tel"
+                          placeholder="07XXXXXXXX or 2547XXXXXXXX"
+                          value={paymentNotifyMobile}
+                          onChange={(e) => setPaymentNotifyMobile(e.target.value)}
+                          className="bg-muted/30 border-none h-11"
+                        />
                       </div>
                     )}
                     <div className="space-y-2">
