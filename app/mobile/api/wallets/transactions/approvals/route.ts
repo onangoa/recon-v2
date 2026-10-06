@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { initiateB2C, initiateB2B, initiateB2Pochi } from '@/lib/mpesa';
+import { initiateB2C, initiateB2B, initiateB2Pochi, resolveB2BDestination } from '@/lib/mpesa';
 import {
   mobileRequirePermission,
   mobileSuccess,
@@ -106,6 +106,13 @@ export async function POST(request: NextRequest) {
         let payoutResponse;
         const payoutType = transaction.remarks || 'phone';
 
+        // M-Pesa B2B PartyB must be the paybill/till shortcode. Wallet
+        // payouts keep it in `reference` (accountReference holds the paybill
+        // account number when one was given); payroll payouts keep it in
+        // `accountReference`. Passing the account number as PartyB is what
+        // Daraja rejects with 400.002.02 "Invalid PartyB".
+        const b2bShortcode = resolveB2BDestination(transaction);
+
         if (payoutType === 'phone') {
           payoutResponse = await initiateB2C(
             transaction.phoneNumber || transaction.accountReference || '',
@@ -125,23 +132,29 @@ export async function POST(request: NextRequest) {
             transactionId
           );
         } else if (payoutType === 'paybill') {
+          // The paybill account number (when given) is the M-Pesa
+          // AccountReference shown on the paybill statement — never PartyB.
+          const mpesaAccountReference =
+            transaction.accountReference && transaction.accountReference !== b2bShortcode
+              ? transaction.accountReference
+              : (transaction.phoneNumber || transaction.wallet.name);
           payoutResponse = await initiateB2B(
-            transaction.accountReference || '',
+            b2bShortcode,
             transaction.amount,
             transaction.walletId,
-            transaction.phoneNumber || transaction.wallet.name,
+            mpesaAccountReference,
             'BusinessPayBill',
-            transaction.description || transaction.transactionDesc || `Payment to Paybill ${transaction.accountReference}`,
+            transaction.description || transaction.transactionDesc || `Payment to Paybill ${b2bShortcode}`,
             transactionId
           );
         } else if (payoutType === 'till') {
           payoutResponse = await initiateB2B(
-            transaction.accountReference || '',
+            b2bShortcode,
             transaction.amount,
             transaction.walletId,
             transaction.wallet.name,
             'BusinessBuyGoods',
-            transaction.description || transaction.transactionDesc || `Payment to Till Number ${transaction.accountReference}`,
+            transaction.description || transaction.transactionDesc || `Payment to Till Number ${b2bShortcode}`,
             transactionId
           );
         } else {

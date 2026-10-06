@@ -649,6 +649,24 @@ export const handleB2CCallback = async (callbackData: any) => {
 
 // ============ B2B OPERATIONS ============
 
+/**
+ * Resolve the paybill/till shortcode that must be sent as M-Pesa B2B `PartyB`.
+ * Wallet-created payouts store the shortcode in `reference` (with the
+ * paybill account number, when given, in `accountReference`), while payroll
+ * payouts store the shortcode in `accountReference` (their `reference` is the
+ * PAYROLL- dedupe id). Sending the account number as PartyB is rejected by
+ * Daraja with 400.002.02 "Invalid PartyB".
+ */
+export function resolveB2BDestination(transaction: {
+  reference?: string | null;
+  accountReference?: string | null;
+}): string {
+  if (transaction.reference?.startsWith('PAYROLL-')) {
+    return transaction.accountReference || '';
+  }
+  return transaction.reference || transaction.accountReference || '';
+}
+
 export const initiateB2B = async (
   receiverShortCode: string,
   amount: number,
@@ -658,6 +676,16 @@ export const initiateB2B = async (
   remarks?: string,
   existingTransactionId?: string
 ) => {
+  // PartyB must be the paybill/till shortcode (4-8 digits). Fail fast with
+  // a clear error before any M-Pesa call when an account number, phone
+  // number or free-text value is passed by mistake.
+  const partyB = String(receiverShortCode || '').trim();
+  if (!/^\d{4,8}$/.test(partyB)) {
+    throw new Error(
+      `Invalid paybill/till number "${receiverShortCode}" - PartyB must be the 4-8 digit shortcode, not the account number`
+    );
+  }
+
   await ensureInitialized();
   let transaction: any = null;
 
@@ -695,7 +723,7 @@ export const initiateB2B = async (
     const result = await mpesa.b2b({
       amount: Math.round(amount),
       partyA: MPESA_SHORTCODE,
-      partyB: receiverShortCode,
+      partyB,
       accountReference,
       remarks: remarks || 'B2B Payment',
       commandID: commandID,

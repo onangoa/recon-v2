@@ -14,7 +14,8 @@
     "test:bank": "tsx scripts/test-bank-api.ts",
     "test:bank:live": "tsx scripts/test-bank-api.ts --live",
     "test:bank:live:filtered": "tsx scripts/test-bank-api.ts --live --only token,balance,statement.full",
-    "test:wallet-transfer": "tsx scripts/test-wallet-transfer.ts"
+    "test:wallet-transfer": "tsx scripts/test-wallet-transfer.ts",
+    "test:b2b-partyb": "tsx scripts/test-b2b-partyb.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

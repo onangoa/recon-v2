@@ -7,6 +7,7 @@ export {
   initiateB2C,
   initiateB2B,
   initiateB2Pochi,
+  resolveB2BDestination,
   checkTransactionStatus,
   checkAccountBalance,
   initiateReversal,
