@@ -755,14 +755,16 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
                                   <span className="text-[10px] font-bold tracking-wide">
                                     {formatTxnRef(tx.seq)}
                                   </span>
-                                  <span className="opacity-50 text-[10px]">
-                                    {tx.mpesaReceiptNumber ||
-                                      tx.receiptNumber ||
-                                      tx.accountReference ||
-                                      tx.reference ||
-                                      tx.phoneNumber ||
-                                      '-'}
-                                  </span>
+                                  {tx.channel === 'mpesa' && (
+                                    <span className="opacity-50 text-[10px]">
+                                      {tx.mpesaReceiptNumber ||
+                                        tx.receiptNumber ||
+                                        tx.accountReference ||
+                                        tx.reference ||
+                                        tx.phoneNumber ||
+                                        '-'}
+                                    </span>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
