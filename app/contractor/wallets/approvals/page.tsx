@@ -58,10 +58,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { formatTxnRef } from '@/lib/txn-ref';
 import { Separator } from '@/components/ui/separator';
 
 interface PendingTransaction {
   id: string;
+  seq: number;
   walletId: string;
   amount: number;
   type: string;
@@ -547,7 +549,7 @@ function ApprovalsContent() {
                       <TableCell className="text-xs">
                         <div className="flex flex-col gap-1">
                           <span className="font-bold text-primary text-xs">{tx.description || tx.transactionType}</span>
-                          <span className="opacity-50 text-[10px]">ID: {tx.id.slice(0, 8)}</span>
+                          <span className="opacity-50 text-[10px]">{formatTxnRef(tx.seq)}</span>
                           <div className="flex items-center gap-2 opacity-70">
                             {tx.remarks === 'phone' && <span className="text-[10px]">📱 {tx.phoneNumber || tx.accountReference}</span>}
                             {tx.remarks === 'pochi' && <span className="text-[10px]">👤 {tx.phoneNumber || tx.accountReference}</span>}

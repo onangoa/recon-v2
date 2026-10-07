@@ -86,6 +86,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { formatTxnRef } from '@/lib/txn-ref';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { KENYAN_BANKS } from '@/lib/bank-codes';
@@ -102,6 +103,7 @@ interface Wallet {
 
 interface Transaction {
   id: string;
+  seq: number;
   walletId: string;
   amount: number;
   type: 'credit' | 'debit';
@@ -985,10 +987,10 @@ const handleBankDeposit = async () => {
                      transactions.map((tx) => (
                        <TableRow key={tx.id} className="hover:bg-muted/20 transition-colors">
                          <TableCell className="font-mono text-xs">
-                           <div className="flex flex-col gap-1">
-                             <span className="opacity-50 text-[10px]">{tx.reference || tx.id.slice(0, 8)}</span>
-                             <span className="font-bold text-primary text-xs">{tx.receiptNumber || '-'}</span>
-                           </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[10px] font-bold tracking-wide">{formatTxnRef(tx.seq)}</span>
+                              <span className="opacity-50 text-[10px]">{tx.receiptNumber || tx.reference || '-'}</span>
+                            </div>
                          </TableCell>
                          <TableCell className={`font-bold font-mono text-xs ${
                            tx.type === 'credit' || tx.type === 'STK_PUSH' || tx.type === 'C2B' ? 'text-emerald-600' : 

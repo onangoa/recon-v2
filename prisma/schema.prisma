@@ -905,6 +905,11 @@ model PasswordResetToken {
 
 model Transaction {
   id                        String   @id @default(cuid())
+  // Global sequence backing the friendly TXN- references shown in the UI.
+  // AUTO_INCREMENT + UNIQUE: the DB guarantees uniqueness and backfills
+  // existing rows; the UI renders it through the sqids encoder in
+  // lib/txn-ref.ts (frozen alphabet — see there before changing anything).
+  seq                       Int      @unique @default(autoincrement())
   walletId                  String
   amount                    Float
   type                      String

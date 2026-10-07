@@ -5,6 +5,7 @@ import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import { WalletService } from '@/lib/wallet-service';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
+import { parseTxnRef } from '@/lib/txn-ref';
 import { notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
 
 export async function GET(
@@ -38,6 +39,12 @@ export async function GET(
         { description: { contains: search } },
         { transactionType: { contains: search } }
       ];
+      // Friendly TXN- references are derived from seq, not stored, so a
+      // search that parses as one resolves to the matching seq directly.
+      const seqFromRef = parseTxnRef(search);
+      if (seqFromRef !== null) {
+        whereCondition.OR.push({ seq: seqFromRef });
+      }
     }
 
     const [transactions, total] = await Promise.all([

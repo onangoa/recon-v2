@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       transactions: transactions.map((t) => ({
         id: t.id,
+        seq: t.seq,
         type: t.type,
         amount: t.amount,
         description: t.description,

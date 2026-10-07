@@ -58,12 +58,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/toast-utils';
+import { formatTxnRef } from '@/lib/txn-ref';
 import { exportToCSV, exportToPDF } from '@/lib/export';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface TransactionRow {
   id: string;
+  seq: number;
   type: string;
   amount: number;
   description: string | null;
@@ -168,6 +170,7 @@ export default function TransactionsReportPage() {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
+      (formatTxnRef(tx.seq).toLowerCase().includes(q)) ||
       (tx.description?.toLowerCase().includes(q)) ||
       (tx.recipientName?.toLowerCase().includes(q)) ||
       (tx.reference?.toLowerCase().includes(q)) ||
@@ -184,6 +187,7 @@ export default function TransactionsReportPage() {
     const rows = filteredTransactions.map((tx) => ({
       Date: new Date(tx.createdAt).toLocaleString(),
       Wallet: tx.walletName,
+      'Txn Ref': formatTxnRef(tx.seq),
       Description: tx.description || '',
       'Payment Recipient': tx.recipientName || '',
       Reference: tx.reference || '',
@@ -202,10 +206,11 @@ export default function TransactionsReportPage() {
       toast({ title: 'No data', description: 'There are no transactions to export.', variant: 'destructive' });
       return;
     }
-    const headers = ['Date', 'Wallet', 'Description', 'Recipient', 'Reference', 'Type', 'Amount', 'Status'];
+    const headers = ['Date', 'Wallet', 'Txn Ref', 'Description', 'Recipient', 'Reference', 'Type', 'Amount', 'Status'];
     const rows = filteredTransactions.map((tx) => [
       new Date(tx.createdAt).toLocaleDateString(),
       tx.walletName,
+      formatTxnRef(tx.seq),
       (tx.description || '').slice(0, 40),
       tx.recipientName || '-',
       tx.reference || '-',
@@ -282,7 +287,8 @@ export default function TransactionsReportPage() {
       startY: 34,
       head: [['Field', 'Value']],
       body: [
-        ['Transaction ID', tx.id],
+        ['Transaction Ref', formatTxnRef(tx.seq)],
+        ['System ID', tx.id],
         ['Date', new Date(tx.createdAt).toLocaleString()],
         ['Wallet', tx.walletName],
         ['Description', tx.description || '-'],
@@ -523,7 +529,10 @@ export default function TransactionsReportPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs font-medium">{tx.recipientName || '-'}</TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground">{tx.reference || tx.receiptNumber || '-'}</TableCell>
+                    <TableCell className="text-xs font-mono whitespace-nowrap">
+                      <span className="font-bold">{formatTxnRef(tx.seq)}</span>
+                      <span className="block text-[10px] text-muted-foreground">{tx.reference || tx.receiptNumber || '-'}</span>
+                    </TableCell>
                     <TableCell>
                       <Badge className={`text-[9px] font-bold uppercase px-1.5 py-0 border-none ${tx.type === 'credit' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                         {tx.type}
