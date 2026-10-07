@@ -11,7 +11,7 @@ import Sqids from 'sqids';
 // after it. Lowercase letters + digits only, so refs are unambiguous when
 // read aloud (no "is that an uppercase Q?" on support calls). The blocklist
 // is emptied so ref generation never depends on the library's word list.
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const MIN_LENGTH = 6;
 
 const sqids = new Sqids({ alphabet: ALPHABET, minLength: MIN_LENGTH, blocklist: new Set<string>() });
