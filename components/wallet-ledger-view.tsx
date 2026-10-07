@@ -45,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { formatTxnRef } from '@/lib/txn-ref';
 import { exportToCSV } from '@/lib/export';
 
 type LedgerChannel = 'mpesa' | 'bank' | 'internal';
@@ -73,6 +74,7 @@ interface WalletsResponse {
 
 interface LedgerTransaction {
   id: string;
+  seq: number;
   type: string;
   status: string;
   channel: LedgerChannel;
@@ -271,6 +273,7 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
         if (searchTerm) {
           const q = searchTerm.toLowerCase();
           const haystack = [
+            formatTxnRef(tx.seq),
             tx.reference,
             tx.receiptNumber,
             tx.mpesaReceiptNumber,
@@ -293,6 +296,7 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
     if (!ledger || filteredTransactions.length === 0) return;
     const rows = filteredTransactions.map((tx) => ({
       Date: new Date(tx.createdAt).toLocaleString(),
+      'Txn Ref': formatTxnRef(tx.seq),
       Channel: CHANNEL_META[tx.channel].label,
       Direction: tx.direction ?? tx.type,
       Status: tx.status,
@@ -647,7 +651,7 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
                     <div className="relative w-full lg:w-72">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search reference, receipt, name..."
+                        placeholder="Search TXN ref, receipt, name..."
                         className="pl-9 h-10 bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -748,13 +752,14 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
                               </TableCell>
                               <TableCell className="font-mono text-xs">
                                 <div className="flex flex-col gap-1">
-                                  <span className="opacity-50 text-[10px]">
-                                    {tx.reference || tx.id.slice(0, 8)}
+                                  <span className="text-[10px] font-bold tracking-wide">
+                                    {formatTxnRef(tx.seq)}
                                   </span>
-                                  <span className="font-bold text-primary text-[10px]">
+                                  <span className="opacity-50 text-[10px]">
                                     {tx.mpesaReceiptNumber ||
                                       tx.receiptNumber ||
                                       tx.accountReference ||
+                                      tx.reference ||
                                       tx.phoneNumber ||
                                       '-'}
                                   </span>

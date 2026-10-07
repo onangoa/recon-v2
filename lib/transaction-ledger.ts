@@ -61,6 +61,7 @@ export function getChannel(tx: LedgerTransactionSource): LedgerChannel {
 
 export interface LedgerSourceTransaction {
   id: string;
+  seq: number;
   type: string;
   status: string;
   amount: number;
@@ -80,6 +81,7 @@ export interface LedgerSourceTransaction {
 
 export interface LedgerRow {
   id: string;
+  seq: number;
   type: string;
   status: string;
   channel: LedgerChannel;
@@ -141,6 +143,7 @@ export function buildWalletLedger(
     }
     return {
       id: tx.id,
+      seq: tx.seq,
       type: tx.type,
       status: tx.status,
       channel: getChannel(tx),
