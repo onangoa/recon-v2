@@ -302,7 +302,7 @@ export function WalletLedgerView({ walletsPath, ledgerPathTemplate }: WalletLedg
       Status: tx.status,
       Amount: tx.direction === 'debit' ? -tx.amount : tx.amount,
       'Balance After': tx.settled ? tx.balanceAfter : '',
-      Reference: tx.reference ?? '',
+      Reference: tx.reference?.startsWith('FEE-') ? '' : (tx.reference ?? ''),
       Receipt: tx.mpesaReceiptNumber || tx.receiptNumber || '',
       Recipient: tx.recipientName ?? '',
       'Phone / Account': tx.phoneNumber || tx.accountReference || '',

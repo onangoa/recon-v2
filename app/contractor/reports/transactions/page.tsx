@@ -190,7 +190,7 @@ export default function TransactionsReportPage() {
       'Txn Ref': formatTxnRef(tx.seq),
       Description: tx.description || '',
       'Payment Recipient': tx.recipientName || '',
-      Reference: tx.reference || '',
+      Reference: tx.reference?.startsWith('FEE-') ? '' : (tx.reference || ''),
       'Receipt No.': tx.receiptNumber || '',
       Type: tx.type,
       Amount: String(tx.amount),
