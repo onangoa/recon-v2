@@ -17,6 +17,7 @@ async function main() {
   const ref = refs[idx];
   console.log(`roundtrip: ${ref} -> ${parseTxnRef(ref)} (expect ${txs[idx].seq})`);
   console.log(`prefixless+uppercase: ${ref.slice(4).toUpperCase()} -> ${parseTxnRef(ref.slice(4).toUpperCase())} (expect ${txs[idx].seq})`);
+  console.log(`lowercase full ref: ${ref.toLowerCase()} -> ${parseTxnRef(ref.toLowerCase())} (expect ${txs[idx].seq})`);
   console.log('garbage ->', parseTxnRef('TXN-hello!'), parseTxnRef('TXN-'), parseTxnRef(''));
 
   if (unique.size !== txs.length) throw new Error('REF COLLISIONS DETECTED');

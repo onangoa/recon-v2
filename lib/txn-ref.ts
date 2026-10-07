@@ -8,8 +8,8 @@ import Sqids from 'sqids';
 // FROZEN CONFIG: the prefix, alphabet and minLength below must never change
 // once shipped. sqids is deterministic — changing any of these renames every
 // existing reference, and a ref generated before the change would not decode
-// after it. Lowercase letters + digits only, so refs are unambiguous when
-// read aloud (no "is that an uppercase Q?" on support calls). The blocklist
+// after it. Uppercase letters + digits only, so refs are unambiguous when
+// read aloud (no "is that a lowercase q?" on support calls). The blocklist
 // is emptied so ref generation never depends on the library's word list.
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const MIN_LENGTH = 6;
@@ -34,11 +34,15 @@ export function formatTxnRef(seq: number): string {
  */
 export function parseTxnRef(ref: string): number | null {
   const raw = ref.trim();
-  const encoded = raw.toLowerCase().startsWith(TXN_REF_PREFIX.toLowerCase())
+  const encoded = raw.toUpperCase().startsWith(TXN_REF_PREFIX)
     ? raw.slice(TXN_REF_PREFIX.length)
     : raw;
   if (!encoded) return null;
-  const [seq] = sqids.decode(encoded.toLowerCase());
+  // User input may arrive in any case; normalise it to the alphabet's case
+  // (uppercase) before decoding, since sqids only maps characters that
+  // exist in the configured alphabet.
+  const normalized = encoded.toUpperCase();
+  const [seq] = sqids.decode(normalized);
   if (typeof seq !== 'number' || seq <= 0) return null;
-  return sqids.encode([seq]) === encoded.toLowerCase() ? seq : null;
+  return sqids.encode([seq]) === normalized ? seq : null;
 }
