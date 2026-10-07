@@ -594,9 +594,17 @@ export const handleB2CCallback = async (callbackData: any) => {
       // charging the fee, so money only moves on a settled transaction.
       await updateTransaction(transaction.id, updateData);
 
-      // Update wallet balance (DECREASE for payouts) only if amount is valid
-      if (amount && !isNaN(amount)) {
-        const numericAmount = parseFloat(amount);
+      // Fall back to the amount stored on the transaction when the callback
+      // omits TransactionAmount, so the wallet debit and the payout fee are
+      // never silently skipped on a successful payout.
+      const callbackAmount = amount ? parseFloat(amount) : NaN;
+      const numericAmount =
+        !isNaN(callbackAmount) && callbackAmount > 0
+          ? callbackAmount
+          : Math.round(transaction.amount);
+
+      // Update wallet balance (DECREASE for payouts)
+      if (numericAmount > 0) {
         console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
         await prisma.wallet.update({
           where: { id: transaction.walletId },
@@ -615,7 +623,8 @@ export const handleB2CCallback = async (callbackData: any) => {
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
           transactionId: transaction.id,
-          amount
+          amount,
+          transactionAmount: transaction.amount
         });
       }
 
@@ -855,9 +864,19 @@ export const handleB2BCallback = async (callbackData: any) => {
       // charging the fee, so money only moves on a settled transaction.
       await updateTransaction(transaction.id, updateData);
 
-      // Update wallet balance (DECREASE for payouts) only if amount is valid
-      if (amount && !isNaN(amount)) {
-        const numericAmount = parseFloat(amount);
+      // The Daraja B2B success callback carries no TransactionAmount (it
+      // only sends Currency + account balance parameters), so fall back to
+      // the amount stored on the transaction — the exact rounded amount
+      // initiated with M-Pesa. Without this fallback the wallet debit and
+      // the payout fee were both silently skipped on success.
+      const callbackAmount = amount ? parseFloat(amount) : NaN;
+      const numericAmount =
+        !isNaN(callbackAmount) && callbackAmount > 0
+          ? callbackAmount
+          : Math.round(transaction.amount);
+
+      // Update wallet balance (DECREASE for payouts)
+      if (numericAmount > 0) {
         console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
         await prisma.wallet.update({
           where: { id: transaction.walletId },
@@ -876,7 +895,8 @@ export const handleB2BCallback = async (callbackData: any) => {
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
           transactionId: transaction.id,
-          amount
+          amount,
+          transactionAmount: transaction.amount
         });
       }
 
@@ -1075,9 +1095,17 @@ export const handleB2PochiCallback = async (callbackData: any) => {
       // charging the fee, so money only moves on a settled transaction.
       await updateTransaction(transaction.id, updateData);
 
-      // Update wallet balance (DECREASE for payouts) only if amount is valid
-      if (amount && !isNaN(amount)) {
-        const numericAmount = parseFloat(amount);
+      // Fall back to the amount stored on the transaction when the callback
+      // omits TransactionAmount, so the wallet debit and the payout fee are
+      // never silently skipped on a successful payout.
+      const callbackAmount = amount ? parseFloat(amount) : NaN;
+      const numericAmount =
+        !isNaN(callbackAmount) && callbackAmount > 0
+          ? callbackAmount
+          : Math.round(transaction.amount);
+
+      // Update wallet balance (DECREASE for payouts)
+      if (numericAmount > 0) {
         console.log(`Updating wallet balance for transaction ${transaction.id} by DECREMENTING ${numericAmount}`);
         await prisma.wallet.update({
           where: { id: transaction.walletId },
@@ -1096,7 +1124,8 @@ export const handleB2PochiCallback = async (callbackData: any) => {
       } else {
         console.warn('Could not update wallet balance: invalid or missing amount', {
           transactionId: transaction.id,
-          amount
+          amount,
+          transactionAmount: transaction.amount
         });
       }
 
