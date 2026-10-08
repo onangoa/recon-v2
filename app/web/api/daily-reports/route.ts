@@ -5,7 +5,7 @@ import { startOfDay, endOfDay, subDays, format, isAfter } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { verifySiteOwnership } from '@/lib/contractor-isolation';
 import { DAILY_REPORT_FULL_INCLUDE, getRangeReports } from '@/lib/daily-report-data';
-import { isTitleWithinWordLimit, MAX_TITLE_WORDS } from '@/lib/daily-report';
+import { isTitleWithinCharLimit, MAX_TITLE_CHARS } from '@/lib/daily-report';
 
 // ---------------------------------------------------------------------------
 // Daily Site Progress & Next-Day Planning Report API
@@ -23,6 +23,8 @@ const VERDICTS = ['achieved', 'partially_achieved', 'not_achieved'];
 const MAX_ACTIVITIES = 50;
 const MAX_TARGETS = 50;
 const MAX_PHOTOS = 2;
+// One image per deliveries / materials line item.
+const MAX_ROW_FILES = 1;
 
 type WorkforceEntry = { category: string; count: number };
 type FileEntry = { url: string; name?: string };
@@ -273,12 +275,12 @@ export async function POST(request: NextRequest) {
       (title) =>
         typeof title === 'string' &&
         title.trim() !== '' &&
-        !isTitleWithinWordLimit(title)
+        !isTitleWithinCharLimit(title)
     );
     if (invalidTitle) {
       return NextResponse.json(
         {
-          error: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle}"`,
+          error: `Activity titles must be ${MAX_TITLE_CHARS} characters or fewer: "${invalidTitle}"`,
         },
         { status: 400 }
       );
@@ -353,6 +355,7 @@ export async function POST(request: NextRequest) {
         unit: d.unit ? String(d.unit).trim() : null,
         supplier: d.supplier ? String(d.supplier).trim() : null,
         notes: d.notes ? String(d.notes).trim() : null,
+        photos: normalizeFiles(d.photos, MAX_ROW_FILES) as any,
       }));
 
     const materialRows = asArray(materials)
@@ -363,6 +366,7 @@ export async function POST(request: NextRequest) {
         quantity: Number(m.quantity) || 0,
         unit: m.unit ? String(m.unit).trim() : null,
         notes: m.notes ? String(m.notes).trim() : null,
+        photos: normalizeFiles(m.photos, MAX_ROW_FILES) as any,
       }));
 
     const report = await prisma.dailyReport.create({

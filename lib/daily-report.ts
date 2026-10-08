@@ -44,6 +44,7 @@ export interface DailyReportDelivery {
   unit?: string | null;
   supplier?: string | null;
   notes?: string | null;
+  photos?: FileEntry[] | null;
 }
 
 export interface DailyReportMaterial {
@@ -52,6 +53,7 @@ export interface DailyReportMaterial {
   quantity: number;
   unit?: string | null;
   notes?: string | null;
+  photos?: FileEntry[] | null;
 }
 
 export interface DayVisitor {
@@ -131,15 +133,11 @@ export const VERDICT_OPTIONS = [
   { value: 'not_achieved', label: 'Not Achieved' },
 ] as const;
 
-/** Proposal limit: activity titles are "5 word max" in both sections. */
-export const MAX_TITLE_WORDS = 5;
+/** Proposal limit: activity titles are "5 char max" in both sections. */
+export const MAX_TITLE_CHARS = 5;
 
-export function countWords(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
-}
-
-export function isTitleWithinWordLimit(value: string): boolean {
-  return countWords(value) <= MAX_TITLE_WORDS;
+export function isTitleWithinCharLimit(value: string): boolean {
+  return value.length <= MAX_TITLE_CHARS;
 }
 
 export const VERDICT_LABELS: Record<string, string> = {

@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   X,
-  Upload,
   Loader2,
   Users,
   Camera,
@@ -52,8 +51,8 @@ import {
   computeLabourCost,
   formatDayLabel,
   formatKes,
-  isTitleWithinWordLimit,
-  MAX_TITLE_WORDS,
+  isTitleWithinCharLimit,
+  MAX_TITLE_CHARS,
   parseISODate,
   toDateKey,
   VERDICT_OPTIONS,
@@ -88,6 +87,7 @@ interface DeliveryRow {
   unit: string;
   supplier: string;
   notes: string;
+  photos: FileEntry[];
 }
 
 interface MaterialRow {
@@ -95,6 +95,7 @@ interface MaterialRow {
   quantity: string;
   unit: string;
   notes: string;
+  photos: FileEntry[];
 }
 
 interface DailyReportFormProps {
@@ -155,6 +156,7 @@ export function DailyReportForm({
       unit: d.unit || '',
       supplier: d.supplier || '',
       notes: d.notes || '',
+      photos: (d.photos || []) as FileEntry[],
     }))
   );
 
@@ -164,10 +166,14 @@ export function DailyReportForm({
       quantity: String(m.quantity ?? 0),
       unit: m.unit || '',
       notes: m.notes || '',
+      photos: (m.photos || []) as FileEntry[],
     }))
   );
 
-  const [attachments, setAttachments] = useState<FileEntry[]>(
+  // Legacy report-level materials attachments (the fixed shared picker was
+  // replaced by per-row images) - kept read-only so editing an old report
+  // does not wipe attachments saved against the report itself.
+  const [attachments] = useState<FileEntry[]>(
     (existing?.uploads || []) as FileEntry[]
   );
 
@@ -286,6 +292,7 @@ export function DailyReportForm({
         unit: d.unit.trim() || null,
         supplier: d.supplier.trim() || null,
         notes: d.notes.trim() || null,
+        photos: d.photos.slice(0, 1),
       }));
     const filledMaterials = materials
       .filter((m) => m.item.trim() !== '')
@@ -294,6 +301,7 @@ export function DailyReportForm({
         quantity: Number(m.quantity) || 0,
         unit: m.unit.trim() || null,
         notes: m.notes.trim() || null,
+        photos: m.photos.slice(0, 1),
       }));
 
     if (status === 'Submitted' && filledActivities.length === 0) {
@@ -306,12 +314,12 @@ export function DailyReportForm({
     }
 
     const invalidTitle = [...filledActivities, ...filledTargets].find((entry) =>
-      !isTitleWithinWordLimit(entry.title)
+      !isTitleWithinCharLimit(entry.title)
     );
     if (invalidTitle) {
       toast({
         title: 'Title is too long',
-        description: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle.title}".`,
+        description: `Activity titles must be ${MAX_TITLE_CHARS} characters or fewer: "${invalidTitle.title}".`,
         variant: 'destructive',
       });
       return;
@@ -542,6 +550,70 @@ export function DailyReportForm({
     </div>
   );
 
+  /** Compact single-image picker for one deliveries/materials table row. */
+  const renderRowImage = (
+    scope: string,
+    photos: FileEntry[],
+    onChange: (entries: FileEntry[]) => void
+  ) => {
+    const inputKey = `${scope}-0`;
+    const entry = photos[0];
+    return (
+      <div className="relative h-9 w-9 shrink-0">
+        {entry ? (
+          <>
+            <img
+              src={entry.url}
+              alt={entry.name || 'Image'}
+              className="h-9 w-9 rounded-md object-cover"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full shadow"
+              title="Remove image"
+              onClick={() => onChange([])}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            title="Attach image"
+            disabled={busyUpload === inputKey}
+            onClick={() => photoInputRefs.current[inputKey]?.click()}
+          >
+            {busyUpload === inputKey ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        <input
+          ref={(el) => {
+            photoInputRefs.current[inputKey] = el;
+          }}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) {
+              handlePhotoPick(scope, 0, file, 1, onChange, photos);
+            }
+          }}
+        />
+      </div>
+    );
+  };
+
   const costTables = useMemo(
     () => activities.map((activity) => costForActivity(activity)),
     [activities, meta.designations]
@@ -608,7 +680,7 @@ export function DailyReportForm({
                     </p>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-muted-foreground italic hidden sm:block">
-                        Title max 5 words
+                        Title max {MAX_TITLE_CHARS} chars
                       </span>
                       <Button
                         type="button"
@@ -630,11 +702,26 @@ export function DailyReportForm({
                         <div className="space-y-2">
                           <Select
                             value={activityTitleSelectValue(activity) || undefined}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
+                              if (value === CUSTOM_TITLE) {
+                                setActivity(index, { title: '' });
+                                return;
+                              }
+                              // Populate the whole activity from the selected
+                              // yesterday target (title, description, labour,
+                              // remarks) - the user then adjusts as needed.
+                              const target = meta.prevDayTargets.find(
+                                (t) => t.title === value
+                              );
                               setActivity(index, {
-                                title: value === CUSTOM_TITLE ? '' : value,
-                              })
-                            }
+                                title: value,
+                                description: target?.description || '',
+                                actual: target?.workforce
+                                  ? target.workforce.filter((e) => e.category)
+                                  : [],
+                                remarks: target?.remarks || '',
+                              });
+                            }}
                           >
                             <SelectTrigger className="bg-muted/30 border-none h-10 text-sm font-bold">
                               <SelectValue placeholder="Pick from yesterday's targets" />
@@ -651,12 +738,12 @@ export function DailyReportForm({
                           {(activityTitleSelectValue(activity) === CUSTOM_TITLE ||
                             !activity.title) && (
                             <Input
-                              placeholder="Type a short activity title (max 5 words)"
-                              maxLength={60}
+                              placeholder={`Type a short activity title (max ${MAX_TITLE_CHARS} chars)`}
+                              maxLength={MAX_TITLE_CHARS}
                               className="bg-muted/30 border-none h-10"
                               value={activity.title}
                               onChange={(e) => {
-                                if (isTitleWithinWordLimit(e.target.value)) {
+                                if (isTitleWithinCharLimit(e.target.value)) {
                                   setActivity(index, { title: e.target.value });
                                 }
                               }}
@@ -665,12 +752,12 @@ export function DailyReportForm({
                         </div>
                       ) : (
                         <Input
-                          placeholder="Short activity title (max 5 words)"
-                          maxLength={60}
+                          placeholder={`Short activity title (max ${MAX_TITLE_CHARS} chars)`}
+                          maxLength={MAX_TITLE_CHARS}
                           className="bg-muted/30 border-none h-10 font-bold"
                           value={activity.title}
                           onChange={(e) => {
-                            if (isTitleWithinWordLimit(e.target.value)) {
+                            if (isTitleWithinCharLimit(e.target.value)) {
                               setActivity(index, { title: e.target.value });
                             }
                           }}
@@ -873,16 +960,16 @@ export function DailyReportForm({
                     <Label className="text-xs font-bold uppercase">
                       Activity Title{' '}
                       <span className="font-medium italic text-muted-foreground normal-case">
-                        (max 5 words)
+                        (max {MAX_TITLE_CHARS} chars)
                       </span>
                     </Label>
                     <Input
                       placeholder="Short title for tomorrow's target"
-                      maxLength={60}
+                      maxLength={MAX_TITLE_CHARS}
                       className="bg-muted/30 border-none h-10 font-bold"
                       value={target.title}
                       onChange={(e) => {
-                        if (isTitleWithinWordLimit(e.target.value)) {
+                        if (isTitleWithinCharLimit(e.target.value)) {
                           setTarget(index, { title: e.target.value });
                         }
                       }}
@@ -969,7 +1056,7 @@ export function DailyReportForm({
                 onClick={() =>
                   setDeliveries((prev) => [
                     ...prev,
-                    { item: '', quantity: '', unit: '', supplier: '', notes: '' },
+                    { item: '', quantity: '', unit: '', supplier: '', notes: '', photos: [] },
                   ])
                 }
               >
@@ -1020,7 +1107,7 @@ export function DailyReportForm({
                       }}
                     />
                     <Input
-                      className="col-span-4 md:col-span-3 bg-background border-none h-9 text-sm"
+                      className="col-span-4 md:col-span-2 bg-background border-none h-9 text-sm"
                       placeholder="Supplier"
                       value={row.supplier}
                       onChange={(e) => {
@@ -1029,15 +1116,22 @@ export function DailyReportForm({
                         setDeliveries(next);
                       }}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="col-span-12 md:col-span-1 h-9 w-9 text-muted-foreground hover:text-destructive justify-self-end"
-                      onClick={() => setDeliveries(deliveries.filter((_, i) => i !== index))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-2">
+                      {renderRowImage(`delivery-${index}`, row.photos, (photos) => {
+                        const next = [...deliveries];
+                        next[index] = { ...next[index], photos };
+                        setDeliveries(next);
+                      })}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeliveries(deliveries.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Input
                       className="col-span-12 bg-background border-none h-9 text-sm"
                       placeholder="Notes (optional)"
@@ -1065,7 +1159,7 @@ export function DailyReportForm({
                 onClick={() =>
                   setMaterials((prev) => [
                     ...prev,
-                    { item: '', quantity: '', unit: '', notes: '' },
+                    { item: '', quantity: '', unit: '', notes: '', photos: [] },
                   ])
                 }
               >
@@ -1116,7 +1210,7 @@ export function DailyReportForm({
                       }}
                     />
                     <Input
-                      className="col-span-3 md:col-span-3 bg-background border-none h-9 text-sm"
+                      className="col-span-4 md:col-span-2 bg-background border-none h-9 text-sm"
                       placeholder="Notes (optional)"
                       value={row.notes}
                       onChange={(e) => {
@@ -1125,15 +1219,22 @@ export function DailyReportForm({
                         setMaterials(next);
                       }}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="col-span-1 md:col-span-1 h-9 w-9 text-muted-foreground hover:text-destructive justify-self-end"
-                      onClick={() => setMaterials(materials.filter((_, i) => i !== index))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-2">
+                      {renderRowImage(`material-${index}`, row.photos, (photos) => {
+                        const next = [...materials];
+                        next[index] = { ...next[index], photos };
+                        setMaterials(next);
+                      })}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                        onClick={() => setMaterials(materials.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1186,16 +1287,6 @@ export function DailyReportForm({
               </div>
             </div>
           )}
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Upload className="h-4 w-4 text-primary" />
-              <Label className="text-sm font-bold uppercase">
-                Materials Attachments / Delivery Notes
-              </Label>
-            </div>
-            {renderPhotoSlots('materials-attach', attachments, 5, 'image/*,.pdf,.doc,.docx', setAttachments)}
-          </div>
         </CardContent>
       </Card>
 

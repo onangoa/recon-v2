@@ -66,8 +66,8 @@ interface PdfReport {
     remarks: string | null;
     uploads: unknown;
   }[];
-  deliveries: { item: string; quantity: number; unit: string | null; supplier: string | null; notes: string | null }[];
-  materials: { item: string; quantity: number; unit: string | null; notes: string | null }[];
+  deliveries: { item: string; quantity: number; unit: string | null; supplier: string | null; notes: string | null; photos: unknown }[];
+  materials: { item: string; quantity: number; unit: string | null; notes: string | null; photos: unknown }[];
   site?: { name: string; location: string; contractor: { companyName: string } } | null;
   dayWorkforce?: { category: string; count: number }[];
   dayVisitors?: {
@@ -223,6 +223,37 @@ async function drawPhotos(doc: any, cursor: Cursor, files: { url: string; name?:
   }
 }
 
+/** Per-row image for one deliveries / materials line item (max 1 each). */
+async function drawRowImages(
+  doc: any,
+  cursor: Cursor,
+  rows: { item: string; photos: unknown }[]
+) {
+  for (const row of rows) {
+    const files = asFiles(row.photos).slice(0, 1);
+    if (files.length === 0) continue;
+    const image = await loadImage(files[0].url);
+    if (image) {
+      const w = CONTENT_W / 3;
+      const h = w * 0.75;
+      ensureSpace(doc, cursor, h + 6);
+      doc.addImage(image.data, image.format, MARGIN, cursor.y, w, h);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(...GRAY);
+      const name = files[0].name || row.item;
+      const lines = doc.splitTextToSize(name, CONTENT_W - w - 6) as string[];
+      lines.forEach((line: string, j: number) => {
+        doc.text(line, MARGIN + w + 4, cursor.y + 4 + j * 4);
+      });
+      doc.setTextColor(0, 0, 0);
+      cursor.y += h + 4;
+    } else {
+      field(doc, cursor, `Image - ${row.item}`, files[0].name || files[0].url);
+    }
+  }
+}
+
 function dayLabel(date: Date): string {
   return format(date, 'EEEE, d MMMM yyyy');
 }
@@ -372,6 +403,7 @@ async function renderReport(
       ['Deliveries - Item', 'Qty', 'Unit', 'Supplier'],
       report.deliveries.map((d) => [d.item, String(d.quantity), d.unit || '-', d.supplier || '-'])
     );
+    await drawRowImages(doc, cursor, report.deliveries);
   } else {
     plainNote(doc, cursor, 'No deliveries listed.');
   }
@@ -382,6 +414,7 @@ async function renderReport(
       ['Material Required - Item', 'Qty', 'Unit', 'Notes'],
       report.materials.map((m) => [m.item, String(m.quantity), m.unit || '-', m.notes || '-'])
     );
+    await drawRowImages(doc, cursor, report.materials);
   } else {
     plainNote(doc, cursor, 'No materials required listed.');
   }

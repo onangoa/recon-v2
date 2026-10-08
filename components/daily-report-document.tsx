@@ -417,6 +417,7 @@ export function DailyReportDocument({
                       <TableHead className="text-[10px] font-black uppercase text-center">Qty</TableHead>
                       <TableHead className="text-[10px] font-black uppercase">Unit</TableHead>
                       <TableHead className="text-[10px] font-black uppercase">Supplier</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-center">Image</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -428,6 +429,24 @@ export function DailyReportDocument({
                         </TableCell>
                         <TableCell className="text-xs">{delivery.unit || '-'}</TableCell>
                         <TableCell className="text-xs">{delivery.supplier || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {delivery.photos && delivery.photos.length > 0 ? (
+                            <a
+                              href={delivery.photos[0].url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={delivery.photos[0].name || 'Image'}
+                            >
+                              <img
+                                src={delivery.photos[0].url}
+                                alt={delivery.photos[0].name || delivery.item}
+                                className="h-10 w-10 rounded object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -451,6 +470,7 @@ export function DailyReportDocument({
                       <TableHead className="text-[10px] font-black uppercase text-center">Qty</TableHead>
                       <TableHead className="text-[10px] font-black uppercase">Unit</TableHead>
                       <TableHead className="text-[10px] font-black uppercase">Notes</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase text-center">Image</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -462,6 +482,24 @@ export function DailyReportDocument({
                         </TableCell>
                         <TableCell className="text-xs">{material.unit || '-'}</TableCell>
                         <TableCell className="text-xs">{material.notes || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {material.photos && material.photos.length > 0 ? (
+                            <a
+                              href={material.photos[0].url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={material.photos[0].name || 'Image'}
+                            >
+                              <img
+                                src={material.photos[0].url}
+                                alt={material.photos[0].name || material.item}
+                                className="h-10 w-10 rounded object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

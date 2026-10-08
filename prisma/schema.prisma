@@ -1004,7 +1004,7 @@ model DailyReportActivity {
   reportId   String
   /// Row order within the report.
   position   Int     @default(1)
-  /// Max 5 words; picked from the previous day's target titles on the form.
+  /// Max 5 chars; picked from the previous day's target titles on the form.
   title      String
   description String?
   /// Planned workforce snapshot (JSON [{ category, count }]) auto-picked
@@ -1031,7 +1031,7 @@ model DailyReportTarget {
   reportId    String
   /// Row order within the report.
   position    Int     @default(1)
-  /// Max 5 words.
+  /// Max 5 chars.
   title       String
   description String?
   /// Target workforce (JSON [{ category, count }]).
@@ -1055,6 +1055,8 @@ model DailyReportDelivery {
   unit     String?
   supplier String?
   notes    String?
+  /// Delivery note / evidence image (JSON [{ url, name }], max 1 per row).
+  photos   Json?
   report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
@@ -1070,6 +1072,8 @@ model DailyReportMaterial {
   quantity Float   @default(0)
   unit     String?
   notes    String?
+  /// Evidence image (JSON [{ url, name }], max 1 per row).
+  photos   Json?
   report   DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
