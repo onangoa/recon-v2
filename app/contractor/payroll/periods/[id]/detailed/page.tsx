@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 import { getErrorMessage } from '@/lib/toast-utils';
 import { exportToCSV } from '@/lib/export';
 import jsPDF from 'jspdf';
@@ -81,25 +82,10 @@ const BRAND_TINT: [number, number, number] = [249, 245, 240]; // light brown tin
 const BRAND_ZEBRA: [number, number, number] = [252, 249, 246]; // zebra stripe tint
 const BRAND_LINE: [number, number, number] = [222, 205, 189]; // wheat/brown grid line
 
-const loadLogoDataUrl = async (): Promise<string | null> => {
-  try {
-    const res = await fetch('/default_full_logo.png');
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string | null>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
 export default function DetailedViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { toast } = useToast();
+  const { contractor } = useAuth();
 
   const [data, setData] = useState<DetailedViewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,17 +190,18 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
     const pageHeight = doc.internal.pageSize.getHeight();
     const right = pageWidth - 14;
 
-    // Logo preloaded once; header/footer chrome drawn on every page by the autoTable hook below.
-    const logoDataUrl = await loadLogoDataUrl();
+    // Header/footer chrome drawn on every page by the autoTable hook below.
+    const companyName = contractor?.companyName?.trim() || 'ReconSMI';
     const drawChrome = () => {
-      if (logoDataUrl) {
-        doc.addImage(logoDataUrl, 'PNG', 14, 11, 42, 11.07); // 4096x1080 logo, aspect preserved
-      } else {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor(...BRAND_BROWN);
-        doc.text('ReconSMI', 14, 18);
+      doc.setFont('helvetica', 'bold');
+      let nameSize = 13;
+      doc.setFontSize(nameSize);
+      while (doc.getTextWidth(companyName) > 90 && nameSize > 8) {
+        nameSize -= 0.5;
+        doc.setFontSize(nameSize);
       }
+      doc.setTextColor(...BRAND_BROWN);
+      doc.text(companyName, 14, 18);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(...BRAND_BROWN);
