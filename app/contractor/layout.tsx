@@ -169,7 +169,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Shifts', href: '/contractor/shifts', icon: Clock, permission: 'shifts:read' },
     { label: 'Attendance', href: '/contractor/attendance', icon: Fingerprint, permission: 'attendance:read' },
     { label: 'Reports', href: '/contractor/reports', icon: BarChart3, permission: 'reports:read' },
-    { label: 'Daily Reports', href: '/contractor/reports/daily', icon: CalendarCheck, permission: 'reports:read' },
+    { label: 'Site Reports', href: '/contractor/reports/daily', icon: CalendarCheck, permission: 'reports:read' },
     { label: 'Settings', href: '/contractor/settings', icon: Settings, permission: 'settings:read' },
   ];
 

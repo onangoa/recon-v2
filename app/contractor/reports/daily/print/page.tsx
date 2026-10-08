@@ -46,7 +46,7 @@ function PrintToolbar({
         <Button asChild variant="outline" size="sm" className="gap-2">
           <Link href="/contractor/reports/daily">
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Daily Reports</span>
+            <span>Back to Site Reports</span>
           </Link>
         </Button>
         <p className="text-sm text-muted-foreground italic">
