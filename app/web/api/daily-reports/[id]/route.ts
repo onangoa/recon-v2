@@ -4,7 +4,7 @@ import { ActivityLogger } from '@/lib/activity-logger';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { DAILY_REPORT_FULL_INCLUDE } from '@/lib/daily-report-data';
-import { isTitleWithinCharLimit, MAX_TITLE_CHARS } from '@/lib/daily-report';
+import { isTitleWithinWordLimit, MAX_TITLE_WORDS } from '@/lib/daily-report';
 
 // ---------------------------------------------------------------------------
 // Single Daily Site Progress & Next-Day Planning Report API
@@ -198,12 +198,12 @@ export async function PUT(
       (title) =>
         typeof title === 'string' &&
         title.trim() !== '' &&
-        !isTitleWithinCharLimit(title)
+        !isTitleWithinWordLimit(title)
     );
     if (invalidTitle) {
       return NextResponse.json(
         {
-          error: `Activity titles must be ${MAX_TITLE_CHARS} characters or fewer: "${invalidTitle}"`,
+          error: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle}"`,
         },
         { status: 400 }
       );

@@ -136,11 +136,12 @@ export const VERDICT_OPTIONS = [
   { value: 'not_achieved', label: 'Not Achieved' },
 ] as const;
 
-/** Proposal limit: activity titles are "5 char max" in both sections. */
-export const MAX_TITLE_CHARS = 5;
+/** Proposal limit: activity titles are "5 words max" in both sections. */
+export const MAX_TITLE_WORDS = 5;
 
-export function isTitleWithinCharLimit(value: string): boolean {
-  return value.length <= MAX_TITLE_CHARS;
+export function isTitleWithinWordLimit(value: string): boolean {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  return words.length <= MAX_TITLE_WORDS;
 }
 
 export const VERDICT_LABELS: Record<string, string> = {

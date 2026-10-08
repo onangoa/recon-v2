@@ -5,7 +5,7 @@ import { startOfDay, endOfDay, subDays, format, isAfter } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { verifySiteOwnership } from '@/lib/contractor-isolation';
 import { DAILY_REPORT_FULL_INCLUDE, getRangeReports } from '@/lib/daily-report-data';
-import { isTitleWithinCharLimit, MAX_TITLE_CHARS } from '@/lib/daily-report';
+import { isTitleWithinWordLimit, MAX_TITLE_WORDS } from '@/lib/daily-report';
 
 // ---------------------------------------------------------------------------
 // Daily Site Progress & Next-Day Planning Report API
@@ -276,12 +276,12 @@ export async function POST(request: NextRequest) {
       (title) =>
         typeof title === 'string' &&
         title.trim() !== '' &&
-        !isTitleWithinCharLimit(title)
+        !isTitleWithinWordLimit(title)
     );
     if (invalidTitle) {
       return NextResponse.json(
         {
-          error: `Activity titles must be ${MAX_TITLE_CHARS} characters or fewer: "${invalidTitle}"`,
+          error: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle}"`,
         },
         { status: 400 }
       );

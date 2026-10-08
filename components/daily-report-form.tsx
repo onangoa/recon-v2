@@ -51,8 +51,8 @@ import {
   computeLabourCost,
   formatDayLabel,
   formatKes,
-  isTitleWithinCharLimit,
-  MAX_TITLE_CHARS,
+  isTitleWithinWordLimit,
+  MAX_TITLE_WORDS,
   parseISODate,
   toDateKey,
   VERDICT_OPTIONS,
@@ -314,12 +314,12 @@ export function DailyReportForm({
     }
 
     const invalidTitle = [...filledActivities, ...filledTargets].find((entry) =>
-      !isTitleWithinCharLimit(entry.title)
+      !isTitleWithinWordLimit(entry.title)
     );
     if (invalidTitle) {
       toast({
         title: 'Title is too long',
-        description: `Activity titles must be ${MAX_TITLE_CHARS} characters or fewer: "${invalidTitle.title}".`,
+        description: `Activity titles must be ${MAX_TITLE_WORDS} words or fewer: "${invalidTitle.title}".`,
         variant: 'destructive',
       });
       return;
@@ -680,7 +680,7 @@ export function DailyReportForm({
                     </p>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-muted-foreground italic hidden sm:block">
-                        Title max {MAX_TITLE_CHARS} chars
+                        Title max {MAX_TITLE_WORDS} words
                       </span>
                       <Button
                         type="button"
@@ -742,12 +742,11 @@ export function DailyReportForm({
                           {(activityTitleSelectValue(activity) === CUSTOM_TITLE ||
                             !activity.title) && (
                             <Input
-                              placeholder={`Type a short activity title (max ${MAX_TITLE_CHARS} chars)`}
-                              maxLength={MAX_TITLE_CHARS}
+                              placeholder={`Type a short activity title (max ${MAX_TITLE_WORDS} words)`}
                               className="bg-muted/30 border-none h-10"
                               value={activity.title}
                               onChange={(e) => {
-                                if (isTitleWithinCharLimit(e.target.value)) {
+                                if (isTitleWithinWordLimit(e.target.value)) {
                                   setActivity(index, { title: e.target.value });
                                 }
                               }}
@@ -756,12 +755,11 @@ export function DailyReportForm({
                         </div>
                       ) : (
                         <Input
-                          placeholder={`Short activity title (max ${MAX_TITLE_CHARS} chars)`}
-                          maxLength={MAX_TITLE_CHARS}
+                          placeholder={`Short activity title (max ${MAX_TITLE_WORDS} words)`}
                           className="bg-muted/30 border-none h-10 font-bold"
                           value={activity.title}
                           onChange={(e) => {
-                            if (isTitleWithinCharLimit(e.target.value)) {
+                            if (isTitleWithinWordLimit(e.target.value)) {
                               setActivity(index, { title: e.target.value });
                             }
                           }}
@@ -964,16 +962,15 @@ export function DailyReportForm({
                     <Label className="text-xs font-bold uppercase">
                       Activity Title{' '}
                       <span className="font-medium italic text-muted-foreground normal-case">
-                        (max {MAX_TITLE_CHARS} chars)
+                        (max {MAX_TITLE_WORDS} words)
                       </span>
                     </Label>
                     <Input
                       placeholder="Short title for tomorrow's target"
-                      maxLength={MAX_TITLE_CHARS}
                       className="bg-muted/30 border-none h-10 font-bold"
                       value={target.title}
                       onChange={(e) => {
-                        if (isTitleWithinCharLimit(e.target.value)) {
+                        if (isTitleWithinWordLimit(e.target.value)) {
                           setTarget(index, { title: e.target.value });
                         }
                       }}
