@@ -186,17 +186,25 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
 
   const handleExportPDF = async () => {
     if (!data || filteredRows.length === 0) return;
-    const { headers, body } = exportRows(filteredRows);
+    const { body } = exportRows(filteredRows);
     const dayCount = data.days.length;
     const summaryStart = 4 + dayCount * 2;
 
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const pageWidth = doc.internal.pageSize.getWidth();
+    // Fixed column widths (mm); the page itself is widened to fit every
+    // column (Worker -> per-day P/OT -> GROSS OT ... STATUS) on a single
+    // page so the trailing summary columns are never split off to a
+    // horizontal continuation page.
+    const colWidths: number[] = [36, 24, 16, 11]; // Worker, Designation, Salary, OT/hr
+    for (let i = 0; i < dayCount; i++) colWidths.push(6.5, 6.5); // per-day P / OT
+    colWidths.push(11, 9, 16, 14, 19, 13, 14, 13.5); // Total OT, Days, GROSS SALARY, GROSS OT, GROSS SALARY + OT, PAYE TAX, NET PAY, STATUS
+
+    const pageWidth = Math.max(297, colWidths.reduce((a, b) => a + b, 0) + 28); // at least A4 landscape
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pageWidth, 210] });
     const pageHeight = doc.internal.pageSize.getHeight();
     const right = pageWidth - 14;
 
-    // Logo preloaded once; header/footer chrome drawn on every page
-    // (including horizontal continuations) by the autoTable hook below.
+    // Logo preloaded once; header/footer chrome drawn on every page by the autoTable hook below.
     const logoDataUrl = await loadLogoDataUrl();
     const drawChrome = () => {
       if (logoDataUrl) {
@@ -232,6 +240,7 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(...BRAND_BROWN);
+      doc.text('P = Present (1/0)  ·  OT = Overtime hrs', 14, pageHeight - 8);
       doc.text('ReconSMI — Construction Hub', pageWidth / 2, pageHeight - 8, { align: 'center' });
     };
 
@@ -250,17 +259,49 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       '',
     ];
 
-    const columnStyles: Record<string, any> = {
-      2: { halign: 'right' }, // Salary
-      3: { halign: 'right' }, // OT/hr
-    };
-    for (let i = summaryStart; i < summaryStart + 7; i++) columnStyles[i] = { halign: 'right' };
-    columnStyles[summaryStart + 1] = { halign: 'center' }; // Days
-    columnStyles[summaryStart + 7] = { halign: 'center' }; // Status
+    const columnStyles: Record<string, any> = {};
+    colWidths.forEach((w, i) => { columnStyles[i] = { cellWidth: w }; });
+    columnStyles[2].halign = 'right'; // Salary
+    columnStyles[3].halign = 'right'; // OT/hr
+    for (let i = 4; i < summaryStart; i++) {
+      columnStyles[i].halign = 'center'; // per-day P / OT
+      columnStyles[i].cellPadding = 0.6;
+    }
+    for (let i = summaryStart; i < summaryStart + 7; i++) columnStyles[i].halign = 'right';
+    columnStyles[summaryStart + 1].halign = 'center'; // Days
+    columnStyles[summaryStart + 7].halign = 'center'; // Status
+
+    // Stacked two-row header: each day's number + weekday letter spans its
+    // P/OT pair; the trailing summary headers span both header rows.
+    const head: any[][] = [
+      [
+        { content: 'Worker', rowSpan: 2 },
+        { content: 'Designation', rowSpan: 2 },
+        { content: 'Salary', rowSpan: 2 },
+        { content: 'OT/hr', rowSpan: 2 },
+        ...data.days.map(d => ({
+          content: `${d.dayOfMonth} ${WEEKDAY_LETTERS[d.weekday]}`,
+          colSpan: 2,
+          styles: { halign: 'center' },
+        })),
+        { content: 'Total OT', rowSpan: 2 },
+        { content: 'Days', rowSpan: 2 },
+        { content: 'GROSS SALARY', rowSpan: 2 },
+        { content: 'GROSS OT', rowSpan: 2 },
+        { content: 'GROSS SALARY + OT', rowSpan: 2 },
+        { content: 'PAYE TAX', rowSpan: 2 },
+        { content: 'NET PAY', rowSpan: 2 },
+        { content: 'STATUS', rowSpan: 2 },
+      ],
+      data.days.flatMap(() => [
+        { content: 'P', styles: { halign: 'center' } },
+        { content: 'OT', styles: { halign: 'center' } },
+      ]),
+    ];
 
     autoTable(doc, {
       startY: 34,
-      head: [headers],
+      head,
       body: body.map(row => row.map(String)),
       foot: [foot],
       theme: 'grid',
@@ -270,8 +311,6 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       alternateRowStyles: { fillColor: BRAND_ZEBRA },
       columnStyles,
       margin: { top: 34, bottom: 20, left: 14, right: 14 },
-      horizontalPageBreak: true,
-      horizontalPageBreakRepeat: ['0', '1'],
       didDrawPage: () => drawChrome(),
     });
 
