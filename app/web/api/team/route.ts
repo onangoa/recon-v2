@@ -63,15 +63,47 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let body: any = null;
   try {
     const permCheck = await requireContractorPermission(request, 'team:create');
     if (!permCheck.authorized) return permCheck.error;
 
     const contractorId = permCheck.contractorId!;
-    const body = await request.json();
+    body = await request.json();
     
     if (!body.name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    if (body.siteId) {
+      const site = await prisma.site.findUnique({ where: { id: body.siteId } });
+      if (!site || site.contractorId !== contractorId) {
+        return NextResponse.json({ error: 'Invalid site' }, { status: 400 });
+      }
+    }
+
+    if (body.email) {
+      const duplicateMember = await prisma.teamMember.findFirst({
+        where: { email: body.email, contractorId },
+      });
+      if (duplicateMember) {
+        return NextResponse.json(
+          { error: `A team member with email ${body.email} already exists` },
+          { status: 409 }
+        );
+      }
+    }
+
+    if (body.phone) {
+      const duplicatePhone = await prisma.teamMember.findFirst({
+        where: { phone: body.phone, contractorId },
+      });
+      if (duplicatePhone) {
+        return NextResponse.json(
+          { error: `A team member with phone number ${body.phone} already exists` },
+          { status: 409 }
+        );
+      }
     }
 
     const temporaryPassword = body.password || Math.random().toString(36).slice(-10) + 'A1!';
@@ -81,6 +113,15 @@ export async function POST(request: NextRequest) {
     if (body.email) {
       const existingUser = await prisma.user.findUnique({ where: { email: body.email } });
       if (existingUser) {
+        const linkedMember = await prisma.teamMember.findFirst({
+          where: { userId: existingUser.id },
+        });
+        if (linkedMember) {
+          return NextResponse.json(
+            { error: `A team member with email ${body.email} already exists` },
+            { status: 409 }
+          );
+        }
         userId = existingUser.id;
       } else {
         const newUser = await prisma.user.create({
@@ -137,13 +178,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (body.siteId) {
-      const site = await prisma.site.findUnique({ where: { id: body.siteId }});
-      if (!site || site.contractorId !== contractorId) {
-        return NextResponse.json({ error: 'Invalid site' }, { status: 400 });
-      }
-    }
-
     await ActivityLogger.log({
       userId: permCheck.userId || 'system',
       contractorId: contractorId,
@@ -157,6 +191,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(member);
   } catch (error) {
     console.error('Failed to create team member:', error);
+    if ((error as { code?: string })?.code === 'P2002') {
+      const email = body?.email;
+      return NextResponse.json(
+        { error: email ? `A team member with email ${email} already exists` : 'Duplicate record' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to create team member' }, { status: 500 });
   }
 }

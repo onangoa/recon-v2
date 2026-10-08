@@ -64,12 +64,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let body: any = null;
   try {
     const permCheck = await mobileRequireContractorPermission(request, 'team:create');
     if (!permCheck.authorized) return permCheck.error!;
 
     const contractorId = permCheck.contractorId!;
-    const body = await request.json();
+    body = await request.json();
 
     if (!body.name) {
       return mobileError('Name is required', 400);
@@ -84,6 +85,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (body.email) {
+      const duplicateMember = await prisma.teamMember.findFirst({
+        where: { email: body.email, contractorId },
+      });
+      if (duplicateMember) {
+        return mobileError(`A team member with email ${body.email} already exists`, 409);
+      }
+    }
+
+    if (body.phone) {
+      const duplicatePhone = await prisma.teamMember.findFirst({
+        where: { phone: body.phone, contractorId },
+      });
+      if (duplicatePhone) {
+        return mobileError(`A team member with phone number ${body.phone} already exists`, 409);
+      }
+    }
+
     const temporaryPassword = body.password || Math.random().toString(36).slice(-10) + 'A1!';
     const hashedPassword = await hashPassword(temporaryPassword);
 
@@ -91,6 +110,12 @@ export async function POST(request: NextRequest) {
     if (body.email) {
       const existingUser = await prisma.user.findUnique({ where: { email: body.email } });
       if (existingUser) {
+        const linkedMember = await prisma.teamMember.findFirst({
+          where: { userId: existingUser.id },
+        });
+        if (linkedMember) {
+          return mobileError(`A team member with email ${body.email} already exists`, 409);
+        }
         userId = existingUser.id;
       } else {
         const newUser = await prisma.user.create({
@@ -160,6 +185,13 @@ export async function POST(request: NextRequest) {
     return mobileSuccess(member, 'Team member created');
   } catch (error) {
     console.error('Failed to create team member:', error);
+    if ((error as { code?: string })?.code === 'P2002') {
+      const email = body?.email;
+      return mobileError(
+        email ? `A team member with email ${email} already exists` : 'Duplicate record',
+        409
+      );
+    }
     return mobileError('Failed to create team member', 500);
   }
 }
