@@ -1,18 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'roles:read');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = session.contractor?.id || null;
+    const user = await prisma.user.findUnique({
+      where: { id: permCheck.userId! },
+      select: { role: true },
+    });
+    const contractorId = permCheck.contractorId || null;
     const { id } = await params;
     const role = await prisma.role.findUnique({
       where: { id },
@@ -26,7 +28,7 @@ export async function GET(
     }
 
     // Allow access if role belongs to this contractor or is a shared/platform role
-    if (role.contractorId && role.contractorId !== contractorId && session.user.role !== 'superadmin') {
+    if (role.contractorId && role.contractorId !== contractorId && user?.role !== 'superadmin') {
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
@@ -38,16 +40,18 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'roles:update');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = session.contractor?.id || null;
+    const user = await prisma.user.findUnique({
+      where: { id: permCheck.userId! },
+      select: { role: true },
+    });
+    const contractorId = permCheck.contractorId || null;
     const { id } = await params;
     const body = await request.json();
     const { name, description, permissionIds } = body;
@@ -64,7 +68,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    if (existingRole.scope === 'platform' && session.user.role !== 'superadmin') {
+    if (existingRole.scope === 'platform' && user?.role !== 'superadmin') {
       return NextResponse.json({ error: 'Cannot edit system roles' }, { status: 403 });
     }
 
@@ -90,16 +94,18 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'roles:delete');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = session.contractor?.id || null;
+    const user = await prisma.user.findUnique({
+      where: { id: permCheck.userId! },
+      select: { role: true },
+    });
+    const contractorId = permCheck.contractorId || null;
     const { id } = await params;
     const existingRole = await prisma.role.findUnique({
       where: { id }
@@ -113,7 +119,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 });
     }
 
-    if (existingRole.scope === 'platform' && session.user.role !== 'superadmin') {
+    if (existingRole.scope === 'platform' && user?.role !== 'superadmin') {
       return NextResponse.json({ error: 'Cannot delete system roles' }, { status: 403 });
     }
 

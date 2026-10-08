@@ -1,13 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { requirePermission } from '@/lib/require-permission';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'roles:read');
+    if (!permCheck.authorized) return permCheck.error;
 
     const permissions = await prisma.permission.findMany({
       orderBy: [

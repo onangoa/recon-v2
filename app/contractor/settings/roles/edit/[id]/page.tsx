@@ -14,10 +14,13 @@ import { Loader2 } from 'lucide-react';
 import RoleForm from '../../../components/role-form';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage } from '@/lib/toast-utils';
+import { useAuth } from '@/context/auth-context';
 
 export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canUpdateRoles = hasPermission('roles:update');
   const [roleData, setRoleData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState<string>('');
@@ -27,6 +30,10 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
   }, [params]);
 
   useEffect(() => {
+    if (!canUpdateRoles) {
+      router.replace('/contractor/settings?tab=roles');
+      return;
+    }
     if (!id) return;
     const fetchRole = async () => {
       try {
@@ -47,7 +54,9 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
       }
     };
     fetchRole();
-  }, [id, router, toast]);
+  }, [canUpdateRoles, id, router, toast]);
+
+  if (!canUpdateRoles) return null;
 
   if (isLoading) {
     return (

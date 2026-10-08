@@ -11,6 +11,7 @@
     "devices:assign-sites": "tsx scripts/assign-devices-to-sites.ts",
     "workers:assign-sites": "tsx scripts/assign-workers-to-sites.ts",
     "shifts:backfill": "tsx scripts/backfill-worker-shifts.ts",
+    "permissions:sync": "tsx scripts/sync-permissions.ts",
     "test:bank": "tsx scripts/test-bank-api.ts",
     "test:bank:live": "tsx scripts/test-bank-api.ts --live",
     "test:bank:live:filtered": "tsx scripts/test-bank-api.ts --live --only token,balance,statement.full",

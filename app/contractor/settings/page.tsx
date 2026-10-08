@@ -18,6 +18,7 @@ import {
 import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 import ProfileTab from './components/profile-tab';
 import NotificationsTab from './components/notifications-tab';
 import SecurityTab from './components/security-tab';
@@ -34,7 +35,10 @@ export default function ContractorSettingsPage() {
 
 function ContractorSettingsContent() {
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'profile';
+  const { hasPermission } = useAuth();
+  const canViewRoles = hasPermission('roles:read');
+  const requestedTab = searchParams.get('tab') || 'profile';
+  const defaultTab = requestedTab === 'roles' && !canViewRoles ? 'profile' : requestedTab;
 
   return (
     <div className="space-y-6">
@@ -70,9 +74,11 @@ function ContractorSettingsContent() {
           <TabsTrigger value="security" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <Lock className="w-4 h-4" /> Security
           </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
-            <ShieldCheck className="w-4 h-4" /> Roles & Permissions
-          </TabsTrigger>
+          {canViewRoles && (
+            <TabsTrigger value="roles" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
+              <ShieldCheck className="w-4 h-4" /> Roles & Permissions
+            </TabsTrigger>
+          )}
           <TabsTrigger value="devices" className="gap-2 data-[state=active]:bg-background data-[state=active]:text-primary">
             <Fingerprint className="w-4 h-4" /> Devices
           </TabsTrigger>
@@ -90,9 +96,11 @@ function ContractorSettingsContent() {
           <SecurityTab />
         </TabsContent>
 
-        <TabsContent value="roles" className="space-y-6">
-          <RolesTab />
-        </TabsContent>
+        {canViewRoles && (
+          <TabsContent value="roles" className="space-y-6">
+            <RolesTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="devices" className="space-y-6">
           <DevicesTab />

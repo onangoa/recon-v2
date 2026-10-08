@@ -1,18 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { requirePermission, requireContractorPermission } from '@/lib/require-permission';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requirePermission(request, 'roles:read');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = session.contractor?.id;
+    const user = await prisma.user.findUnique({
+      where: { id: permCheck.userId! },
+      select: { role: true },
+    });
+    const contractorId = permCheck.contractorId || null;
 
     const where: any = {};
-    if (session.user.role === 'superadmin') {
+    if (user?.role === 'superadmin') {
       // Superadmin sees all roles
     } else if (contractorId) {
       where.OR = [
@@ -39,17 +41,12 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const permCheck = await requireContractorPermission(request, 'roles:create');
+    if (!permCheck.authorized) return permCheck.error;
 
-    const contractorId = session.contractor?.id;
-    if (!contractorId) {
-      return NextResponse.json({ error: 'Contractor account required' }, { status: 403 });
-    }
+    const contractorId = permCheck.contractorId!;
 
     const body = await request.json();
     const { name, description, permissionIds } = body;

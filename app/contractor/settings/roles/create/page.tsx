@@ -1,16 +1,31 @@
 'use client';
 
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbPage, 
-  BreadcrumbSeparator 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 import RoleForm from '../../components/role-form';
+import { useAuth } from '@/context/auth-context';
 
 export default function CreateRolePage() {
+  const router = useRouter();
+  const { hasPermission } = useAuth();
+  const canCreateRoles = hasPermission('roles:create');
+
+  useEffect(() => {
+    if (!canCreateRoles) {
+      router.replace('/contractor/settings?tab=roles');
+    }
+  }, [canCreateRoles, router]);
+
+  if (!canCreateRoles) return null;
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
