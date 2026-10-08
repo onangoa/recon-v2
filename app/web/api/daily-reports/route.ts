@@ -145,6 +145,7 @@ async function buildDayMeta(contractorId: string, siteId: string, day: Date) {
           description: t.description,
           workforce: normalizeWorkforce(t.workforce),
           remarks: t.remarks,
+          uploads: normalizeFiles(t.uploads, MAX_PHOTOS),
         }))
       : [],
   };

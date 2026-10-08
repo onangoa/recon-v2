@@ -163,6 +163,7 @@ export async function GET(
               description: t.description,
               workforce: Array.isArray(t.workforce) ? (t.workforce as any[]) : [],
               remarks: t.remarks,
+              uploads: normalizeFiles(t.uploads, MAX_PHOTOS),
             }))
           : [],
       },

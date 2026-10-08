@@ -124,6 +124,9 @@ export interface DailyReportMeta {
     description?: string | null;
     workforce?: WorkforceEntry[] | null;
     remarks?: string | null;
+    /** Images attached to yesterday's target - copied onto the activity
+     *  when it is picked from the dropdown on the form. */
+    uploads?: FileEntry[] | null;
   }[];
 }
 

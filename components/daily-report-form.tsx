@@ -709,7 +709,8 @@ export function DailyReportForm({
                               }
                               // Populate the whole activity from the selected
                               // yesterday target (title, description, labour,
-                              // remarks) - the user then adjusts as needed.
+                              // remarks, photo evidence) - the user then
+                              // adjusts as needed.
                               const target = meta.prevDayTargets.find(
                                 (t) => t.title === value
                               );
@@ -720,6 +721,9 @@ export function DailyReportForm({
                                   ? target.workforce.filter((e) => e.category)
                                   : [],
                                 remarks: target?.remarks || '',
+                                photos: target?.uploads
+                                  ? target.uploads.slice(0, 2)
+                                  : [],
                               });
                             }}
                           >
