@@ -119,15 +119,17 @@ export async function DELETE(
       details: { name: member.name, role: member.role }
     });
 
+    // Delete the member first: deleting the user cascades (TeamMember.userId
+    // onDelete: Cascade) and would remove the member row before this call.
+    await prisma.teamMember.delete({
+      where: { id },
+    });
+
     if (member.userId) {
       await prisma.user.delete({
         where: { id: member.userId }
       });
     }
-
-    await prisma.teamMember.delete({
-      where: { id },
-    });
 
     return mobileSuccess(null, 'Team member deleted');
   } catch (error) {

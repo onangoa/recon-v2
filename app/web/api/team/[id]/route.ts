@@ -116,16 +116,18 @@ const permCheck = await requireContractorPermission(request, 'team:delete');
       details: { name: member.name, role: member.role }
     });
 
+    // Delete the member first: deleting the user cascades (TeamMember.userId
+    // onDelete: Cascade) and would remove the member row before this call.
+    await prisma.teamMember.delete({
+      where: { id },
+    });
+
     // Delete corresponding user if exists
     if (member.userId) {
       await prisma.user.delete({
         where: { id: member.userId }
       });
     }
-
-    await prisma.teamMember.delete({
-      where: { id },
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
