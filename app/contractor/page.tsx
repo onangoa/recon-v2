@@ -316,8 +316,8 @@ export default function ContractorDashboard() {
             )}
           </CardContent>
           <CardFooter className="p-3 bg-muted/20 border-t">
-            <Link href="/contractor/reports" className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-              View Full Report
+            <Link href="/contractor/activity" className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
+              View All Activity
             </Link>
           </CardFooter>
         </Card>
