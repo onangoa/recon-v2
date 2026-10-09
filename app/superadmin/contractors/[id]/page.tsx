@@ -12,10 +12,15 @@ import {
   ShieldCheck,
   Calendar,
   Users,
+  DollarSign,
   Edit2,
   Trash2,
   FileText,
+  CreditCard,
   Wallet,
+  CheckCircle,
+  XCircle,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,10 +35,15 @@ interface Contractor {
   location: string;
   phoneNumber: string;
   licenseNo: string;
+  subscriptionPlanId: string;
   userId: string;
   user: {
     name: string;
     email: string;
+  };
+  subscriptionPlan: {
+    name: string;
+    price: number;
   };
   createdAt: string;
   employees?: any[];
@@ -228,7 +238,22 @@ export default function ContractorDetailPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-none shadow-md">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              Subscription Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <p className="text-2xl font-bold">{contractor.subscriptionPlan.name}</p>
+            <p className="text-muted-foreground mt-1">
+              KES {contractor.subscriptionPlan.price?.toLocaleString() || 'N/A'}/month
+            </p>
+          </CardContent>
+        </Card>
+
         <Card className="border-none shadow-md">
           <CardHeader className="border-b border-border/50">
             <CardTitle className="flex items-center gap-2">

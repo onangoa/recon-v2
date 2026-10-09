@@ -195,7 +195,7 @@ export default function TransactionsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Input id="description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="e.g. Wallet top-up" required />
+                  <Input id="description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="e.g. Subscription top-up" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ref">Reference Number</Label>

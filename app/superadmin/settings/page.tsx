@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Settings,
   Shield,
-  UserPlus,
+  CreditCard,
   Bell,
   Globe,
   Save,
@@ -220,8 +220,8 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2"><UserPlus className="w-4 h-4" /> New Registrations</Label>
-                  <p className="text-sm text-muted-foreground">Notify when a new contractor registers on the platform.</p>
+                  <Label className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> New Subscriptions</Label>
+                  <p className="text-sm text-muted-foreground">Notify when a new contractor subscribes to a plan.</p>
                 </div>
                 <Switch defaultChecked />
               </div>

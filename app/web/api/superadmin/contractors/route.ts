@@ -20,6 +20,7 @@ export async function GET(request: Request) {
         take: limit,
         include: {
           user: true,
+          subscriptionPlan: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -44,7 +45,12 @@ export async function POST(request: Request) {
   if (!adminCheck.authorized) return adminCheck.error;
   try {
     const body = await request.json();
-    const { name, email, companyName, location, phoneNumber, licenseNo, password } = body;
+    const { name, email, companyName, location, phoneNumber, licenseNo, subscriptionPlanId, password } = body;
+
+    // Validate plan
+    if (!subscriptionPlanId) {
+      return NextResponse.json({ error: 'Subscription plan is mandatory' }, { status: 400 });
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -81,6 +87,7 @@ export async function POST(request: Request) {
           location,
           phoneNumber,
           licenseNo,
+          subscriptionPlanId,
         },
       });
 

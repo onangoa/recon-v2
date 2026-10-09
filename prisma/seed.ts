@@ -32,6 +32,7 @@ async function main() {
     await prisma.user.deleteMany({});
     await prisma.role.deleteMany({});
     await prisma.permission.deleteMany({});
+    await prisma.subscriptionPlan.deleteMany({});
 
     console.log('Cleared existing data');
 
@@ -94,6 +95,39 @@ async function main() {
         scope: 'platform',
       },
     });
+
+    // Create subscription plans first
+    const basicPlan = await prisma.subscriptionPlan.create({
+      data: {
+        name: 'Basic',
+        price: 2999,
+        maxSites: 1,
+        maxTeamMembers: 3,
+        features: JSON.stringify(['Up to 5 sites', 'Basic reporting', 'Email support']),
+      },
+    });
+
+    const proPlan = await prisma.subscriptionPlan.create({
+      data: {
+        name: 'Professional',
+        price: 7999,
+        maxSites: 1,
+        maxTeamMembers: 15,
+        features: JSON.stringify(['Unlimited sites', 'Advanced reporting', 'Priority support', 'Team management']),
+      },
+    });
+
+    const enterprisePlan = await prisma.subscriptionPlan.create({
+      data: {
+        name: 'Enterprise',
+        price: 19999,
+        maxSites: 1,
+        maxTeamMembers: 999,
+        features: JSON.stringify(['Unlimited sites', 'Custom reporting', '24/7 support', 'Advanced features']),
+      },
+    });
+
+    console.log('Created subscription plans');
 
     // Create Superadmin user
     const hashedDefaultPassword = await hashPassword('12345678');
@@ -164,6 +198,7 @@ const adminRole = await prisma.role.create({
           location: data.location,
           phoneNumber: data.phone,
           licenseNo: data.licenseNo,
+          subscriptionPlanId: basicPlan.id,
           safetyScore: 85 + Math.random() * 15,
         },
       });

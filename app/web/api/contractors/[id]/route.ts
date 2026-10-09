@@ -14,6 +14,7 @@ export async function GET(
       where: { id },
       include: {
         user: true,
+        subscriptionPlan: true,
         projects: true,
       },
     });
@@ -40,6 +41,7 @@ export async function PUT(
       data: body,
       include: {
         user: true,
+        subscriptionPlan: true,
       },
     });
     return NextResponse.json(contractor);

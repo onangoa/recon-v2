@@ -61,6 +61,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 
@@ -70,17 +77,27 @@ interface Contractor {
   location: string;
   phoneNumber: string;
   licenseNo: string;
+  subscriptionPlanId: string;
   user: {
     name: string;
     email: string;
   };
+  subscriptionPlan: {
+    name: string;
+  };
   createdAt: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
 }
 
 export default function ContractorsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -102,6 +119,7 @@ export default function ContractorsPage() {
     location: '',
     phoneNumber: '',
     licenseNo: '',
+    subscriptionPlanId: '',
     password: '',
   });
 
@@ -123,11 +141,16 @@ export default function ContractorsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const contractorsRes = await fetch(`/web/api/superadmin/contractors?page=${currentPage}&limit=${limit}`);
+      const [contractorsRes, plansRes] = await Promise.all([
+        fetch(`/web/api/superadmin/contractors?page=${currentPage}&limit=${limit}`),
+        fetch('/web/api/subscription-plans'),
+      ]);
       const contractorsData = await contractorsRes.json();
-
+      const plansData = await plansRes.json();
+      
       setContractors(contractorsData.contractors || []);
       setTotalPages(contractorsData.pages || 1);
+      setPlans(plansData);
     } catch (error) {
       toast({
         title: "Error",
@@ -145,6 +168,15 @@ export default function ContractorsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.subscriptionPlanId) {
+      toast({
+        title: "Required",
+        description: "Please select a subscription plan",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsCreating(true);
     try {
@@ -169,6 +201,7 @@ export default function ContractorsPage() {
           location: '',
           phoneNumber: '',
           licenseNo: '',
+          subscriptionPlanId: '',
           password: '',
         });
         fetchData();
@@ -267,6 +300,7 @@ export default function ContractorsPage() {
       location: contractor.location,
       phoneNumber: contractor.phoneNumber,
       licenseNo: contractor.licenseNo,
+      subscriptionPlanId: contractor.subscriptionPlanId,
       password: '',
     });
     setIsEditDialogOpen(true);
@@ -283,7 +317,7 @@ export default function ContractorsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Contractor Management</h1>
-          <p className="text-muted-foreground">Manage all registered contractor accounts.</p>
+          <p className="text-muted-foreground">Manage all registered contractors and their subscription tiers.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" className="h-9 gap-2">
@@ -365,9 +399,24 @@ export default function ContractorsPage() {
                     <Input id="phoneNumber" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} placeholder="+254..." required />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="licenseNo">License Number *</Label>
-                  <Input id="licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} placeholder="NCA-..." required />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="licenseNo">License Number *</Label>
+                    <Input id="licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} placeholder="NCA-..." required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Subscription Plan *</Label>
+                    <Select value={formData.subscriptionPlanId} onValueChange={val => setFormData({...formData, subscriptionPlanId: val})}>
+                      <SelectTrigger id="plan">
+                        <SelectValue placeholder="Select Plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map(plan => (
+                          <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>Cancel</Button>
@@ -413,6 +462,7 @@ export default function ContractorsPage() {
               <TableRow>
                 <TableHead className="font-bold text-[11px] uppercase tracking-wider">Company</TableHead>
                 <TableHead className="font-bold text-[11px] uppercase tracking-wider">Primary Contact</TableHead>
+                <TableHead className="font-bold text-[11px] uppercase tracking-wider">Plan</TableHead>
                 <TableHead className="font-bold text-[11px] uppercase tracking-wider">Location</TableHead>
                 <TableHead className="font-bold text-[11px] uppercase tracking-wider">Created</TableHead>
                 <TableHead className="text-right font-bold text-[11px] uppercase tracking-wider">Actions</TableHead>
@@ -432,7 +482,7 @@ export default function ContractorsPage() {
                 ))
               ) : filteredContractors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                     No contractors found.
                   </TableCell>
                 </TableRow>
@@ -459,6 +509,11 @@ export default function ContractorsPage() {
                           <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" /> {contractor.phoneNumber}</span>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[9px]">
+                        {contractor.subscriptionPlan.name}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm flex items-center gap-1.5 text-muted-foreground">
@@ -572,9 +627,24 @@ export default function ContractorsPage() {
                 <Input id="edit-phoneNumber" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} required />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-licenseNo">License Number</Label>
-              <Input id="edit-licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-licenseNo">License Number</Label>
+                <Input id="edit-licenseNo" value={formData.licenseNo} onChange={e => setFormData({...formData, licenseNo: e.target.value})} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-plan">Subscription Plan</Label>
+                <Select value={formData.subscriptionPlanId} onValueChange={val => setFormData({...formData, subscriptionPlanId: val})}>
+                  <SelectTrigger id="edit-plan">
+                    <SelectValue placeholder="Select Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map(plan => (
+                      <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isUpdating}>Cancel</Button>
