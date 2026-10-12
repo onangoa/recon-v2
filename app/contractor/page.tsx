@@ -111,6 +111,11 @@ export default function ContractorDashboard() {
       try {
         const query = activeSite ? `?siteId=${activeSite.id}` : '';
         const response = await fetch(`/web/api/contractor/dashboard${query}`);
+        if (response.status === 403) {
+          throw new Error(
+            'You do not have permission to view the dashboard. Ask your administrator to grant your role the "dashboard:read" permission (Settings → Roles).'
+          );
+        }
         if (!response.ok) throw new Error('Failed to fetch dashboard data');
         const data = await response.json();
         if (data.error) throw new Error(data.error);

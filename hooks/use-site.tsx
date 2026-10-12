@@ -18,6 +18,7 @@ interface SiteContextType {
   setActiveSite: (site: Site) => void;
   sites: Site[];
   isLoading: boolean;
+  accessDenied: boolean;
 }
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
@@ -26,6 +27,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const [activeSite, setActiveSiteState] = useState<Site | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -33,15 +35,34 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
     const fetchSites = async () => {
       try {
         const response = await fetch('/web/api/sites');
+
+        if (response.status === 403) {
+          // The user's role is missing the sites:read permission. This is a
+          // rights problem, not an empty workspace — never treat it as
+          // onboarding (the old behavior bounced these users to the site
+          // creation page). Send them to the descriptive no-access page.
+          setAccessDenied(true);
+          if (!pathname.includes('/no-access')) {
+            router.replace('/contractor/no-access');
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sites (${response.status})`);
+        }
+
         const data = await response.json();
-        
+
         // Handle both array and object responses (pagination)
         const rawSites = Array.isArray(data) ? data : (data.sites || []);
-        
-        if (rawSites.length === 0 && !pathname.includes('/sites/create') && !pathname.includes('/auth') && pathname.startsWith('/contractor')) {
+
+        if (rawSites.length === 0 && !pathname.includes('/sites/create') && !pathname.includes('/auth') && !pathname.includes('/no-access') && pathname.startsWith('/contractor')) {
           router.push('/contractor/sites/create');
           return;
         }
+
+        setAccessDenied(false);
 
         const transformedSites = rawSites.map((site: any) => ({
           id: site.id,
@@ -80,7 +101,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SiteContext.Provider value={{ activeSite, setActiveSite, sites, isLoading }}>
+    <SiteContext.Provider value={{ activeSite, setActiveSite, sites, isLoading, accessDenied }}>
       {children}
     </SiteContext.Provider>
   );

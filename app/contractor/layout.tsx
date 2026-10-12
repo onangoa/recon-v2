@@ -80,6 +80,10 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
   const isOnboarding =
     !sitesLoading && sites.length === 0 && pathname.startsWith('/contractor/sites/create');
 
+  // Users whose role lacks sites:read are sent to the no-access page.
+  // Render it with the same minimal chrome so it reads as a standalone page.
+  const isNoAccess = pathname.startsWith('/contractor/no-access');
+
   const handleLogout = async () => {
     await logout();
   };
@@ -95,7 +99,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
       .toUpperCase() || 'U';
   const avatarUrl = user?.avatar || undefined;
 
-  if (isOnboarding) {
+  if (isOnboarding || isNoAccess) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-muted/5">
         <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
