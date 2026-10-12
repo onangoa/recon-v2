@@ -69,11 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const isRefreshingRef = useRef(false);
   const userRef = useRef<User | null>(null);
+  const pathnameRef = useRef(pathname);
   const lastActivityRef = useRef<number>(Date.now());
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const clearAllState = useCallback(() => {
     setUser(null);
@@ -111,7 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setAuthCallbacks(applyAuthData, () => {
       clearAllState();
-      router.push('/login');
+      const currentPathname = pathnameRef.current;
+      if (!PUBLIC_PATHS.includes(currentPathname) && !currentPathname.startsWith('/docs')) {
+        router.push('/login');
+      }
     });
     return () => setAuthCallbacks(null, null);
   }, [applyAuthData, clearAllState, router]);
