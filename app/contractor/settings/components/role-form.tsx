@@ -109,6 +109,35 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
     }));
   };
 
+  // ---- Bulk selection helpers ----
+  const toggleModulePermissions = (modulePermissions: Permission[]) => {
+    const moduleIds = modulePermissions.map((p) => p.id);
+    setFormData((prev) => {
+      const allSelected = moduleIds.every((id) => prev.permissionIds.includes(id));
+      return {
+        ...prev,
+        permissionIds: allSelected
+          ? prev.permissionIds.filter((pid) => !moduleIds.includes(pid))
+          : Array.from(new Set([...prev.permissionIds, ...moduleIds])),
+      };
+    });
+  };
+
+  const selectAllPermissions = () => {
+    setFormData((prev) => ({ ...prev, permissionIds: permissions.map((p) => p.id) }));
+  };
+
+  const clearAllPermissions = () => {
+    setFormData((prev) => ({ ...prev, permissionIds: [] }));
+  };
+
+  const moduleCheckState = (modulePermissions: Permission[]): boolean | 'indeterminate' => {
+    const selectedCount = modulePermissions.filter((p) => formData.permissionIds.includes(p.id)).length;
+    if (selectedCount === 0) return false;
+    if (selectedCount === modulePermissions.length) return true;
+    return 'indeterminate';
+  };
+
   // Group permissions by module
   const groupedPermissions = permissions.reduce((acc, p) => {
     if (!acc[p.module]) acc[p.module] = [];
@@ -162,13 +191,54 @@ export default function RoleForm({ initialData, isEditing = false }: RoleFormPro
           <CardTitle>Permissions & Access</CardTitle>
           <CardDescription>Select what actions this role can perform across different modules.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              <span className="font-bold text-foreground">{formData.permissionIds.length}</span> of{' '}
+              {permissions.length} permissions selected
+            </span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={selectAllPermissions}
+                disabled={isSubmitting || permissions.length === 0 || formData.permissionIds.length === permissions.length}
+              >
+                Select all
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground"
+                onClick={clearAllPermissions}
+                disabled={isSubmitting || formData.permissionIds.length === 0}
+              >
+                Clear all
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {Object.entries(groupedPermissions).map(([module, modulePermissions]) => (
               <div key={module} className="space-y-4">
-                <h3 className="text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
-                  {module}
-                </h3>
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-xs font-black text-primary uppercase tracking-widest">
+                    {module}
+                  </h3>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <Checkbox
+                      checked={moduleCheckState(modulePermissions)}
+                      onCheckedChange={() => toggleModulePermissions(modulePermissions)}
+                      disabled={isSubmitting}
+                      aria-label={`Select all ${module} permissions`}
+                    />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      All
+                    </span>
+                  </label>
+                </div>
                 <div className="space-y-3">
                   {modulePermissions.map((permission) => (
                     <div key={permission.id} className="flex items-start space-x-3">

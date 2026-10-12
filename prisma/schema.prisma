@@ -467,7 +467,6 @@ model TeamMember {
   id           String     @id @default(cuid())
   contractorId String
   userId       String?    @unique
-  siteId       String?
   name         String
   email        String?
   phone        String?
@@ -477,13 +476,12 @@ model TeamMember {
   joinedAt     DateTime   @default(now())
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  site         Site?      @relation(fields: [siteId], references: [id])
+  sites        Site[]
   contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
   roleRelation Role?      @relation(fields: [roleId], references: [id])
   user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([contractorId])
-  @@index([siteId])
   @@index([userId])
 }
 

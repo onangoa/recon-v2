@@ -21,13 +21,17 @@ import {
   BreadcrumbSeparator 
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { useSite } from '@/hooks/use-site';
 
 export default function CreateTeamMemberPage() {
   const router = useRouter();
   const { toast } = useToast();
-  
+  const { sites: contractorSites } = useSite();
+
   const [formData, setFormData] = useState({
     name: '',
     role: '',
@@ -35,9 +39,19 @@ export default function CreateTeamMemberPage() {
     email: '',
     phone: '',
     status: 'Active',
+    siteIds: [] as string[],
   });
   const [roles, setRoles] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toggleSite = (siteId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      siteIds: prev.siteIds.includes(siteId)
+        ? prev.siteIds.filter((id) => id !== siteId)
+        : [...prev.siteIds, siteId],
+    }));
+  };
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -217,6 +231,29 @@ export default function CreateTeamMemberPage() {
                 className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary shadow-sm"
               />
             </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-[10px] font-black text-primary uppercase tracking-widest">
+              Assigned Sites <span className="text-muted-foreground font-medium normal-case">(select one or more)</span>
+            </label>
+            {contractorSites.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No sites available yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {contractorSites.map((site) => (
+                  <label key={site.id} className="flex items-center gap-2 rounded-lg border border-muted-foreground/15 bg-background px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors">
+                    <Checkbox
+                      checked={formData.siteIds.includes(site.id)}
+                      onCheckedChange={() => toggleSite(site.id)}
+                      disabled={isSubmitting}
+                      aria-label={`Assign to ${site.name}`}
+                    />
+                    <span className="text-xs font-semibold">{site.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 pt-2">

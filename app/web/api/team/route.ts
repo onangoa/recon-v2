@@ -14,18 +14,34 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    // Site scoping: a specific site id, 'unassigned' (no sites), or a site id
+    // combined with includeUnassigned=1 for "this site + unassigned" views.
+    const siteId = searchParams.get('siteId') || '';
+    const includeUnassigned = searchParams.get('includeUnassigned') === '1';
     const skip = (page - 1) * limit;
 
-    const where: any = { contractorId };
-    
+    const and: any[] = [{ contractorId }];
+
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { role: { contains: search } },
-        { email: { contains: search } },
-        { phone: { contains: search } },
-      ];
+      and.push({
+        OR: [
+          { name: { contains: search } },
+          { role: { contains: search } },
+          { email: { contains: search } },
+          { phone: { contains: search } },
+        ],
+      });
     }
+
+    if (siteId === 'unassigned') {
+      and.push({ sites: { none: {} } });
+    } else if (siteId && includeUnassigned) {
+      and.push({ OR: [{ sites: { some: { id: siteId } } }, { sites: { none: {} } }] });
+    } else if (siteId) {
+      and.push({ sites: { some: { id: siteId } } });
+    }
+
+    const where = { AND: and };
 
     const [members, total] = await Promise.all([
       prisma.teamMember.findMany({
@@ -36,7 +52,9 @@ export async function GET(request: NextRequest) {
               permissions: true
             }
           },
-          site: true
+          sites: {
+            select: { id: true, name: true }
+          }
         },
         orderBy: {
           name: 'asc'
@@ -75,9 +93,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    if (body.siteId) {
-      const site = await prisma.site.findUnique({ where: { id: body.siteId } });
-      if (!site || site.contractorId !== contractorId) {
+    // Site assignment: `siteIds` (array) or the legacy single `siteId`.
+    // Every id must belong to this contractor before creating the member.
+    const siteIds: string[] = Array.isArray(body.siteIds)
+      ? body.siteIds.filter((id: any) => id)
+      : body.siteId
+        ? [body.siteId]
+        : [];
+    if (siteIds.length > 0) {
+      const ownedSites = await prisma.site.findMany({
+        where: { id: { in: siteIds }, contractorId },
+        select: { id: true },
+      });
+      if (ownedSites.length !== siteIds.length) {
         return NextResponse.json({ error: 'Invalid site' }, { status: 400 });
       }
     }
@@ -174,7 +202,10 @@ export async function POST(request: NextRequest) {
         email: body.email || null,
         phone: body.phone || null,
         status: body.status || 'Active',
-        siteId: body.siteId || null,
+        sites: { connect: siteIds.map((id) => ({ id })) },
+      },
+      include: {
+        sites: { select: { id: true, name: true } },
       },
     });
 

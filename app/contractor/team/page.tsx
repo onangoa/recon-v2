@@ -70,6 +70,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useRouter } from 'next/navigation';
+import { useSite } from '@/hooks/use-site';
 
 interface TeamMember {
   id: string;
@@ -79,16 +80,22 @@ interface TeamMember {
   phone: string | null;
   status: string;
   createdAt: string;
+  sites: { id: string; name: string }[];
 }
 
 export default function TeamPage() {
   const router = useRouter();
   const { toast } = useToast();
-  
+  const { sites: contractorSites, activeSite, isLoading: sitesLoading } = useSite();
+
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // site filter: 'current' = the switched (active) site + unassigned members —
+  // the default per-site view; '' = all sites; 'unassigned' = members without
+  // any site; otherwise a specific site id.
+  const [filterSiteId, setFilterSiteId] = useState<string>('current');
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -100,10 +107,21 @@ export default function TeamPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchMembers = async () => {
+    if (sitesLoading) return; // wait until the active site is resolved
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/web/api/team?page=${currentPage}&limit=${limit}&search=${searchQuery}`);
+      let url = `/web/api/team?page=${currentPage}&limit=${limit}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+      if (filterSiteId === 'current') {
+        // Default view: the switched site's members plus unassigned ones.
+        if (activeSite) url += `&siteId=${activeSite.id}&includeUnassigned=1`;
+      } else if (filterSiteId === 'unassigned') {
+        url += `&siteId=unassigned`;
+      } else if (filterSiteId) {
+        url += `&siteId=${filterSiteId}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch team members');
       const data = await response.json();
       setMembers(data.members);
@@ -127,7 +145,9 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchMembers();
-  }, [currentPage]);
+    // activeSite?.id: re-apply the 'current' view when the site is switched.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, filterSiteId, activeSite?.id, sitesLoading]);
 
   const handleDelete = async () => {
     if (!memberToDelete) return;
@@ -251,14 +271,34 @@ export default function TeamPage() {
       <Card className="border-none shadow-md overflow-hidden">
         <CardHeader className="pb-3 border-b bg-muted/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or role..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
-              />
+            <div className="flex flex-1 gap-3">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-background border-none h-10 text-sm shadow-sm"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <select
+                  value={filterSiteId}
+                  onChange={(e) => setFilterSiteId(e.target.value)}
+                  disabled={isLoading}
+                  className="h-10 pl-10 pr-8 rounded-md bg-background border-none text-sm shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 appearance-none"
+                >
+                  <option value="current">
+                    {activeSite ? `${activeSite.name} + unassigned` : 'This site + unassigned'}
+                  </option>
+                  <option value="">All sites</option>
+                  <option value="unassigned">Unassigned only</option>
+                  {contractorSites.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -305,6 +345,7 @@ export default function TeamPage() {
                 <TableRow>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Member Details</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Role</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Assigned Sites</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Contact Info</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Status</TableHead>
                   <TableHead className="text-right w-[80px] font-bold text-xs uppercase tracking-wider">Actions</TableHead>
@@ -328,6 +369,24 @@ export default function TeamPage() {
                       <Badge variant="outline" className="text-[10px] font-semibold border-primary/20 text-primary/80">
                         {member.role}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {member.sites && member.sites.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {member.sites.slice(0, 2).map((s) => (
+                            <Badge key={s.id} variant="outline" className="text-[10px] font-semibold">
+                              {s.name}
+                            </Badge>
+                          ))}
+                          {member.sites.length > 2 && (
+                            <Badge variant="secondary" className="text-[10px] font-bold">
+                              +{member.sites.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">Unassigned</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">

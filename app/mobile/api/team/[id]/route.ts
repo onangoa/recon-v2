@@ -18,6 +18,9 @@ export async function GET(
     const { id } = await params;
     const member = await prisma.teamMember.findFirst({
       where: { id, contractorId },
+      include: {
+        sites: { select: { id: true, name: true } },
+      },
     });
 
     if (!member) {
@@ -50,6 +53,28 @@ export async function PATCH(
       return mobileError('Team member not found', 404);
     }
 
+    // Site assignment: `siteIds` (array) replaces the member's sites; the
+    // legacy single `siteId` string maps to a one-element list. Neither key
+    // present leaves assignments unchanged; an empty array unassigns all.
+    let sitesUpdate: { set: { id: string }[] } | undefined;
+    if (Array.isArray(body.siteIds) || body.siteId !== undefined) {
+      const siteIds: string[] = Array.isArray(body.siteIds)
+        ? body.siteIds.filter((id: any) => id)
+        : body.siteId
+          ? [body.siteId]
+          : [];
+      if (siteIds.length > 0) {
+        const ownedSites = await prisma.site.findMany({
+          where: { id: { in: siteIds }, contractorId },
+          select: { id: true },
+        });
+        if (ownedSites.length !== siteIds.length) {
+          return mobileError('Invalid site', 400);
+        }
+      }
+      sitesUpdate = { set: siteIds.map((id) => ({ id })) };
+    }
+
     const member = await prisma.teamMember.update({
       where: { id },
       data: {
@@ -59,7 +84,10 @@ export async function PATCH(
         email: body.email,
         phone: body.phone,
         status: body.status,
-        siteId: body.siteId,
+        sites: sitesUpdate,
+      },
+      include: {
+        sites: { select: { id: true, name: true } },
       },
     });
 

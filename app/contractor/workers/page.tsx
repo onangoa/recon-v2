@@ -57,6 +57,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -204,6 +205,11 @@ export default function WorkersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ---- Bulk selection ----
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   // ---- Biometric device enrollment state ----
   const [enrolledEnrollIds, setEnrolledEnrollIds] = useState<number[]>([]);
   const [deviceAvailable, setDeviceAvailable] = useState<boolean | null>(null);
@@ -219,6 +225,7 @@ export default function WorkersPage() {
     if (sitesLoading) return; // wait until the active site is resolved
     setIsLoading(true);
     setError(null);
+    setSelectedIds(new Set());
     try {
       let url = `/web/api/workers?page=${currentPage}&limit=${limit}`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
@@ -460,6 +467,65 @@ export default function WorkersPage() {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // ---- Bulk selection helpers ----
+  const toggleSelectWorker = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allOnPageSelected = workers.length > 0 && workers.every((w) => selectedIds.has(w.id));
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      if (allOnPageSelected) {
+        const next = new Set(prev);
+        workers.forEach((w) => next.delete(w.id));
+        return next;
+      }
+      const next = new Set(prev);
+      workers.forEach((w) => next.add(w.id));
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      const response = await fetch('/web/api/workers/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: data.message || 'Selected workers have been removed',
+          variant: "default",
+        });
+        setIsBulkDeleteDialogOpen(false);
+        fetchWorkers();
+      } else {
+        throw new Error(getApiError(data, 'Failed to delete workers'));
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(err, "Unable to remove the selected workers. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -748,6 +814,38 @@ export default function WorkersPage() {
               </Button>
             </div>
           </div>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between gap-3 mt-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <Badge className="text-[10px] uppercase font-bold bg-primary text-white">
+                  {selectedIds.size} selected
+                </Badge>
+                <span className="text-xs text-muted-foreground italic">
+                  {allOnPageSelected ? 'All workers on this page are selected' : 'Select more workers below'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-muted-foreground"
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={isBulkDeleting}
+                >
+                  <X className="w-4 h-4" /> Clear
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  disabled={isBulkDeleting}
+                >
+                  <Trash2 className="w-4 h-4" /> Delete Selected
+                </Button>
+              </div>
+            </div>
+          )}
           {filterDesignationId && (
             <p className="text-xs text-muted-foreground italic mt-2">
               Filtered by: <span className="font-bold text-foreground">
@@ -776,6 +874,14 @@ export default function WorkersPage() {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allOnPageSelected}
+                      onCheckedChange={toggleSelectAllOnPage}
+                      aria-label="Select all workers on this page"
+                      disabled={isBulkDeleting}
+                    />
+                  </TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Worker</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Designation</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Site</TableHead>
@@ -789,6 +895,14 @@ export default function WorkersPage() {
               <TableBody>
                 {workers.map((worker) => (
                   <TableRow key={worker.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(worker.id)}
+                        onCheckedChange={() => toggleSelectWorker(worker.id)}
+                        aria-label={`Select ${worker.name}`}
+                        disabled={isBulkDeleting}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9 border border-primary/20">
@@ -957,6 +1071,31 @@ export default function WorkersPage() {
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Delete Worker'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} worker{selectedIds.size === 1 ? '' : 's'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected worker{selectedIds.size === 1 ? '' : 's'} and all associated
+              payroll records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleBulkDelete();
+              }}
+              disabled={isBulkDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isBulkDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : `Delete ${selectedIds.size} Worker${selectedIds.size === 1 ? '' : 's'}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
