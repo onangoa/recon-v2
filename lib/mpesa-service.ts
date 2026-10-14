@@ -711,12 +711,12 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
             <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(to right, #0F1F3D, #1A3260); color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Sign In to Your Account</a>
           </div>
           
-          <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+          <p style="color: #4A5568; font-size: 14px;">Or copy and paste this link into your browser:</p>
           <p style="word-break: break-all; color: #0F1F3D; font-size: 12px;">${loginUrl}</p>
           
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #eee;">
-            <p style="margin: 8px 0; color: #666;"><strong>Getting Started:</strong></p>
-            <ul style="color: #666; margin: 8px 0 8px 32px; padding: 0;">
+            <p style="margin: 8px 0; color: #4A5568;"><strong>Getting Started:</strong></p>
+            <ul style="color: #4A5568; margin: 8px 0 8px 32px; padding: 0;">
               <li>Sign in to your dashboard</li>
               <li>Add your team members</li>
               <li>Create your first project</li>
@@ -733,7 +733,7 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
           
           <p>If you have any questions or need assistance, please contact our support team.</p>
           
-          <p style="margin-top: 32px; color: #666; font-size: 12px;">ReconSMI - Construction Management System<br>Building Excellence Together</p>
+          <p style="margin-top: 32px; color: #4A5568; font-size: 12px;">ReconSMI - Construction Management System<br>Building Excellence Together</p>
         </div>
       `,
       text: `Welcome to ReconSMI!

@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
           subject: 'Welcome to ReconSMI – Your Account Has Been Created',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-              <h2 style="color: #1e40af;">Welcome to ReconSMI!</h2>
+              <h2 style="color: #0F1F3D;">Welcome to ReconSMI!</h2>
               <p>Hello <strong>${body.name}</strong>,</p>
               <p>An account has been created for you on ReconSMI. Here are your login details:</p>
               <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
                 <p style="margin: 4px 0;"><strong>Temporary Password:</strong> ${temporaryPassword}</p>
               </div>
               <p style="margin-top: 16px;">
-                <a href="${appUrl}/login" style="background: #1e40af; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+                <a href="${appUrl}/login" style="background: #0F1F3D; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
                   Log In Now
                 </a>
               </p>

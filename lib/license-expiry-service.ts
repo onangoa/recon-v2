@@ -42,12 +42,12 @@ function buildEmailHtml(
       <h2 style="margin-bottom: 8px;">${headline}</h2>
       <p style="margin: 0 0 16px; color: #4b5563;">${expiryText}</p>
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-        <tr><td style="padding: 6px 0; color: #6b7280;">License</td><td style="padding: 6px 0; font-weight: 600;">${licenseName}</td></tr>
-        <tr><td style="padding: 6px 0; color: #6b7280;">License No.</td><td style="padding: 6px 0;">${licenseNumber}</td></tr>
-        ${siteName ? `<tr><td style="padding: 6px 0; color: #6b7280;">Site</td><td style="padding: 6px 0;">${siteName}</td></tr>` : ''}
-        <tr><td style="padding: 6px 0; color: #6b7280;">Expiry</td><td style="padding: 6px 0;">${expiryDate.toLocaleDateString()}</td></tr>
+        <tr><td style="padding: 6px 0; color: #4A5568;">License</td><td style="padding: 6px 0; font-weight: 600;">${licenseName}</td></tr>
+        <tr><td style="padding: 6px 0; color: #4A5568;">License No.</td><td style="padding: 6px 0;">${licenseNumber}</td></tr>
+        ${siteName ? `<tr><td style="padding: 6px 0; color: #4A5568;">Site</td><td style="padding: 6px 0;">${siteName}</td></tr>` : ''}
+        <tr><td style="padding: 6px 0; color: #4A5568;">Expiry</td><td style="padding: 6px 0;">${expiryDate.toLocaleDateString()}</td></tr>
       </table>
-      <p style="margin-top: 24px; font-size: 13px; color: #6b7280;">
+      <p style="margin-top: 24px; font-size: 13px; color: #4A5568;">
         Please review and renew this license to keep your records and operations compliant.
       </p>
       <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">ReconSMI License Compliance Alerts</p>

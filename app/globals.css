@@ -77,6 +77,107 @@
   --shadow-card: 0 1px 4px rgba(15, 31, 61, 0.06), 0 4px 16px rgba(15, 31, 61, 0.04);
   --shadow-elevated: 0 4px 20px rgba(15, 31, 61, 0.1), 0 1px 4px rgba(15, 31, 61, 0.06);
   --shadow-modal: 0 20px 60px rgba(15, 31, 61, 0.18);
+
+  /* Remap Tailwind's stock palettes onto the MosaicMove palette so every
+     legacy utility (gray/emerald/green/red/orange/blue/indigo) follows the theme. */
+  --color-amber: #F4A261;
+  --color-amber-light: #FEF3E8;
+
+  --color-gray-50: #F8F6F2;
+  --color-gray-100: #EDE9E1;
+  --color-gray-200: #E2DACE;
+  --color-gray-300: #C8BFAE;
+  --color-gray-400: #8A96A8;
+  --color-gray-500: #6B778A;
+  --color-gray-600: #4A5568;
+  --color-gray-700: #36435A;
+  --color-gray-800: #1A3260;
+  --color-gray-900: #0F1F3D;
+  --color-gray-950: #0A1630;
+
+  --color-slate-50: #F8F6F2;
+  --color-slate-100: #EDE9E1;
+  --color-slate-200: #E2DACE;
+  --color-slate-300: #C8BFAE;
+  --color-slate-400: #8A96A8;
+  --color-slate-500: #6B778A;
+  --color-slate-600: #4A5568;
+  --color-slate-700: #36435A;
+  --color-slate-800: #1A3260;
+  --color-slate-900: #0F1F3D;
+  --color-slate-950: #0A1630;
+
+  --color-emerald-50: #E6F4F2;
+  --color-emerald-100: #CCE9E5;
+  --color-emerald-200: #A3D7D0;
+  --color-emerald-300: #72C0B6;
+  --color-emerald-400: #46AC9F;
+  --color-emerald-500: #2A9D8F;
+  --color-emerald-600: #1F7A6E;
+  --color-emerald-700: #1A665C;
+  --color-emerald-800: #15524A;
+  --color-emerald-900: #103E38;
+  --color-emerald-950: #0A2925;
+
+  --color-green-50: #E6F4F2;
+  --color-green-100: #CCE9E5;
+  --color-green-200: #A3D7D0;
+  --color-green-300: #72C0B6;
+  --color-green-400: #46AC9F;
+  --color-green-500: #2A9D8F;
+  --color-green-600: #1F7A6E;
+  --color-green-700: #1A665C;
+  --color-green-800: #15524A;
+  --color-green-900: #103E38;
+  --color-green-950: #0A2925;
+
+  --color-red-50: #FDECEA;
+  --color-red-100: #FBD9D3;
+  --color-red-200: #F6B4A7;
+  --color-red-300: #F08E7B;
+  --color-red-400: #EC7862;
+  --color-red-500: #E8634A;
+  --color-red-600: #C94E38;
+  --color-red-700: #A63E2C;
+  --color-red-800: #823022;
+  --color-red-900: #5E2318;
+  --color-red-950: #3D160F;
+
+  --color-orange-50: #FDECEA;
+  --color-orange-100: #FBD9D3;
+  --color-orange-200: #F6B4A7;
+  --color-orange-300: #F08E7B;
+  --color-orange-400: #EC7862;
+  --color-orange-500: #E8634A;
+  --color-orange-600: #C94E38;
+  --color-orange-700: #A63E2C;
+  --color-orange-800: #823022;
+  --color-orange-900: #5E2318;
+  --color-orange-950: #3D160F;
+
+  --color-blue-50: #E8EDF5;
+  --color-blue-100: #D1DBEA;
+  --color-blue-200: #A9BAD5;
+  --color-blue-300: #9BB0D4;
+  --color-blue-400: #6F8BBF;
+  --color-blue-500: #2E4F85;
+  --color-blue-600: #1A3260;
+  --color-blue-700: #142950;
+  --color-blue-800: #0F1F3D;
+  --color-blue-900: #0A1630;
+  --color-blue-950: #060E20;
+
+  --color-indigo-50: #E8EDF5;
+  --color-indigo-100: #D1DBEA;
+  --color-indigo-200: #A9BAD5;
+  --color-indigo-300: #9BB0D4;
+  --color-indigo-400: #6F8BBF;
+  --color-indigo-500: #2E4F85;
+  --color-indigo-600: #1A3260;
+  --color-indigo-700: #142950;
+  --color-indigo-800: #0F1F3D;
+  --color-indigo-900: #0A1630;
+  --color-indigo-950: #060E20;
 }
 
 @layer utilities {
