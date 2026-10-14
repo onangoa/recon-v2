@@ -101,8 +101,8 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
   if (isOnboarding || isNoAccess) {
     return (
-      <div className="flex min-h-screen w-full flex-col bg-muted/5">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
+      <div className="flex min-h-screen w-full flex-col bg-cloud">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white shadow-sm px-6">
           <Link href="/contractor" className="flex items-center gap-2">
             <img src="/default_full_logo.png" alt="ReconSMI" className="h-9 w-auto" />
           </Link>
@@ -194,14 +194,14 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full bg-background print:block">
-      <Sidebar collapsible="icon" variant="inset" className="border-r border-border print:hidden">
-        <SidebarHeader className="border-b border-border/50 pb-4">
+      <Sidebar collapsible="icon" className="border-r-0 print:hidden">
+        <SidebarHeader className="border-b border-sidebar-border pb-3">
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex items-center gap-3 px-2 py-4 group-data-[collapsible=icon]:justify-center">
                 <Link href="/contractor" className="flex items-center gap-3">
-                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
-                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden group-data-[collapsible=icon]:block" />
+                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto brightness-0 invert group-data-[collapsible=icon]:hidden" />
+                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden brightness-0 invert group-data-[collapsible=icon]:block" />
                 </Link>
               </div>
             </SidebarMenuItem>
@@ -211,20 +211,20 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    className="bg-primary/5 border border-primary/10 hover:bg-primary/10 hover:border-primary/20 transition-all data-[state=open]:bg-primary/10 data-[state=open]:border-primary/20"
+                    className="rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:text-white transition-all data-[state=open]:bg-white/10 data-[state=open]:text-white"
                   >
-                    <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                    <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal text-white shadow-sm">
                       {activeSite?.name.includes('Road') ? <Construction className="size-5" /> : <Building2 className="size-5" />}
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden ml-1">
-                      <span className="truncate font-black text-primary uppercase tracking-tighter text-[11px]">
+                      <span className="truncate font-semibold text-blue-200/60 uppercase tracking-widest text-[10px]">
                         Active Site
                       </span>
-                      <span className="truncate font-bold text-foreground -mt-0.5">
+                      <span className="truncate font-semibold text-white -mt-0.5">
                         {activeSite?.name || 'Loading...'}
                       </span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="ml-auto size-4 text-blue-200/50 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -281,7 +281,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
         <SidebarContent className="px-2 py-4 custom-scrollbar">
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 mb-2">Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200/40">Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleNavItems.map((item) => (
@@ -290,12 +290,12 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                       asChild 
                       isActive={isActive(item.href)}
                       tooltip={item.label}
-                      className={isActive(item.href) ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary font-bold" : ""}
+                      className={`h-10 rounded-xl transition-all duration-200 ${isActive(item.href) ? "bg-white/15 text-white hover:bg-white/15 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white font-semibold" : "text-blue-200/70 hover:bg-white/10 hover:text-white"}`}
                     >
                       <Link href={item.href}>
-                        <item.icon className={isActive(item.href) ? "text-primary" : "text-muted-foreground"} />
+                        <item.icon className={isActive(item.href) ? "text-teal" : "text-blue-200/70"} />
                         <span className="font-medium">{item.label}</span>
-                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-primary group-data-[collapsible=icon]:hidden" />}
+                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-teal group-data-[collapsible=icon]:hidden" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -305,24 +305,24 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-4 border-t border-border">
+        <SidebarFooter className="p-3 border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="rounded-xl text-white hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10 data-[state=open]:text-white"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage src={avatarUrl} alt={displayName} />
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
+                      <AvatarFallback className="rounded-full bg-sand text-midnight font-bold">{initials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold text-primary">{displayName}</span>
-                      <span className="truncate text-xs opacity-70">Site Contractor</span>
+                      <span className="truncate font-semibold text-white">{displayName}</span>
+                      <span className="truncate text-xs text-blue-200/50">Site Contractor</span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="ml-auto size-4 text-blue-200/50 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -362,13 +362,13 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="flex flex-col flex-1 overflow-hidden print:min-h-screen print:overflow-visible">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6 print:hidden">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white shadow-sm px-6 print:hidden">
           <div className="flex items-center gap-4 flex-1">
-            <SidebarTrigger className="-ml-1 text-primary" />
+            <SidebarTrigger className="-ml-1 rounded-xl text-midnight hover:bg-cloud" />
             <div className="h-4 w-px bg-border mx-2"></div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Site</span>
-              <span className="text-sm font-bold text-primary">{activeSite?.name}</span>
+              <span className="font-display text-sm font-bold text-midnight">{activeSite?.name}</span>
             </div>
           </div>
           
@@ -378,20 +378,20 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
               <Input
                 type="text"
                 placeholder="Global search..."
-                className="w-full pl-8 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-8 text-xs"
+                className="w-full pl-8 bg-cloud border-border rounded-xl focus-visible:ring-2 focus-visible:ring-midnight/20 h-9 text-sm"
               />
             </div>
             
             <div className="flex items-center gap-1">
               <NotificationBell />
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
+              <Button variant="ghost" size="icon" className="rounded-xl border border-border text-muted-foreground hover:bg-cloud hover:text-foreground h-9 w-9">
                 <MessageSquare className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8 print:overflow-visible print:bg-white print:p-0">
+        <main className="flex-1 overflow-auto bg-cloud p-4 lg:p-8 print:overflow-visible print:bg-white print:p-0">
           <div className="mx-auto max-w-7xl print:max-w-none">
             {children}
           </div>

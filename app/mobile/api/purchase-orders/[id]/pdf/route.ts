@@ -90,7 +90,7 @@ export async function GET(
       head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
       theme: 'striped',
-      headStyles: { fillColor: [139, 69, 19], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [15, 31, 61], textColor: 255, fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 4 },
       columnStyles: {
         0: { cellWidth: 12 },

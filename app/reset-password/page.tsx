@@ -101,16 +101,16 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8DC]">
+    <div className="min-h-screen bg-[#F8F6F2]">
       <AuthNavbar />
       <div className="pt-20 flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#8B4513]/5 rounded-full blur-[100px]"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0F1F3D]/5 rounded-full blur-[100px]"></div>
         </div>
 
         <div className="w-full max-w-[440px] space-y-8 z-10">
-          <Card className="border-[#8B4513]/20 bg-white/70 backdrop-blur-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
-            <CardHeader className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white p-8 text-center relative overflow-hidden">
+          <Card className="border-[#0F1F3D]/20 bg-white/70 backdrop-blur-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+            <CardHeader className="bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] text-white p-8 text-center relative overflow-hidden">
               <div className="absolute inset-0 opacity-10">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
               </div>
@@ -126,14 +126,14 @@ export function ResetPasswordPage() {
               {!isSuccess ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">New Password</Label>
+                    <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-[#4A5568]">New Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="password" 
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-10 h-12 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-12 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -143,14 +143,14 @@ export function ResetPasswordPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-xs font-bold uppercase tracking-widest text-[#5D4037]">Confirm Password</Label>
+                    <Label htmlFor="confirm-password" className="text-xs font-bold uppercase tracking-widest text-[#4A5568]">Confirm Password</Label>
                     <div className="relative">
-                      <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="confirm-password" 
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-10 h-12 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-12 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
@@ -161,7 +161,7 @@ export function ResetPasswordPage() {
 
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 transition-all disabled:opacity-50"
+                    className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20 transition-all disabled:opacity-50"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Resetting...' : 'Reset Password'}
@@ -172,13 +172,13 @@ export function ResetPasswordPage() {
                   <div className="bg-emerald-100 text-emerald-700 w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg">
                     <CheckCircle className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#3E2723]">Password Reset Successful!</h3>
-                  <p className="text-sm text-[#5D4037]">Your password has been successfully reset. You can now log in with your new password.</p>
+                  <h3 className="text-xl font-bold text-[#0F1F3D]">Password Reset Successful!</h3>
+                  <p className="text-sm text-[#4A5568]">Your password has been successfully reset. You can now log in with your new password.</p>
                 </div>
               )}
             </CardContent>
-            <CardFooter className="bg-[#FFF8DC]/50 p-6 flex justify-center border-t border-[#8B4513]/10">
-              <Button variant="ghost" className="gap-2 text-[#8B4513] font-bold hover:bg-[#8B4513]/5" asChild>
+            <CardFooter className="bg-[#F8F6F2]/50 p-6 flex justify-center border-t border-[#0F1F3D]/10">
+              <Button variant="ghost" className="gap-2 text-[#0F1F3D] font-bold hover:bg-[#0F1F3D]/5" asChild>
                 <Link href="/login">
                   <ArrowLeft className="w-4 h-4" /> Back to Sign In
                 </Link>

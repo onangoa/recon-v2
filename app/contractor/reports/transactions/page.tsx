@@ -229,11 +229,11 @@ export default function TransactionsReportPage() {
     window.print();
   };
 
-  const BRAND_BROWN: [number, number, number] = [139, 69, 19]; // #8B4513 saddle brown (primary)
-  const BRAND_SIENNA: [number, number, number] = [160, 82, 45]; // #A0522D sienna (accent)
-  const BRAND_TINT: [number, number, number] = [249, 245, 240]; // light brown tint
+  const BRAND_MIDNIGHT: [number, number, number] = [15, 31, 61]; // #0F1F3D midnight (primary)
+  const BRAND_MIDNIGHT_LIGHT: [number, number, number] = [26, 50, 96]; // #1A3260 midnight light (accent)
+  const BRAND_TINT: [number, number, number] = [232, 237, 245]; // light midnight tint
   const BRAND_ZEBRA: [number, number, number] = [252, 249, 246]; // zebra stripe tint
-  const BRAND_LINE: [number, number, number] = [222, 205, 189]; // wheat/brown grid line
+  const BRAND_LINE: [number, number, number] = [226, 218, 206]; // mosaic border line
 
   const loadLogoDataUrl = async (): Promise<string | null> => {
     try {
@@ -254,20 +254,20 @@ export default function TransactionsReportPage() {
   const printMiniReport = async (tx: TransactionRow) => {
     const doc = new jsPDF();
 
-    // Header: brand logo (left) + title (right) in brand brown
+    // Header: brand logo (left) + title (right) in brand midnight
     const logoDataUrl = await loadLogoDataUrl();
     if (logoDataUrl) {
       doc.addImage(logoDataUrl, 'PNG', 14, 11, 42, 11.07); // 4096x1080 logo, aspect preserved
     } else {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
-      doc.setTextColor(...BRAND_BROWN);
+      doc.setTextColor(...BRAND_MIDNIGHT);
       doc.text('ReconSMI', 14, 18);
     }
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.setTextColor(...BRAND_BROWN);
+    doc.setTextColor(...BRAND_MIDNIGHT);
     doc.text('TRANSACTION MINI REPORT', 196, 16, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
@@ -275,11 +275,11 @@ export default function TransactionsReportPage() {
     doc.setTextColor(102, 102, 102);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 196, 21.5, { align: 'right' });
 
-    // Brand brown divider rules
-    doc.setDrawColor(...BRAND_BROWN);
+    // Brand midnight divider rules
+    doc.setDrawColor(...BRAND_MIDNIGHT);
     doc.setLineWidth(0.8);
     doc.line(14, 27, 196, 27);
-    doc.setDrawColor(...BRAND_SIENNA);
+    doc.setDrawColor(...BRAND_MIDNIGHT_LIGHT);
     doc.setLineWidth(0.25);
     doc.line(14, 28.5, 196, 28.5);
 
@@ -306,19 +306,19 @@ export default function TransactionsReportPage() {
       ],
       theme: 'grid',
       styles: { fontSize: 9, cellPadding: 3, lineColor: BRAND_LINE, lineWidth: 0.1, textColor: [26, 26, 26] },
-      headStyles: { fillColor: BRAND_BROWN, textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      headStyles: { fillColor: BRAND_MIDNIGHT, textColor: 255, fontStyle: 'bold', fontSize: 9 },
       alternateRowStyles: { fillColor: BRAND_ZEBRA },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60, textColor: BRAND_BROWN, fillColor: BRAND_TINT } },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60, textColor: BRAND_MIDNIGHT, fillColor: BRAND_TINT } },
     });
 
     // Footer: brand rule + tagline
     const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(...BRAND_SIENNA);
+    doc.setDrawColor(...BRAND_MIDNIGHT_LIGHT);
     doc.setLineWidth(0.4);
     doc.line(14, pageHeight - 14, 196, pageHeight - 14);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...BRAND_BROWN);
+    doc.setTextColor(...BRAND_MIDNIGHT);
     doc.text('ReconSMI — Construction Hub', 105, pageHeight - 8, { align: 'center' });
 
     doc.save(`transaction-${tx.id}.pdf`);

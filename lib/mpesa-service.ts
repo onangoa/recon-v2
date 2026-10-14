@@ -689,16 +689,16 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="color: #8B4513; margin: 0;">Welcome to ReconSMI!</h1>
-            <p style="color: #A0522D; margin: 8px 0 0 0;">Your Construction Management System</p>
+            <h1 style="color: #0F1F3D; margin: 0;">Welcome to ReconSMI!</h1>
+            <p style="color: #1A3260; margin: 8px 0 0 0;">Your Construction Management System</p>
           </div>
           
           <p>Dear ${user.name},</p>
           
           <p>Congratulations! Your account has been successfully created and your subscription is now active. You can now start managing your construction projects efficiently.</p>
           
-          <div style="background: #f5f5dc; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #8B4513/20;">
-            <h3 style="color: #8B4513; margin: 0 0 16px 0;">Your Account Details:</h3>
+          <div style="background: #EDE9E1; padding: 24px; border-radius: 8px; margin: 24px 0; border: 1px solid #0F1F3D/20;">
+            <h3 style="color: #0F1F3D; margin: 0 0 16px 0;">Your Account Details:</h3>
             <div style="line-height: 1.8;">
               <p style="margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
               <p style="margin: 8px 0;"><strong>Password:</strong> ${password}</p>
@@ -708,11 +708,11 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
           </div>
           
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(to right, #8B4513, #A0522D); color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Sign In to Your Account</a>
+            <a href="${loginUrl}" style="display: inline-block; padding: 12px 32px; background: linear-gradient(to right, #0F1F3D, #1A3260); color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Sign In to Your Account</a>
           </div>
           
           <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
-          <p style="word-break: break-all; color: #8B4513; font-size: 12px;">${loginUrl}</p>
+          <p style="word-break: break-all; color: #0F1F3D; font-size: 12px;">${loginUrl}</p>
           
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #eee;">
             <p style="margin: 8px 0; color: #666;"><strong>Getting Started:</strong></p>

@@ -53,12 +53,12 @@ export async function POST(request: NextRequest) {
         subject: 'Password Reset Request',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #8B4513;">Password Reset Request</h2>
+            <h2 style="color: #0F1F3D;">Password Reset Request</h2>
             <p>Hi ${user.name},</p>
             <p>We received a request to reset your password. Click the button below to reset your password:</p>
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(to right, #8B4513, #A0522D); color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Reset Password</a>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(to right, #0F1F3D, #1A3260); color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Reset Password</a>
             <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #8B4513;">${resetUrl}</p>
+            <p style="word-break: break-all; color: #0F1F3D;">${resetUrl}</p>
             <p>This link will expire in 1 hour.</p>
             <p>If you didn't request this password reset, please ignore this email.</p>
             <p style="margin-top: 32px; color: #666; font-size: 12px;">ReconSMI - Construction Management System</p>

@@ -22,9 +22,9 @@ export function SiteSelector() {
 
   return (
     <div className="flex items-center gap-2">
-      <Building2 className="w-4 h-4 text-[#8B4513]" />
+      <Building2 className="w-4 h-4 text-[#0F1F3D]" />
       <Select value={selectedSiteId || ''} onValueChange={setSelectedSite}>
-        <SelectTrigger className="w-[200px] border-[#8B4513]/20 focus:border-[#8B4513]">
+        <SelectTrigger className="w-[200px] border-[#0F1F3D]/20 focus:border-[#0F1F3D]">
           <SelectValue placeholder="Select a site">
             {selectedSite ? selectedSite.name : 'Select a site'}
           </SelectValue>
@@ -35,7 +35,7 @@ export function SiteSelector() {
               <div className="flex items-center gap-2">
                 {site.name}
                 {site.isPrimary && (
-                  <span className="text-[10px] bg-[#8B4513]/10 text-[#8B4513] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] bg-[#0F1F3D]/10 text-[#0F1F3D] px-1.5 py-0.5 rounded">
                     Primary
                   </span>
                 )}

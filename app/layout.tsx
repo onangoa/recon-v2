@@ -1,18 +1,20 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { DM_Sans, Plus_Jakarta_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/auth-context"
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: '--font-dm-sans' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ['400', '500', '600', '700', '800'], variable: '--font-jakarta' });
+const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ['400', '500'], variable: '--font-plex-mono' });
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  themeColor: '#0F1F3D',
 }
 
 export const metadata: Metadata = {
@@ -44,8 +46,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className={`${_geist.className} font-sans antialiased bg-background text-foreground`}>
+    <html lang="en" className={`${dmSans.variable} ${jakarta.variable} ${plexMono.variable} bg-background`}>
+      <body className="font-sans antialiased bg-background text-foreground">
         <AuthProvider>
           {children}
         </AuthProvider>

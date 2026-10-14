@@ -330,9 +330,9 @@ export function RegisterPageComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8DC] flex flex-col items-center justify-center p-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8F6F2] flex flex-col items-center justify-center p-4 py-12 relative overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#8B4513]/5 rounded-full blur-[120px]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#0F1F3D]/5 rounded-full blur-[120px]"></div>
       </div>
 
       <div className="w-full max-w-4xl space-y-8 z-10">
@@ -343,16 +343,16 @@ export function RegisterPageComponent() {
               <div className="flex flex-col items-center relative">
                 <div className={`
                   w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                  ${currentStep >= step.id ? 'bg-gradient-to-br from-[#8B4513] to-[#A0522D] border-[#8B4513] text-white shadow-lg shadow-[#8B4513]/20' : 'bg-white border-[#8B4513]/20 text-[#5D4037]'}
+                  ${currentStep >= step.id ? 'bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] border-[#0F1F3D] text-white shadow-lg shadow-[#0F1F3D]/20' : 'bg-white border-[#0F1F3D]/20 text-[#4A5568]'}
                 `}>
                   {currentStep > step.id ? <CheckCircle2 className="w-5 h-5" /> : step.icon}
                 </div>
-                <span className={`absolute -bottom-6 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${currentStep >= step.id ? 'text-[#8B4513]' : 'text-[#5D4037]'}`}>
+                <span className={`absolute -bottom-6 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${currentStep >= step.id ? 'text-[#0F1F3D]' : 'text-[#4A5568]'}`}>
                   {step.title}
                 </span>
               </div>
               {idx < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${currentStep > step.id ? 'bg-gradient-to-r from-[#8B4513] to-[#A0522D]' : 'bg-[#8B4513]/10'}`} />
+                <div className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${currentStep > step.id ? 'bg-gradient-to-r from-[#0F1F3D] to-[#1A3260]' : 'bg-[#0F1F3D]/10'}`} />
               )}
             </div>
           ))}
@@ -360,8 +360,8 @@ export function RegisterPageComponent() {
 
         <div className="mt-12">
           {currentStep === 1 && (
-            <Card className="border-[#8B4513]/20 bg-white/70 backdrop-blur-md shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <CardHeader className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white p-8 relative overflow-hidden">
+            <Card className="border-[#0F1F3D]/20 bg-white/70 backdrop-blur-md shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <CardHeader className="bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] text-white p-8 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
                 </div>
@@ -374,15 +374,15 @@ export function RegisterPageComponent() {
               </CardHeader>
               <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-[#8B4513] border-b border-[#8B4513]/20 pb-1">Admin Information</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-[#0F1F3D] border-b border-[#0F1F3D]/20 pb-1">Admin Information</h3>
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="name" 
                         placeholder="e.g. John Doe" 
-                        className="pl-10 h-11 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-11 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       />
@@ -391,12 +391,12 @@ export function RegisterPageComponent() {
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address *</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="email" 
                         type="email" 
                         placeholder="john@example.com" 
-                        className="pl-10 h-11 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-11 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
@@ -405,12 +405,12 @@ export function RegisterPageComponent() {
                   <div className="space-y-2">
                     <Label htmlFor="password">Password *</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="password" 
                         type="password" 
                         placeholder="••••••••" 
-                        className="pl-10 h-11 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-11 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       />
@@ -419,15 +419,15 @@ export function RegisterPageComponent() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-[#8B4513] border-b border-[#8B4513]/20 pb-1">Company Details</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-[#0F1F3D] border-b border-[#0F1F3D]/20 pb-1">Company Details</h3>
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company Name *</Label>
                     <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="companyName" 
                         placeholder="e.g. Peak Construction" 
-                        className="pl-10 h-11 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-11 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={formData.companyName}
                         onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                       />
@@ -436,11 +436,11 @@ export function RegisterPageComponent() {
                   <div className="space-y-2">
                     <Label htmlFor="phoneNumber">Phone Number *</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                       <Input 
                         id="phoneNumber" 
                         placeholder="2547XXXXXXXX" 
-                        className="pl-10 h-11 border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                        className="pl-10 h-11 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                         value={formData.phoneNumber}
                         onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       />
@@ -450,11 +450,11 @@ export function RegisterPageComponent() {
                     <div className="space-y-2">
                       <Label htmlFor="location">Location *</Label>
                       <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                         <Input 
                           id="location" 
                           placeholder="Nairobi" 
-                          className="pl-10 h-11 text-sm border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                          className="pl-10 h-11 text-sm border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                           value={formData.location}
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         />
@@ -463,11 +463,11 @@ export function RegisterPageComponent() {
                     <div className="space-y-2">
                       <Label htmlFor="license">License No</Label>
                       <div className="relative">
-                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                         <Input 
                           id="license" 
                           placeholder="LIC-000" 
-                          className="pl-10 h-11 text-sm border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                          className="pl-10 h-11 text-sm border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                           value={formData.licenseNo}
                           onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
                         />
@@ -476,9 +476,9 @@ export function RegisterPageComponent() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="bg-[#FFF8DC]/50 p-6 flex justify-end gap-3 border-t border-[#8B4513]/10">
-                <Button variant="ghost" onClick={() => router.push('/')} className="text-[#8B4513] hover:bg-[#8B4513]/5">Cancel</Button>
-                <Button onClick={handleNext} className="gap-2 px-8 h-11 bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20">
+              <CardFooter className="bg-[#F8F6F2]/50 p-6 flex justify-end gap-3 border-t border-[#0F1F3D]/10">
+                <Button variant="ghost" onClick={() => router.push('/')} className="text-[#0F1F3D] hover:bg-[#0F1F3D]/5">Cancel</Button>
+                <Button onClick={handleNext} className="gap-2 px-8 h-11 bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20">
                   Select Plan <ChevronRight className="w-4 h-4" />
                 </Button>
               </CardFooter>
@@ -488,8 +488,8 @@ export function RegisterPageComponent() {
           {currentStep === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="text-center">
-                <h2 className="text-2xl font-black text-[#8B4513] uppercase tracking-tight">Choose Your Plan</h2>
-                <p className="text-[#5D4037] italic text-sm">Select the best subscription level for your business needs</p>
+                <h2 className="text-2xl font-black text-[#0F1F3D] uppercase tracking-tight">Choose Your Plan</h2>
+                <p className="text-[#4A5568] italic text-sm">Select the best subscription level for your business needs</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {plans.map((plan) => (
@@ -497,35 +497,35 @@ export function RegisterPageComponent() {
                     key={plan.id} 
                     className={`
                       border-2 cursor-pointer transition-all duration-300 relative overflow-hidden flex flex-col bg-white/70 backdrop-blur-md
-                      ${formData.planId === plan.id ? 'border-[#8B4513] shadow-lg shadow-[#8B4513]/20 scale-105 z-10' : 'border-[#8B4513]/20 hover:border-[#8B4513]/40'}
+                      ${formData.planId === plan.id ? 'border-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20 scale-105 z-10' : 'border-[#0F1F3D]/20 hover:border-[#0F1F3D]/40'}
                     `}
                     onClick={() => setFormData({ ...formData, planId: plan.id })}
                   >
                     {formData.planId === plan.id && (
-                      <div className="absolute top-0 right-0 p-2 bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white rounded-bl-xl">
+                      <div className="absolute top-0 right-0 p-2 bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] text-white rounded-bl-xl">
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                     )}
                     <CardHeader className="p-6">
-                      <Badge variant="outline" className="w-fit mb-2 text-[10px] font-black uppercase tracking-widest border-[#8B4513]/20 text-[#8B4513]">{plan.name}</Badge>
-                      <CardTitle className="text-3xl font-black text-[#8B4513]">
-                        <span className="text-sm font-medium text-[#5D4037] align-top mt-1 inline-block mr-1">KES</span>
+                      <Badge variant="outline" className="w-fit mb-2 text-[10px] font-black uppercase tracking-widest border-[#0F1F3D]/20 text-[#0F1F3D]">{plan.name}</Badge>
+                      <CardTitle className="text-3xl font-black text-[#0F1F3D]">
+                        <span className="text-sm font-medium text-[#4A5568] align-top mt-1 inline-block mr-1">KES</span>
                         {(Number(plan.price ?? 0)).toLocaleString()}
-                        <span className="text-xs font-medium text-[#5D4037] align-bottom ml-1">/mo</span>
+                        <span className="text-xs font-medium text-[#4A5568] align-bottom ml-1">/mo</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 flex-1 space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-[#5D4037]">Max Sites</span>
-                          <span className="font-bold text-[#3E2723]">1</span>
+                          <span className="text-[#4A5568]">Max Sites</span>
+                          <span className="font-bold text-[#0F1F3D]">1</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-[#5D4037]">Max Team</span>
-                          <span className="font-bold text-[#3E2723]">{plan.maxTeamMembers ?? '-'}</span>
+                          <span className="text-[#4A5568]">Max Team</span>
+                          <span className="font-bold text-[#0F1F3D]">{plan.maxTeamMembers ?? '-'}</span>
                         </div>
                       </div>
-                      <div className="pt-4 border-t border-[#8B4513]/10 space-y-2">
+                      <div className="pt-4 border-t border-[#0F1F3D]/10 space-y-2">
                         {(Array.isArray(plan.features) ? plan.features : (() => { try { return JSON.parse(plan.features || '[]'); } catch { return []; } })()).map((feature: string, i: number) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
@@ -537,7 +537,7 @@ export function RegisterPageComponent() {
                     <CardFooter className="p-6 pt-0">
                       <Button 
                         variant={formData.planId === plan.id ? 'default' : 'outline'} 
-                        className={`w-full font-bold ${formData.planId === plan.id ? 'bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513]' : 'border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5'}`}
+                        className={`w-full font-bold ${formData.planId === plan.id ? 'bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D]' : 'border-[#0F1F3D]/20 text-[#0F1F3D] hover:bg-[#0F1F3D]/5'}`}
                       >
                         {formData.planId === plan.id ? 'Selected' : 'Select Plan'}
                       </Button>
@@ -545,11 +545,11 @@ export function RegisterPageComponent() {
                   </Card>
                 ))}
               </div>
-              <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-lg border border-[#8B4513]/10 backdrop-blur-sm">
-                <Button variant="ghost" onClick={handleBack} className="gap-2 text-[#8B4513] hover:bg-[#8B4513]/5">
+              <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-lg border border-[#0F1F3D]/10 backdrop-blur-sm">
+                <Button variant="ghost" onClick={handleBack} className="gap-2 text-[#0F1F3D] hover:bg-[#0F1F3D]/5">
                   <ChevronLeft className="w-4 h-4" /> Back to Details
                 </Button>
-                <Button onClick={handleNext} className="gap-2 px-8 bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 h-11">
+                <Button onClick={handleNext} className="gap-2 px-8 bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20 h-11">
                   Continue to Payment <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -557,8 +557,8 @@ export function RegisterPageComponent() {
           )}
 
           {currentStep === 3 && (
-            <Card className="border-[#8B4513]/20 bg-white/70 backdrop-blur-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-500 max-w-lg mx-auto">
-              <CardHeader className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] text-white p-8 relative overflow-hidden">
+            <Card className="border-[#0F1F3D]/20 bg-white/70 backdrop-blur-md shadow-xl overflow-hidden animate-in zoom-in-95 duration-500 max-w-lg mx-auto">
+              <CardHeader className="bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] text-white p-8 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
                 </div>
@@ -570,14 +570,14 @@ export function RegisterPageComponent() {
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
-                <div className="bg-[#FFF8DC]/50 p-4 rounded-xl space-y-2 border border-[#8B4513]/10">
+                <div className="bg-[#F8F6F2]/50 p-4 rounded-xl space-y-2 border border-[#0F1F3D]/10">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#5D4037] font-medium">Selected Plan</span>
-                    <span className="font-bold text-[#8B4513]">{plans.find(p => p.id === formData.planId)?.name}</span>
+                    <span className="text-[#4A5568] font-medium">Selected Plan</span>
+                    <span className="font-bold text-[#0F1F3D]">{plans.find(p => p.id === formData.planId)?.name}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-black border-t border-[#8B4513]/10 pt-2 mt-2">
-                    <span className="text-[#8B4513]">Total Amount</span>
-                    <span className="text-[#8B4513]">KES {plans.find(p => p.id === formData.planId)?.price.toLocaleString()}</span>
+                  <div className="flex justify-between text-lg font-black border-t border-[#0F1F3D]/10 pt-2 mt-2">
+                    <span className="text-[#0F1F3D]">Total Amount</span>
+                    <span className="text-[#0F1F3D]">KES {plans.find(p => p.id === formData.planId)?.price.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -618,14 +618,14 @@ export function RegisterPageComponent() {
                         <div className="flex gap-2">
                           <Button 
                             onClick={handleRetryPayment}
-                            className="flex-1 h-8 text-xs font-bold bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] text-white gap-1"
+                            className="flex-1 h-8 text-xs font-bold bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] text-white gap-1"
                           >
                             <RotateCcw className="w-3 h-3" /> Try Again
                           </Button>
                           <Button 
                             onClick={handleChangePlan}
                             variant="outline"
-                            className="flex-1 h-8 text-xs font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 gap-1"
+                            className="flex-1 h-8 text-xs font-bold border-[#0F1F3D]/20 text-[#0F1F3D] hover:bg-[#0F1F3D]/5 gap-1"
                           >
                             <ChevronLeft className="w-3 h-3" /> Change Plan
                           </Button>
@@ -646,7 +646,7 @@ export function RegisterPageComponent() {
                           <Button 
                             onClick={() => window.open('mailto:support@reconsmi.com?subject=Registration Issue', '_blank')}
                             variant="outline"
-                            className="flex-1 h-8 text-xs font-bold border-[#8B4513]/20 text-[#8B4513] hover:bg-[#8B4513]/5 gap-1"
+                            className="flex-1 h-8 text-xs font-bold border-[#0F1F3D]/20 text-[#0F1F3D] hover:bg-[#0F1F3D]/5 gap-1"
                           >
                             Contact Support
                           </Button>
@@ -682,18 +682,18 @@ export function RegisterPageComponent() {
                 {!checkoutRequestId && (
                   <>
                     <div className="space-y-3">
-                      <Label htmlFor="mpesaNumber" className="text-sm font-bold uppercase tracking-wider text-[#5D4037]">M-Pesa Phone Number</Label>
+                      <Label htmlFor="mpesaNumber" className="text-sm font-bold uppercase tracking-wider text-[#4A5568]">M-Pesa Phone Number</Label>
                       <div className="relative">
-                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B4513]/60" />
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
                         <Input 
                           id="mpesaNumber" 
                           placeholder="e.g. 254712345678" 
-                          className="pl-10 h-12 text-lg font-bold tracking-widest border-[#8B4513]/20 focus:border-[#8B4513] focus:ring-[#8B4513]/20 bg-white/50"
+                          className="pl-10 h-12 text-lg font-bold tracking-widest border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
                           value={formData.mpesaNumber}
                           onChange={(e) => setFormData({ ...formData, mpesaNumber: e.target.value })}
                         />
                       </div>
-                      <p className="text-[10px] text-[#5D4037] italic flex items-center gap-1">
+                      <p className="text-[10px] text-[#4A5568] italic flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                         You will receive an STK Push prompt on this number.
                       </p>
@@ -701,12 +701,12 @@ export function RegisterPageComponent() {
                   </>
                 )}
               </CardContent>
-              <CardFooter className="bg-[#FFF8DC]/50 p-8 flex flex-col gap-4 border-t border-[#8B4513]/10">
+              <CardFooter className="bg-[#F8F6F2]/50 p-8 flex flex-col gap-4 border-t border-[#0F1F3D]/10">
                 {!checkoutRequestId ? (
                   <>
                     <Button 
                       onClick={handleInitiatePayment} 
-                      className="w-full h-14 text-lg font-black bg-gradient-to-r from-[#8B4513] to-[#A0522D] hover:from-[#6D3710] hover:to-[#8B4513] shadow-lg shadow-[#8B4513]/20 gap-2 transition-all duration-300"
+                      className="w-full h-14 text-lg font-black bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20 gap-2 transition-all duration-300"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -720,7 +720,7 @@ export function RegisterPageComponent() {
                         </>
                       )}
                     </Button>
-                    <Button variant="ghost" onClick={handleBack} disabled={isLoading} className="w-full text-[#8B4513] hover:bg-[#8B4513]/5">
+                    <Button variant="ghost" onClick={handleBack} disabled={isLoading} className="w-full text-[#0F1F3D] hover:bg-[#0F1F3D]/5">
                       <ChevronLeft className="w-4 h-4 mr-2" /> Change Plan
                     </Button>
                   </>
@@ -743,7 +743,7 @@ export function RegisterPageComponent() {
                         </>
                       )}
                      </Button>
-                     <p className="text-[10px] text-[#5D4037] italic text-center">
+                     <p className="text-[10px] text-[#4A5568] italic text-center">
                        If you've completed the payment but haven't been redirected, click above to check your status.
                      </p>
                    </>

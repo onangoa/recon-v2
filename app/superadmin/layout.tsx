@@ -84,14 +84,14 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <Sidebar collapsible="icon" variant="inset" className="border-r border-border">
-        <SidebarHeader className="border-b border-border/50 pb-4">
+      <Sidebar collapsible="icon" className="border-r-0">
+        <SidebarHeader className="border-b border-sidebar-border pb-3">
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex items-center gap-3 px-2 py-4 group-data-[collapsible=icon]:justify-center">
                 <Link href="/superadmin" className="flex items-center gap-3">
-                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
-                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden group-data-[collapsible=icon]:block" />
+                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto brightness-0 invert group-data-[collapsible=icon]:hidden" />
+                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden brightness-0 invert group-data-[collapsible=icon]:block" />
                 </Link>
               </div>
             </SidebarMenuItem>
@@ -100,7 +100,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
 
         <SidebarContent className="px-2 py-4 custom-scrollbar">
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 mb-2">Platform Management</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200/40">Platform Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {navItems.map((item) => (
@@ -109,12 +109,12 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
                       asChild 
                       isActive={isActive(item.href)}
                       tooltip={item.label}
-                      className={isActive(item.href) ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary font-bold" : ""}
+                      className={`h-10 rounded-xl transition-all duration-200 ${isActive(item.href) ? "bg-white/15 text-white hover:bg-white/15 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:text-white font-semibold" : "text-blue-200/70 hover:bg-white/10 hover:text-white"}`}
                     >
                       <Link href={item.href}>
-                        <item.icon className={isActive(item.href) ? "text-primary" : "text-muted-foreground"} />
+                        <item.icon className={isActive(item.href) ? "text-teal" : "text-blue-200/70"} />
                         <span className="font-medium">{item.label}</span>
-                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-primary group-data-[collapsible=icon]:hidden" />}
+                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-teal group-data-[collapsible=icon]:hidden" />}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -124,24 +124,24 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-4 border-t border-border">
+        <SidebarFooter className="p-3 border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="rounded-xl text-white hover:bg-white/10 hover:text-white data-[state=open]:bg-white/10 data-[state=open]:text-white"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage src="/placeholder-user.jpg" alt="Admin" />
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">SA</AvatarFallback>
+                      <AvatarFallback className="rounded-full bg-sand text-midnight font-bold">SA</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold text-primary">Super Admin</span>
-                      <span className="truncate text-xs opacity-70">Global Administrator</span>
+                      <span className="truncate font-semibold text-white">Super Admin</span>
+                      <span className="truncate text-xs text-blue-200/50">Global Administrator</span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="ml-auto size-4 text-blue-200/50 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -186,13 +186,13 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white shadow-sm px-6">
           <div className="flex items-center gap-4 flex-1">
-            <SidebarTrigger className="-ml-1 text-primary" />
+            <SidebarTrigger className="-ml-1 rounded-xl text-midnight hover:bg-cloud" />
             <div className="h-4 w-px bg-border mx-2"></div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Portal</span>
-              <span className="text-sm font-bold text-primary">Super Administrator</span>
+              <span className="font-display text-sm font-bold text-midnight">Super Administrator</span>
             </div>
           </div>
           
@@ -202,23 +202,23 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
               <Input
                 type="text"
                 placeholder="Search platform..."
-                className="w-full pl-8 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-8 text-xs"
+                className="w-full pl-8 bg-cloud border-border rounded-xl focus-visible:ring-2 focus-visible:ring-midnight/20 h-9 text-sm"
               />
             </div>
             
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative h-9 w-9">
+              <Button variant="ghost" size="icon" className="rounded-xl border border-border text-muted-foreground hover:bg-cloud hover:text-foreground relative h-9 w-9">
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full border border-background"></span>
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-coral rounded-full"></span>
               </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
+              <Button variant="ghost" size="icon" className="rounded-xl border border-border text-muted-foreground hover:bg-cloud hover:text-foreground h-9 w-9">
                 <MessageSquare className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8">
+        <main className="flex-1 overflow-auto bg-cloud p-4 lg:p-8">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>
