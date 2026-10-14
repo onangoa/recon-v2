@@ -313,6 +313,46 @@
     font-family: var(--font-display);
     letter-spacing: -0.01em;
   }
+
+  /* Mosaic table defaults for raw <table> markup; utility classes still override. */
+  table:not([data-slot]) thead {
+    background-color: color-mix(in oklab, var(--color-cloud) 60%, transparent);
+  }
+  .dark table:not([data-slot]) thead {
+    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+  }
+  table:not([data-slot]) th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+  table:not([data-slot]) tbody tr {
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    transition: background-color 100ms;
+  }
+  table:not([data-slot]) tbody tr:hover {
+    background-color: color-mix(in oklab, var(--color-cloud) 60%, transparent);
+  }
+  .dark table:not([data-slot]) tbody tr:hover {
+    background-color: color-mix(in oklab, var(--muted) 40%, transparent);
+  }
+
+  /* Mosaic input-field defaults for raw form controls. */
+  input:not([data-slot]):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='hidden']),
+  select:not([data-slot]),
+  textarea:not([data-slot]) {
+    border-radius: 0.75rem;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  input:not([data-slot]):not([type='checkbox']):not([type='radio']):focus-visible,
+  select:not([data-slot]):focus-visible,
+  textarea:not([data-slot]):focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 30%, transparent);
+  }
 }
 
 @layer components {
