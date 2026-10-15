@@ -23,7 +23,7 @@ from PIL import Image
 
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 
-SOURCE = PUBLIC / "default_full_logo.png"
+SOURCE = PUBLIC / "WhatsApp Image 2026-09-08 at 17.08.22.png"
 
 # Output targets:  (path, size, background RGBA)
 TARGETS = [

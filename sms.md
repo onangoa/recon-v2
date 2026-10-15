@@ -1,4 +1,4 @@
-# SMS Notifications — ReconSMI
+# SMS Notifications — CalcSite
 
 SMS notifications are delivered through the **Celcom Africa ISMS gateway**
 (`lib/sms-service.ts`). Domain-specific message builders live in

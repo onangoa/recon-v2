@@ -685,11 +685,11 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
 
     const emailResult = await EmailService.send({
       to: user.email,
-      subject: 'Welcome to ReconSMI - Your Account is Ready!',
+      subject: 'Welcome to CalcSite - Your Account is Ready!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="color: #0F1F3D; margin: 0;">Welcome to ReconSMI!</h1>
+            <h1 style="color: #0F1F3D; margin: 0;">Welcome to CalcSite!</h1>
             <p style="color: #1A3260; margin: 8px 0 0 0;">Your Construction Management System</p>
           </div>
           
@@ -736,7 +736,7 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
           <p style="margin-top: 32px; color: #4A5568; font-size: 12px;">ReconSMI - Construction Management System<br>Building Excellence Together</p>
         </div>
       `,
-      text: `Welcome to ReconSMI!
+      text: `Welcome to CalcSite!
 
 Dear ${user.name},
 

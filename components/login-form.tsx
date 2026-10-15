@@ -206,7 +206,7 @@ export function LoginForm() {
         )}
 
         <p className="text-center text-[10px] text-[#4A5568] font-medium uppercase tracking-tighter">
-          &copy; 2026 ReconSMI Systems. All rights reserved.
+          &copy; 2026 CalcSite Systems. All rights reserved.
         </p>
       </div>
     </div>

@@ -235,7 +235,7 @@ function DailyReportPrintView() {
 
           <div className="flex-1 px-8 py-10 flex flex-col items-center justify-center text-center">
             <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground mb-3">
-              ReconSMI Site Reporting
+              CalcSite Site Reporting
             </p>
             <h1 className="text-4xl font-black uppercase tracking-tight text-primary leading-tight">
               {isSingleDay ? 'Daily Report' : 'Merged Daily Reports'}

@@ -1,4 +1,4 @@
-// Generates a complete Postman v2.1 collection for the ReconSMI Mobile API.
+// Generates a complete Postman v2.1 collection for the CalcSite Mobile API.
 // Run: node scripts/generate-mobile-postman.mjs
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -427,7 +427,7 @@ const collection = {
   info: {
     name: 'ReconSMI Mobile API',
     _postman_id: 'reconsmi-mobile-api-' + Date.now(),
-    description: 'Complete Postman collection for the ReconSMI /mobile/api endpoints. All protected routes enforce the same RBAC permissions as the web API (Authorization: Bearer <accessToken>). Run "Login" first — it auto-stores accessToken, refreshToken, companyId and siteId into the active environment.',
+    description: 'Complete Postman collection for the CalcSite /mobile/api endpoints. All protected routes enforce the same RBAC permissions as the web API (Authorization: Bearer <accessToken>). Run "Login" first — it auto-stores accessToken, refreshToken, companyId and siteId into the active environment.',
     schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
   },
   variable: [

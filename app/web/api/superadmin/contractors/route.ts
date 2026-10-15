@@ -114,10 +114,10 @@ export async function POST(request: Request) {
     try {
       await EmailService.send({
         to: email,
-        subject: 'Welcome to ReconSMI - Your Contractor Account',
+        subject: 'Welcome to CalcSite - Your Contractor Account',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to ReconSMI!</h2>
+            <h2>Welcome to CalcSite!</h2>
             <p>Hello ${name},</p>
             <p>Your contractor account has been created successfully.</p>
             <div style="background: #f4f4f4; padding: 16px; border-radius: 8px; margin: 16px 0;">
