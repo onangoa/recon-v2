@@ -4,28 +4,19 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Building2,
-  Lock,
-  Mail,
-  Loader2,
-  AlertCircle,
-  ArrowRight,
-  ChevronRight,
-  ShieldCheck,
-  Eye,
-  EyeOff
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  ArrowPathIcon,
+  ArrowRightIcon,
+  ChevronRightIcon,
+  EnvelopeIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
+} from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription,
-  CardFooter
-} from '@/components/ui/card';
+import { AuthShell } from '@/components/auth-shell';
 import { useAuth } from '@/context/auth-context';
 
 export function LoginForm() {
@@ -56,13 +47,13 @@ export function LoginForm() {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         setAuthData(data.user, data.contractor, data.sites || [], data.needsOnboarding);
-        
+
         if (data.selectedSiteId) {
           localStorage.setItem('selectedSiteId', data.selectedSiteId);
         }
-        
+
         if (data.user.role === 'superadmin') {
           router.push('/superadmin');
         } else if (data.needsOnboarding) {
@@ -82,133 +73,155 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0F1F3D]/5 rounded-full blur-[100px]"></div>
-      </div>
-
-      <div className="w-full max-w-[440px] space-y-8 z-10">
-
-        <Card className="border-[#0F1F3D]/20 bg-white/70 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CardHeader className="bg-gradient-to-br from-[#0F1F3D] to-[#1A3260] text-white p-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
-            </div>
-            <div className="relative z-10">
-              <div className="flex justify-center mb-4">
-                <img src="/light-logo.png" alt="CalCite" className="h-12" />
-              </div>
-              <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-              <CardDescription className="text-white/90 italic mt-1">Enter your credentials to access your portal</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs font-medium text-red-700 flex items-center gap-2 animate-in shake-1">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-[#4A5568]">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="name@company.com" 
-                    className="pl-10 h-12 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-[#4A5568]">Password</Label>
-                  <Link href="/forgot-password" className="text-[10px] font-black uppercase tracking-tighter text-[#0F1F3D] hover:text-[#0A1630] hover:underline">
-                    Forgot Password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F1F3D]/60" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    className="pl-10 pr-11 h-12 border-[#0F1F3D]/20 focus:border-[#0F1F3D] focus:ring-[#0F1F3D]/20 bg-white/50"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0F1F3D]/60 hover:text-[#0F1F3D]"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-md font-bold bg-gradient-to-r from-[#0F1F3D] to-[#1A3260] hover:from-[#0A1630] hover:to-[#0F1F3D] shadow-lg shadow-[#0F1F3D]/20 gap-2 transition-all"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Authenticating...
-                  </>
-                ) : (
-                  <>
-                    Sign In <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="bg-[#F8F6F2]/50 p-6 flex flex-col items-center gap-3 border-t border-[#0F1F3D]/10">
-            <p className="text-xs text-[#4A5568] font-medium">Don't have a contractor account?</p>
-            <Button variant="outline" className="w-full h-11 font-bold border-[#0F1F3D]/20 text-[#0F1F3D] hover:bg-[#0F1F3D]/5 hover:border-[#0F1F3D] gap-2" asChild>
-              <Link href="/register">
-                Join Now <ChevronRight className="w-4 h-4" />
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* Demo credentials info */}
-        {process.env.NODE_ENV === 'development' && (
-        <div className="rounded-xl border border-[#0F1F3D]/20 bg-[#0F1F3D]/5 p-4 space-y-3 backdrop-blur-sm">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0F1F3D] flex items-center gap-2">
-            <ShieldCheck className="w-3 h-3" /> Demo Credentials
-          </p>
-          <div className="grid grid-cols-1 gap-2 text-[11px] text-[#4A5568]">
-            <div className="flex justify-between border-b border-[#0F1F3D]/10 pb-1">
-              <span className="font-bold">Superadmin:</span>
-              <code className="text-[#0F1F3D] font-bold">admin@constructionhub.ke</code>
-            </div>
-            <div className="flex justify-between border-b border-[#0F1F3D]/10 pb-1">
-              <span className="font-bold">Contractor:</span>
-              <code className="text-[#0F1F3D] font-bold">info@nairobibuilders.ke</code>
-            </div>
-            <div className="text-[9px] italic opacity-70">Password for all demo accounts: <span className="font-black text-[#0F1F3D]">12345678</span></div>
-          </div>
-        </div>
-        )}
-
-        <p className="text-center text-[10px] text-[#4A5568] font-medium uppercase tracking-tighter">
-          &copy; 2026 CalcSite Systems. All rights reserved.
+    <AuthShell
+      eyebrow="Welcome back"
+      headline={
+        <>
+          Site operations,
+          <br />
+          fully managed.
+        </>
+      }
+      subline="Sign in to track safety, workers, wallets and reports across every site — in one workspace."
+      mobileActionHref="/register"
+      mobileActionLabel="Create account"
+    >
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-teal">Welcome back</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-midnight leading-tight tracking-tight">
+          Sign in to your workspace
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your credentials to access your portal.
         </p>
       </div>
-    </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="rounded-xl bg-coral-light border border-coral/30 p-3 text-xs font-semibold text-coral flex items-center gap-2 animate-fade-in">
+            <ExclamationTriangleIcon className="size-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label
+            htmlFor="email"
+            className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+          >
+            Email Address
+          </Label>
+          <div className="relative">
+            <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@company.com"
+              className="pl-10 h-12"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label
+              htmlFor="password"
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+            >
+              Password
+            </Label>
+            <Link
+              href="/forgot-password"
+              className="text-[10px] font-bold uppercase tracking-widest text-midnight hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+          <div className="relative">
+            <LockClosedIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              className="pl-10 pr-11 h-12"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-midnight transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeSlashIcon className="size-4" /> : <EyeIcon className="size-4" />}
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" className="btn-primary w-full h-12" disabled={loading}>
+          {loading ? (
+            <>
+              <ArrowPathIcon className="size-4 animate-spin" />
+              Authenticating…
+            </>
+          ) : (
+            <>
+              Sign In
+              <ArrowRightIcon className="size-4" />
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+          or
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <Link href="/register" className="btn-secondary w-full h-12">
+        Create Contractor Account
+        <ChevronRightIcon className="size-4" />
+      </Link>
+
+      {/* Demo credentials info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="card-section p-4 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-midnight flex items-center gap-2">
+            <ShieldCheckIcon className="size-3.5 text-teal" /> Demo Credentials
+          </p>
+          <div className="grid grid-cols-1 gap-2 text-[11px] text-muted-foreground">
+            <div className="flex justify-between items-center border-b border-border/60 pb-1.5">
+              <span className="font-semibold">Superadmin</span>
+              <code className="font-mono-data font-semibold text-midnight">
+                admin@constructionhub.ke
+              </code>
+            </div>
+            <div className="flex justify-between items-center border-b border-border/60 pb-1.5">
+              <span className="font-semibold">Contractor</span>
+              <code className="font-mono-data font-semibold text-midnight">
+                info@nairobibuilders.ke
+              </code>
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Password for all demo accounts:{' '}
+              <span className="font-mono-data font-bold text-midnight">12345678</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+        &copy; 2026 CalcSite Systems. All rights reserved.
+      </p>
+    </AuthShell>
   );
 }
