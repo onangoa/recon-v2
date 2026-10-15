@@ -85,7 +85,7 @@ export function AuthShell({
 
         {/* Brand */}
         <div className="relative z-10 flex items-center gap-3">
-          <img src="/icon.svg" alt="Calcite" className="h-9 w-9 brightness-0 invert" />
+          <img src="/icon.svg" alt="Calcite" className="h-9 w-9" />
           <div className="flex flex-col">
             <span className="font-display text-white font-bold text-lg leading-tight tracking-tight">
               Calcite

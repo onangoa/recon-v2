@@ -114,7 +114,7 @@ export default function AppSidebar({
           <img
             src="/icon.svg"
             alt="CalCite"
-            className="h-8 w-8 brightness-0 invert"
+            className="h-8 w-8"
           />
         </Link>
         {!collapsed && (
