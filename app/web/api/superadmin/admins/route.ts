@@ -52,7 +52,7 @@ export async function POST(request: Request) {
               <p style="margin: 0;"><strong>Password:</strong> ${plainPassword}</p>
             </div>
             <p>Please log in and change your password as soon as possible.</p>
-            <p style="margin-top: 24px; color: #888;">ReconSMI Team</p>
+            <p style="margin-top: 24px; color: #888;">CalCite Team</p>
           </div>
         `,
       });

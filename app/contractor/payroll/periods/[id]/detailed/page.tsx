@@ -191,7 +191,7 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
     const right = pageWidth - 14;
 
     // Header/footer chrome drawn on every page by the autoTable hook below.
-    const companyName = contractor?.companyName?.trim() || 'ReconSMI';
+    const companyName = contractor?.companyName?.trim() || 'CalCite';
     const drawChrome = () => {
       doc.setFont('helvetica', 'bold');
       let nameSize = 13;
@@ -228,7 +228,7 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       doc.setFontSize(8);
       doc.setTextColor(...BRAND_MIDNIGHT);
       doc.text('P = Present (1/0)  ·  OT = Overtime hrs', 14, pageHeight - 8);
-      doc.text('ReconSMI — Construction Hub', pageWidth / 2, pageHeight - 8, { align: 'center' });
+      doc.text('CalCite — Construction Hub', pageWidth / 2, pageHeight - 8, { align: 'center' });
     };
 
     // Totals row aligned under the summary columns.

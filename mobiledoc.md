@@ -4,7 +4,7 @@ Generated from the route handlers in `app/mobile/api/**`. Use this to update the
 
 ## Conventions
 
-- **Base URL**: `https://reconsmi.com` (production). All paths below are appended to this base.
+- **Base URL**: `https://CalCite.com` (production). All paths below are appended to this base.
 - **Auth**: Except where marked "none", every endpoint requires a Bearer access token in the `Authorization` header:
   ```
   Authorization: Bearer <accessToken>

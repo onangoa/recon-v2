@@ -42,7 +42,7 @@ export function LandingPage() {
       <nav className="fixed top-0 w-full z-50 px-6 py-4 bg-[#F8F6F2]/95 backdrop-blur-sm border-b border-[#0F1F3D]/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold tracking-tight text-[#0F1F3D]">
-            <img src="/default_full_logo.png" alt="ReconSMI" className="h-10" />
+            <img src="/default_full_logo.png" alt="CalCite" className="h-10" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#4A5568]">
             <Link href="/#features" className="hover:text-[#0F1F3D] transition-colors">Features</Link>
@@ -392,7 +392,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <Link href="/" className="text-2xl font-bold text-[#2A9D8F]">
-              <img src="/light-logo.png" alt="ReconSMI" className="h-8" />
+              <img src="/light-logo.png" alt="CalCite" className="h-8" />
             </Link>
             
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm">

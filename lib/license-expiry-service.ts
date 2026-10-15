@@ -50,7 +50,7 @@ function buildEmailHtml(
       <p style="margin-top: 24px; font-size: 13px; color: #4A5568;">
         Please review and renew this license to keep your records and operations compliant.
       </p>
-      <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">ReconSMI License Compliance Alerts</p>
+      <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">CalCite License Compliance Alerts</p>
     </div>
   `;
 }

@@ -7,7 +7,7 @@ const COOP_BASE_URL = process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opba
 const AUTH_TOKEN = process.env.COOP_BANK_AUTH_TOKEN || '';
 const DEFAULT_USER_ID = process.env.COOP_BANK_USER_ID || 'RECON';
 const DEFAULT_SOURCE_ACCOUNT = process.env.COOP_BANK_SOURCE_ACCOUNT || '';
-const FUNDS_TRANSFER_CALLBACK = process.env.COOP_BANK_CALLBACK_URL || 'https://reconsmi.com/v1/ext/ipn';
+const FUNDS_TRANSFER_CALLBACK = process.env.COOP_BANK_CALLBACK_URL || 'https://CalCite.com/v1/ext/ipn';
 const BANK_IPN_DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // In-memory token cache (refreshes ~5min before expiry)

@@ -262,7 +262,7 @@ export default function TransactionsReportPage() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.setTextColor(...BRAND_MIDNIGHT);
-      doc.text('ReconSMI', 14, 18);
+      doc.text('CalCite', 14, 18);
     }
 
     doc.setFont('helvetica', 'bold');
@@ -319,7 +319,7 @@ export default function TransactionsReportPage() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(...BRAND_MIDNIGHT);
-    doc.text('ReconSMI — Construction Hub', 105, pageHeight - 8, { align: 'center' });
+    doc.text('CalCite — Construction Hub', 105, pageHeight - 8, { align: 'center' });
 
     doc.save(`transaction-${tx.id}.pdf`);
     toast({ title: 'Downloaded', description: 'Mini report PDF downloaded', variant: 'success' });

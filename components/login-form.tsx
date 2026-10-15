@@ -96,7 +96,7 @@ export function LoginForm() {
             </div>
             <div className="relative z-10">
               <div className="flex justify-center mb-4">
-                <img src="/light-logo.png" alt="ReconSMI" className="h-12" />
+                <img src="/light-logo.png" alt="CalCite" className="h-12" />
               </div>
               <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
               <CardDescription className="text-white/90 italic mt-1">Enter your credentials to access your portal</CardDescription>

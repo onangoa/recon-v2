@@ -125,12 +125,15 @@ export default function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative h-9 w-9">
-          <Bell className="w-4 h-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative h-10 w-10 rounded-xl text-muted-foreground hover:bg-cloud hover:text-midnight"
+          title="Notifications"
+        >
+          <Bell className="size-[18px]" />
           {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 w-4 h-4 bg-primary text-[10px] font-black text-white flex items-center justify-center rounded-full border-2 border-background animate-pulse">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-coral rounded-full" />
           )}
         </Button>
       </DropdownMenuTrigger>

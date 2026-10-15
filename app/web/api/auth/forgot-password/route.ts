@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
             <p style="word-break: break-all; color: #0F1F3D;">${resetUrl}</p>
             <p>This link will expire in 1 hour.</p>
             <p>If you didn't request this password reset, please ignore this email.</p>
-            <p style="margin-top: 32px; color: #666; font-size: 12px;">ReconSMI - Construction Management System</p>
+            <p style="margin-top: 32px; color: #666; font-size: 12px;">CalCite - Construction Management System</p>
           </div>
         `,
-        text: `Hi ${user.name},\n\nWe received a request to reset your password. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.\n\nReconSMI - Construction Management System`,
+        text: `Hi ${user.name},\n\nWe received a request to reset your password. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.\n\nCalCite - Construction Management System`,
       });
 
       if (!emailResult.success) {

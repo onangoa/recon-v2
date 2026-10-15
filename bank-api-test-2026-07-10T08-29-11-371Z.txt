@@ -11,7 +11,7 @@
 [2026-07-10T08:29:11.377Z] INFO Dest Acct  : 01100006870001 (bank 11)
 [2026-07-10T08:29:11.377Z] INFO Mobile     : 2547<redacted>
 [2026-07-10T08:29:11.377Z] INFO Amount     : KES 50
-[2026-07-10T08:29:11.377Z] INFO Callback   : https://reconsmi.com/v1/ext/ipn
+[2026-07-10T08:29:11.377Z] INFO Callback   : https://CalCite.com/v1/ext/ipn
 [2026-07-10T08:29:11.377Z] INFO AUTH_KEY   : MFZPeW…<redacted>
 [2026-07-10T08:29:11.377Z] INFO Filters    : only=all  skip=none
 [2026-07-10T08:29:11.377Z] SEP  
@@ -81,13 +81,13 @@ grant_type=client_credentials
 {
   "MessageReference": "6155297d8a294c",
   "UserId": "RECON",
-  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "CallBackUrl": "https://CalCite.com/v1/ext/ipn",
   "ISO2CountryCode": "KE",
   "Source": {
     "AccountNumber": "01192588813000",
     "Amount": 50,
     "TransactionCurrency": "KES",
-    "Narration": "RECONSMI TEST PESALINK"
+    "Narration": "CalCite TEST PESALINK"
   },
   "Destinations": [
     {
@@ -96,7 +96,7 @@ grant_type=client_credentials
       "BankCode": "11",
       "Amount": "50",
       "TransactionCurrency": "KES",
-      "Narration": "RECONSMI TEST PESALINK"
+      "Narration": "CalCite TEST PESALINK"
     }
   ]
 }
@@ -127,12 +127,12 @@ grant_type=client_credentials
   "MessageReference": "b8a269d0a82a20",
   "UserId": "RECON",
   "ISO2CountryCode": "KE",
-  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "CallBackUrl": "https://CalCite.com/v1/ext/ipn",
   "Source": {
     "AccountNumber": "01192588813000",
     "Amount": 50,
     "TransactionCurrency": "KES",
-    "Narration": "RECONSMI TEST IFT"
+    "Narration": "CalCite TEST IFT"
   },
   "Destinations": [
     {
@@ -140,7 +140,7 @@ grant_type=client_credentials
       "AccountNumber": "01100006870001",
       "Amount": 50,
       "TransactionCurrency": "KES",
-      "Narration": "RECONSMI TEST IFT"
+      "Narration": "CalCite TEST IFT"
     }
   ]
 }
@@ -177,19 +177,19 @@ grant_type=client_credentials
   "MessageReference": "ff82e84ceb3ad5",
   "UserId": "RECON",
   "ISO2CountryCode": "KE",
-  "CallBackUrl": "https://reconsmi.com/v1/ext/ipn",
+  "CallBackUrl": "https://CalCite.com/v1/ext/ipn",
   "Source": {
     "AccountNumber": "01192588813000",
     "Amount": "50",
     "TransactionCurrency": "KES",
-    "Narration": "RECONSMI TEST B2C MPESA"
+    "Narration": "CalCite TEST B2C MPESA"
   },
   "Destinations": [
     {
       "ReferenceNumber": "ff82e84ceb3ad5_1",
       "MobileNumber": "2547<redacted>",
       "Amount": "50",
-      "Narration": "RECONSMI TEST B2C MPESA"
+      "Narration": "CalCite TEST B2C MPESA"
     }
   ]
 }

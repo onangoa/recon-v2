@@ -15,7 +15,7 @@ export default function DocsPage() {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
-          <span className="text-sm font-bold tracking-tight text-primary">ReconSMI Docs</span>
+          <span className="text-sm font-bold tracking-tight text-primary">CalCite Docs</span>
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"

@@ -221,7 +221,7 @@ function DailyReportPrintView() {
         {/* ---------------- Cover page ---------------- */}
         <div className="rounded-lg border border-border bg-white shadow-sm print:shadow-none print:rounded-none print:break-after-page min-h-[1000px] flex flex-col">
           <div className="border-b-2 border-primary px-8 py-8 flex items-center justify-between gap-6">
-            <img src="/default_full_logo.png" alt="ReconSMI" className="h-12 w-auto" />
+            <img src="/default_full_logo.png" alt="CalCite" className="h-12 w-auto" />
             <div className="text-right">
               <p className="text-xs text-muted-foreground">
                 {contractorName || 'Construction Site Management'}

@@ -19,6 +19,7 @@
     "test:b2b-partyb": "tsx scripts/test-b2b-partyb.ts"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "5.22.0",
     "@radix-ui/react-accordion": "1.2.12",

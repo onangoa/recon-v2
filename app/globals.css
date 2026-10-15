@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -51,9 +52,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-dm-sans), 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   --color-midnight: #0F1F3D;
   --color-midnight-light: #1A3260;
@@ -79,7 +80,8 @@
   --shadow-modal: 0 20px 60px rgba(15, 31, 61, 0.18);
 
   /* Remap Tailwind's stock palettes onto the MosaicMove palette so every
-     legacy utility (gray/emerald/green/red/orange/blue/indigo) follows the theme. */
+     legacy utility (gray/emerald/green/red/orange/blue/indigo/purple/cyan)
+     follows the theme. Purple = template accent #7C5CBF, cyan = #3B82C4. */
   --color-amber: #F4A261;
   --color-amber-light: #FEF3E8;
 
@@ -178,6 +180,30 @@
   --color-indigo-800: #0F1F3D;
   --color-indigo-900: #0A1630;
   --color-indigo-950: #060E20;
+
+  --color-purple-50: #F0EBFB;
+  --color-purple-100: #E1D8F7;
+  --color-purple-200: #C4B4EE;
+  --color-purple-300: #A791E4;
+  --color-purple-400: #9275DC;
+  --color-purple-500: #7C5CBF;
+  --color-purple-600: #6B4FA8;
+  --color-purple-700: #5A4392;
+  --color-purple-800: #49377B;
+  --color-purple-900: #382A64;
+  --color-purple-950: #241B41;
+
+  --color-cyan-50: #EBF3FB;
+  --color-cyan-100: #D7E7F7;
+  --color-cyan-200: #AFCEF0;
+  --color-cyan-300: #87B5E8;
+  --color-cyan-400: #629BDD;
+  --color-cyan-500: #3B82C4;
+  --color-cyan-600: #2E6DA8;
+  --color-cyan-700: #25598C;
+  --color-cyan-800: #1C4770;
+  --color-cyan-900: #133554;
+  --color-cyan-950: #0A2338;
 }
 
 @layer utilities {
@@ -332,6 +358,9 @@
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
     transition: background-color 100ms;
   }
+  table:not([data-slot]) tbody tr:nth-child(even) {
+    background-color: color-mix(in oklab, var(--color-cloud) 20%, transparent);
+  }
   table:not([data-slot]) tbody tr:hover {
     background-color: color-mix(in oklab, var(--color-cloud) 60%, transparent);
   }
@@ -367,6 +396,114 @@
   .font-mono-data {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* MosaicMove template component vocabulary */
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-nav-item:hover {
+    @apply bg-white/10 text-white;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-white/15 text-white;
+  }
+
+  .sidebar-nav-item.inactive {
+    @apply text-blue-200/70;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-midnight text-white rounded-xl text-sm font-semibold hover:bg-midnight-light active:scale-95 transition-all duration-150;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-white text-midnight border border-border rounded-xl text-sm font-semibold hover:bg-cloud active:scale-95 transition-all duration-150;
+  }
+
+  .btn-teal {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-teal text-white rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  .input-field {
+    @apply w-full px-3.5 py-2.5 bg-cloud border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary transition-all duration-150;
+  }
+
+  .phase-dot {
+    @apply w-3 h-3 rounded-full border-2 border-white shadow-sm;
+  }
+
+  .checkpoint-line {
+    @apply absolute top-5 left-0 right-0 h-0.5 bg-border;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.25s ease forwards;
+  }
+
+  .animate-pulse-highlight {
+    animation: pulseHighlight 1s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseHighlight {
+  0% {
+    background-color: var(--teal-light);
+  }
+  100% {
+    background-color: transparent;
   }
 }
 

@@ -644,7 +644,7 @@ export function RegisterPageComponent() {
                             Go to Login
                           </Button>
                           <Button 
-                            onClick={() => window.open('mailto:support@reconsmi.com?subject=Registration Issue', '_blank')}
+                            onClick={() => window.open('mailto:support@CalCite.com?subject=Registration Issue', '_blank')}
                             variant="outline"
                             className="flex-1 h-8 text-xs font-bold border-[#0F1F3D]/20 text-[#0F1F3D] hover:bg-[#0F1F3D]/5 gap-1"
                           >

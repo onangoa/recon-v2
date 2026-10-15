@@ -54,7 +54,7 @@ const BASE_URL = (process.env.COOP_BANK_BASE_URL || 'https://openapi.co-opbank.c
 const AUTH_KEY = "MFZPeWMwWFpFdFdncTFRaFQyanBVWUZhQ0cwYTpBTlhmMklXSFk2Ym9idURXYWZGdHl2ZGJHd0Fh";
 const USER_ID = 'RECON';
 const SOURCE_ACCOUNT = '01192588813000';
-let CALLBACK_URL = 'https://reconsmi.com/v1/ext/ipn';
+let CALLBACK_URL = 'https://CalCite.com/v1/ext/ipn';
 let TEST_DEST_ACCOUNT = '01100006870001';
 let TEST_BANK_CODE = '11';
 let TEST_MOBILE = '254796504484';
@@ -383,7 +383,7 @@ async function testPesalinkSend(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: amount,
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST PESALINK',
+      Narration: 'CalCite TEST PESALINK',
     },
     Destinations: [
       {
@@ -392,7 +392,7 @@ async function testPesalinkSend(): Promise<string | null> {
         BankCode: TEST_BANK_CODE,
         Amount: String(amount),
         TransactionCurrency: 'KES',
-        Narration: 'RECONSMI TEST PESALINK',
+        Narration: 'CalCite TEST PESALINK',
       },
     ],
   };
@@ -427,7 +427,7 @@ async function testIftSend(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: amount,
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST IFT',
+      Narration: 'CalCite TEST IFT',
     },
     Destinations: [
       {
@@ -435,7 +435,7 @@ async function testIftSend(): Promise<string | null> {
         AccountNumber: TEST_DEST_ACCOUNT,
         Amount: amount,
         TransactionCurrency: 'KES',
-        Narration: 'RECONSMI TEST IFT',
+        Narration: 'CalCite TEST IFT',
       },
     ],
   };
@@ -470,14 +470,14 @@ async function testB2CMpesa(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: String(amount),
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST B2C MPESA',
+      Narration: 'CalCite TEST B2C MPESA',
     },
     Destinations: [
       {
         ReferenceNumber: `${messageReference}_1`,
         MobileNumber: TEST_MOBILE,
         Amount: String(amount),
-        Narration: 'RECONSMI TEST B2C MPESA',
+        Narration: 'CalCite TEST B2C MPESA',
       },
     ],
   };

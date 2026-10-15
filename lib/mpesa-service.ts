@@ -733,7 +733,7 @@ const sendWelcomeEmail = async (user: any, password: string, contractor: any, mp
           
           <p>If you have any questions or need assistance, please contact our support team.</p>
           
-          <p style="margin-top: 32px; color: #4A5568; font-size: 12px;">ReconSMI - Construction Management System<br>Building Excellence Together</p>
+          <p style="margin-top: 32px; color: #4A5568; font-size: 12px;">CalCite - Construction Management System<br>Building Excellence Together</p>
         </div>
       `,
       text: `Welcome to CalcSite!
@@ -761,7 +761,7 @@ Security Note: For your security, we recommend changing your password after your
 
 If you have any questions or need assistance, please contact our support team.
 
-ReconSMI - Construction Management System
+CalCite - Construction Management System
 Building Excellence Together`,
     });
 
