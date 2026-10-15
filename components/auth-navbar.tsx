@@ -13,9 +13,10 @@ export function AuthNavbar() {
           <img src="/default_full_logo.png" alt="ReconSMI" className="h-10" />
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#4A5568]">
-          <Link href="/#features" className="hover:text-[#0F1F3D] transition-colors">Features</Link>
+          <Link href="/#" className="hover:text-[#0F1F3D] transition-colors">Home</Link>
+          {/* <Link href="/#features" className="hover:text-[#0F1F3D] transition-colors">Features</Link>
           <Link href="/#mobile" className="hover:text-[#0F1F3D] transition-colors">Mobile App</Link>
-          <Link href="/#pricing" className="hover:text-[#0F1F3D] transition-colors">Pricing</Link>
+          <Link href="/#pricing" className="hover:text-[#0F1F3D] transition-colors">Pricing</Link> */}
         </div>
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
