@@ -26,8 +26,8 @@ import {
 // several weeks of merged daily reports.
 // ---------------------------------------------------------------------------
 
-// Brand brown - matches the purchase order PDF table headers.
-const PRIMARY: [number, number, number] = [139, 69, 19];
+// Brand midnight - matches the purchase order PDF table headers.
+const PRIMARY: [number, number, number] = [15, 31, 61];
 const GRAY: [number, number, number] = [110, 110, 110];
 const GREEN: [number, number, number] = [16, 185, 129];
 const AMBER: [number, number, number] = [217, 119, 6];

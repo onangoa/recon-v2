@@ -1,4 +1,4 @@
-# SMS Notifications — ReconSMI
+# SMS Notifications — CalcSite
 
 SMS notifications are delivered through the **Celcom Africa ISMS gateway**
 (`lib/sms-service.ts`). Domain-specific message builders live in
@@ -23,32 +23,32 @@ All recipients are normalized to `2547XXXXXXXX` / `2541XXXXXXXX`
 
 | # | Trigger | Recipient | Sample message | Status |
 |---|---|---|---|---|
-| 1 | Wallet top-up confirmed (M-Pesa STK Push callback or Co-op Bank IPN) | Payer's phone / wallet owner | `ReconSMI: Wallet top-up of KES 5,000 confirmed. New balance KES 12,300. Ref QK7H2X9PLM.` | **IMPLEMENTED** |
-| 2 | Bank payout / withdrawal created (`pending_approval`) | Approver (superadmin) | `ReconSMI: Payout of KES 45,000 to J. Wanjiku (Co-op Bank) by BuildRight Ltd needs approval.` | Pending |
-| 3 | Payout approved / rejected | Requester (wallet owner) | `ReconSMI: BuildRight Ltd payout of KES 45,000 to J. Wanjiku via Co-op Bank A/C *8130 approved and processing.` / `...was rejected. Reason: Insufficient balance.` | **IMPLEMENTED** (skipped for worker payroll payouts) |
-| 4 | Payroll disbursement initiated (`pending_approval`) | Approver | `ReconSMI: Oct 2026 payroll for BuildRight Ltd (38 workers, KES 512,400) needs approval.` | Pending |
-| 5 | Payout / salary sent (payout completed) | Payout recipient | `ReconSMI: BuildRight Ltd has sent you KES 45,000 via M-Pesa. Ref QK7H2X9PLM.` | **IMPLEMENTED** (skipped when the destination phone is unknown, e.g. paybill/till or bank payouts without a notification mobile; worker payroll payouts notify the worker: `BuildRight Ltd has paid you KES 12,500 for Sep 1 - 15. Ref PAYROLL-...`) |
+| 1 | Wallet top-up confirmed (M-Pesa STK Push callback or Co-op Bank IPN) | Payer's phone / wallet owner | `CalCite: Wallet top-up of KES 5,000 confirmed. New balance KES 12,300. Ref QK7H2X9PLM.` | **IMPLEMENTED** |
+| 2 | Bank payout / withdrawal created (`pending_approval`) | Approver (superadmin) | `CalCite: Payout of KES 45,000 to J. Wanjiku (Co-op Bank) by BuildRight Ltd needs approval.` | Pending |
+| 3 | Payout approved / rejected | Requester (wallet owner) | `CalCite: BuildRight Ltd payout of KES 45,000 to J. Wanjiku via Co-op Bank A/C *8130 approved and processing.` / `...was rejected. Reason: Insufficient balance.` | **IMPLEMENTED** (skipped for worker payroll payouts) |
+| 4 | Payroll disbursement initiated (`pending_approval`) | Approver | `CalCite: Oct 2026 payroll for BuildRight Ltd (38 workers, KES 512,400) needs approval.` | Pending |
+| 5 | Payout / salary sent (payout completed) | Payout recipient | `CalCite: BuildRight Ltd has sent you KES 45,000 via M-Pesa. Ref QK7H2X9PLM.` | **IMPLEMENTED** (skipped when the destination phone is unknown, e.g. paybill/till or bank payouts without a notification mobile; worker payroll payouts notify the worker: `BuildRight Ltd has paid you KES 12,500 for Sep 1 - 15. Ref PAYROLL-...`) |
 
 ### B. Compliance & safety
 
 | # | Trigger | Recipient | Sample message | Status |
 |---|---|---|---|---|
-| 6 | License expiry (30/14/7-day cron) | Contractor | `ReconSMI: License NCA-88321 (Westlands Site) expires in 7 days (21 Oct). Renew to stay compliant.` | Pending |
-| 7 | Safety incident reported (high severity) | Site manager / team | `ReconSMI ALERT: Injury reported at Westlands Site (High) — J. Mwangi, 11:40 AM. Review in app.` | Pending |
+| 6 | License expiry (30/14/7-day cron) | Contractor | `CalCite: License NCA-88321 (Westlands Site) expires in 7 days (21 Oct). Renew to stay compliant.` | Pending |
+| 7 | Safety incident reported (high severity) | Site manager / team | `CalCite ALERT: Injury reported at Westlands Site (High) — J. Mwangi, 11:40 AM. Review in app.` | Pending |
 
 ### C. Operations
 
 | # | Trigger | Recipient | Sample message | Status |
 |---|---|---|---|---|
-| 8 | Purchase order sent to supplier | Supplier (`Supplier.phone`) | `ReconSMI: BuildRight Ltd sent you PO-2043 (KES 88,000, 12 items). Details in your email.` | Pending |
-| 9 | Team member added (currently email-only) | Team member (`TeamMember.phone`) | `ReconSMI: You've been added to BuildRight Ltd as Site Engineer. Set your password via email link.` | Pending |
-| 10 | Visitor checked in | Host (team member) | `ReconSMI: Your visitor Mary A (Safaricom) checked in at Westlands Site, 10:05 AM.` | Pending |
+| 8 | Purchase order sent to supplier | Supplier (`Supplier.phone`) | `CalCite: BuildRight Ltd sent you PO-2043 (KES 88,000, 12 items). Details in your email.` | Pending |
+| 9 | Team member added (currently email-only) | Team member (`TeamMember.phone`) | `CalCite: You've been added to BuildRight Ltd as Site Engineer. Set your password via email link.` | Pending |
+| 10 | Visitor checked in | Host (team member) | `CalCite: Your visitor Mary A (Safaricom) checked in at Westlands Site, 10:05 AM.` | Pending |
 
 ### D. Auth
 
 | # | Trigger | Recipient | Sample message | Status |
 |---|---|---|---|---|
-| 11 | Password reset OTP | User | `ReconSMI: Code 482913. Valid 10 min. Never share it.` | Pending |
+| 11 | Password reset OTP | User | `CalCite: Code 482913. Valid 10 min. Never share it.` | Pending |
 
 ## Implemented touchpoints
 

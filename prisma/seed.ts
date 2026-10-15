@@ -133,7 +133,7 @@ async function main() {
     const hashedDefaultPassword = await hashPassword('12345678');
     const superadminUser = await prisma.user.create({
       data: {
-        email: 'admin@constructionhub.ke',
+        email: 'admin@calcite.dev',
         password: hashedDefaultPassword,
         role: 'superadmin',
         roleId: superadminRole.id,
@@ -148,7 +148,7 @@ async function main() {
     const contractorData = [
       {
         name: 'Nairobi Builders Ltd',
-        email: 'info@nairobibuilders.ke',
+        email: 'demo@nairobibuilders.dev',
         phone: '+254722111111',
         location: 'Nairobi',
         licenseNo: 'LIC-001-2024',

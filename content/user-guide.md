@@ -1,6 +1,6 @@
-# ReconSMI User Guide
+# CalcSite User Guide
 
-A complete guide to the ReconSMI construction site management platform — covering both the **Contractor** and **Super Admin** portals.
+A complete guide to the CalcSite construction site management platform — covering both the **Contractor** and **Super Admin** portals.
 
 ---
 

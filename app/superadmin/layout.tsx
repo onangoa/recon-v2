@@ -1,229 +1,154 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Users, 
-  ClipboardList, 
-  CreditCard, 
-  Wallet, 
-  ShieldCheck, 
-  Settings,
+import { useState } from 'react';
+import {
   Search,
+  Menu,
   Bell,
   MessageSquare,
-  LogOut,
   HardHat,
-  ChevronsUpDown,
-  Building2,
-  Plus,
-  CheckCircle2,
-  Construction,
-  MapPin,
-  UserCircle,
-  SearchCheck,
-  Scale
+  ChevronRight,
 } from 'lucide-react';
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarFooter, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarGroupLabel, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem, 
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-  SidebarRail
-} from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  HomeIcon,
+  BuildingOffice2Icon,
+  ClipboardDocumentListIcon,
+  CreditCardIcon,
+  BanknotesIcon,
+  DocumentMagnifyingGlassIcon,
+  ScaleIcon,
+  ShieldCheckIcon,
+  UserCircleIcon,
+} from '@heroicons/react/24/outline';
+import AppSidebar from '@/components/app-sidebar';
+import type { AppSidebarIcon } from '@/components/app-sidebar';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/context/auth-context';
 
-function SidebarNav({ children }: { children: React.ReactNode }) {
+function SuperadminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { logout } = useAuth();
 
-  const navItems = [
-    { label: 'Dashboard', href: '/superadmin', icon: LayoutDashboard },
-    { label: 'Contractors', href: '/superadmin/contractors', icon: Users },
-    { label: 'Plans', href: '/superadmin/plans', icon: ClipboardList },
-    { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCard },
-    { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
-    { label: 'Payment Review', href: '/superadmin/transactions/review', icon: SearchCheck },
-    { label: 'Wallet Ledger', href: '/superadmin/transactions/wallets', icon: Scale },
-    { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
-    { label: 'Profile', href: '/superadmin/profile', icon: UserCircle },
-    { label: 'Settings', href: '/superadmin/settings', icon: Settings },
+  const navItems: { label: string; href: string; icon: AppSidebarIcon }[] = [
+    { label: 'Dashboard', href: '/superadmin', icon: HomeIcon },
+    { label: 'Contractors', href: '/superadmin/contractors', icon: BuildingOffice2Icon },
+    { label: 'Plans', href: '/superadmin/plans', icon: ClipboardDocumentListIcon },
+    { label: 'Subscriptions', href: '/superadmin/subscriptions', icon: CreditCardIcon },
+    { label: 'Transactions', href: '/superadmin/transactions', icon: BanknotesIcon },
+    { label: 'Payment Review', href: '/superadmin/transactions/review', icon: DocumentMagnifyingGlassIcon },
+    { label: 'Wallet Ledger', href: '/superadmin/transactions/wallets', icon: ScaleIcon },
+    { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheckIcon },
   ];
 
-  const isActive = (href: string) => {
-    const matched = navItems.filter(
-      (item) => pathname === item.href || pathname.startsWith(item.href + '/')
-    );
-    return (
-      matched.some((item) => item.href === href) &&
-      matched.every((item) => item.href.length <= href.length)
-    );
+  const platformSwitcher = (
+    <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 transition-colors duration-200 border border-white/10 text-left cursor-default">
+      <div className="w-6 h-6 rounded-lg bg-teal flex items-center justify-center shrink-0">
+        <HardHat size={12} className="text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-xs font-semibold truncate">CalCite Platform</p>
+        <p className="text-blue-200/50 text-[10px]">Super Admin</p>
+      </div>
+      <ChevronRight size={12} className="text-blue-200/40 shrink-0" />
+    </button>
+  );
+
+  const sidebarProps = {
+    currentPath: pathname,
+    navItems,
+    sectionLabel: 'Platform Management',
+    brandTagline: 'Platform administration.',
+    workspaceSelector: platformSwitcher,
+    user: {
+      name: 'Super Admin',
+      role: 'Global Administrator',
+      initials: 'SA',
+      email: 'admin@reconhub.com',
+    },
+    settingsHref: '/superadmin/settings',
+    userMenuItems: [
+      { label: 'Profile', href: '/superadmin/profile', icon: UserCircleIcon },
+    ],
+    onLogout: () => logout(),
+    onLinkClick: () => setMobileNavOpen(false),
   };
 
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <Sidebar collapsible="icon" variant="inset" className="border-r border-border">
-        <SidebarHeader className="border-b border-border/50 pb-4">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="flex items-center gap-3 px-2 py-4 group-data-[collapsible=icon]:justify-center">
-                <Link href="/superadmin" className="flex items-center gap-3">
-                  <img src="/default_full_logo.png" alt="ReconSMI" className="h-10 w-auto group-data-[collapsible=icon]:hidden" />
-                  <img src="/icon.svg" alt="ReconSMI" className="h-8 w-auto hidden group-data-[collapsible=icon]:block" />
-                </Link>
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
+    <div className="flex h-screen bg-cloud overflow-hidden print:block print:h-auto print:overflow-visible">
+      <div className="hidden md:flex h-full print:hidden">
+        <AppSidebar {...sidebarProps} />
+      </div>
 
-        <SidebarContent className="px-2 py-4 custom-scrollbar">
-          <SidebarGroup>
-            <SidebarGroupLabel className="px-2 mb-2">Platform Management</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive(item.href)}
-                      tooltip={item.label}
-                      className={isActive(item.href) ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary font-bold" : ""}
-                    >
-                      <Link href={item.href}>
-                        <item.icon className={isActive(item.href) ? "text-primary" : "text-muted-foreground"} />
-                        <span className="font-medium">{item.label}</span>
-                        {isActive(item.href) && <div className="ml-auto size-1.5 rounded-full bg-primary group-data-[collapsible=icon]:hidden" />}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-
-        <SidebarFooter className="p-4 border-t border-border">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton
-                    size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  >
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="/placeholder-user.jpg" alt="Admin" />
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">SA</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold text-primary">Super Admin</span>
-                      <span className="truncate text-xs opacity-70">Global Administrator</span>
-                    </div>
-                    <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                  side="bottom"
-                  align="end"
-                  sideOffset={4}
-                >
-                  <DropdownMenuLabel className="p-0 font-normal">
-                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                      <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarImage src="/placeholder-user.jpg" alt="Admin" />
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold">SA</AvatarFallback>
-                      </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">Super Admin</span>
-                        <span className="truncate text-xs text-muted-foreground">admin@reconhub.com</span>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2" asChild>
-                    <Link href="/superadmin/profile">
-                      <UserCircle className="size-4" /> Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2" asChild>
-                    <Link href="/superadmin/settings">
-                      <Settings className="size-4" /> Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 text-destructive" onClick={() => logout()}>
-                    <LogOut className="size-4" /> Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 backdrop-blur px-6">
-          <div className="flex items-center gap-4 flex-1">
-            <SidebarTrigger className="-ml-1 text-primary" />
-            <div className="h-4 w-px bg-border mx-2"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest hidden sm:inline">Portal</span>
-              <span className="text-sm font-bold text-primary">Super Administrator</span>
+      <div className="flex flex-col flex-1 min-w-0">
+        <header className="bg-white border-b border-border px-4 sm:px-6 lg:px-8 shrink-0 print:hidden">
+          <div className="max-w-screen-2xl mx-auto flex items-center gap-4 py-3.5">
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              className="md:hidden p-2.5 rounded-xl border border-border text-muted-foreground hover:bg-cloud transition-colors duration-150"
+              aria-label="Open navigation"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-lg sm:text-xl font-bold text-midnight leading-tight truncate">
+                Platform Admin
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
+                CalCite · {today}
+              </p>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="relative w-64 hidden lg:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search platform..."
-                className="w-full pl-8 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary h-8 text-xs"
+            <div className="relative hidden lg:block w-72">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
+              <input
+                type="text"
+                placeholder="Search contractors, plans, transactions…"
+                className="input-field pl-9 py-2 text-sm"
+              />
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono bg-cloud-dark px-1.5 py-0.5 rounded">
+                ⌘K
+              </kbd>
             </div>
-            
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative h-9 w-9">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full border border-background"></span>
-              </Button>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
-                <MessageSquare className="w-4 h-4" />
-              </Button>
-            </div>
+            <button className="relative p-2.5 rounded-xl border border-border text-muted-foreground hover:bg-cloud hover:text-midnight transition-colors duration-150">
+              <Bell size={18} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-coral rounded-full" />
+            </button>
+            <button
+              className="hidden sm:flex p-2.5 rounded-xl border border-border text-muted-foreground hover:bg-cloud transition-colors duration-150"
+              title="Messages"
+            >
+              <MessageSquare size={18} />
+            </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-muted/5 p-4 lg:p-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 overflow-y-auto bg-cloud scrollbar-thin print:overflow-visible print:bg-white">
+          <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 pb-10 print:max-w-none print:p-0">
             {children}
           </div>
         </main>
-      </SidebarInset>
+      </div>
+
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent
+          side="left"
+          className="bg-midnight border-r-0 p-0 w-[240px] max-w-[240px] overflow-hidden [&>button]:hidden"
+        >
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <AppSidebar {...sidebarProps} mobile />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -234,8 +159,6 @@ export default function SuperadminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <SidebarNav>{children}</SidebarNav>
-    </SidebarProvider>
+    <SuperadminShell>{children}</SuperadminShell>
   );
 }

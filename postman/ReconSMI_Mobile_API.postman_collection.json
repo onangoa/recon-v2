@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "ReconSMI Mobile API",
-    "_postman_id": "reconsmi-mobile-api-1782994162284",
-    "description": "Complete Postman collection for the ReconSMI /mobile/api endpoints. All protected routes enforce the same RBAC permissions as the web API (Authorization: Bearer <accessToken>). Run \"Login\" first — it auto-stores accessToken, refreshToken, companyId and siteId into the active environment.",
+    "name": "CalCite Mobile API",
+    "_postman_id": "CalCite-mobile-api-1782994162284",
+    "description": "Complete Postman collection for the CalcSite /mobile/api endpoints. All protected routes enforce the same RBAC permissions as the web API (Authorization: Bearer <accessToken>). Run \"Login\" first — it auto-stores accessToken, refreshToken, companyId and siteId into the active environment.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

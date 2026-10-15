@@ -15,8 +15,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
+          fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         } as React.CSSProperties
       }
+      toastOptions={{
+        style: {
+          fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+          fontSize: '13px',
+          borderRadius: '12px',
+          border: '1px solid var(--border)',
+        },
+      }}
       {...props}
     />
   )

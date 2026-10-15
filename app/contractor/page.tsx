@@ -65,8 +65,8 @@ interface InventoryStatus {
 }
 
 const attendanceConfig = {
-  overtime: { label: 'Overtime', color: '#f97316' },
-  attained: { label: 'Regular', color: '#10b981' },
+  overtime: { label: 'Overtime', color: '#E8634A' },
+  attained: { label: 'Regular', color: '#0F1F3D' },
 };
 
 const poConfig = {
@@ -157,36 +157,56 @@ export default function ContractorDashboard() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-teal">Overview</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-midnight text-balance">Dashboard</h1>
         <p className="text-muted-foreground text-sm">
           {activeSite ? `Overview for ${activeSite.name}` : 'Overview across all sites'}
         </p>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="col-span-2 relative overflow-hidden rounded-2xl bg-midnight p-6 text-white shadow-elevated">
+          <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-teal/20" aria-hidden="true" />
+          <div className="pointer-events-none absolute right-10 -bottom-14 size-32 rounded-full bg-sand/10" aria-hidden="true" />
+          <div className="relative flex items-center gap-2 text-blue-200/70">
+            <Users className="size-4" />
+            <p className="text-xs font-semibold uppercase tracking-widest">Workers Present Today</p>
+          </div>
+          <div className="relative mt-4 flex items-end gap-3">
+            {loading ? <Skeleton className="h-10 w-24 bg-white/10" /> : (
+              <p className="font-display text-5xl font-extrabold leading-none">{stats?.workersPresentToday ?? '-'}</p>
+            )}
+            {stats && <p className="pb-1 text-sm text-blue-200/70">of {stats.totalWorkers} total workers</p>}
+          </div>
+        </div>
         {[
-          { label: 'Workers Present', value: stats?.workersPresentToday ?? '-', sub: stats ? `${stats.totalWorkers} total` : '', icon: Users, color: 'bg-blue-100 text-blue-700' },
-          { label: 'Inventory', value: stats?.totalInventory ?? '-', sub: '', icon: Package, color: 'bg-amber-100 text-amber-700' },
-          { label: 'Purchase Orders', value: stats?.totalPurchaseOrders ?? '-', sub: stats ? `${stats.pendingPurchaseOrders} pending` : '', icon: ClipboardList, color: 'bg-purple-100 text-purple-700' },
-          { label: 'Safety', value: stats?.safetyIncidents ?? '-', sub: '', icon: ShieldAlert, color: stats?.safetyIncidents ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' },
+          { label: 'Inventory', value: stats?.totalInventory ?? '-', sub: 'Tracked items', icon: Package, color: 'bg-teal-light text-teal-dark' },
+          { label: 'Purchase Orders', value: stats?.totalPurchaseOrders ?? '-', sub: stats ? `${stats.pendingPurchaseOrders} pending` : '', icon: ClipboardList, color: 'bg-sand-light text-midnight' },
         ].map((card) => (
-          <Card key={card.label} className="border-none shadow-sm">
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className={`p-1.5 rounded-lg ${card.color}`}><card.icon className="w-3.5 h-3.5" /></div>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.label}</p>
-              </div>
-              <p className="text-xl font-bold">{loading ? <Skeleton className="h-6 w-16" /> : card.value}</p>
-              {card.sub && <p className="text-[10px] text-muted-foreground">{card.sub}</p>}
-            </CardContent>
-          </Card>
+          <div key={card.label} className="metric-card">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{card.label}</p>
+              <div className={`flex size-9 items-center justify-center rounded-xl ${card.color}`}><card.icon className="size-4" /></div>
+            </div>
+            <div className="mt-3 font-display text-3xl font-extrabold text-midnight">{loading ? <Skeleton className="h-8 w-16" /> : card.value}</div>
+            {card.sub && <p className="mt-1 text-xs text-muted-foreground">{card.sub}</p>}
+          </div>
         ))}
+        <div className={`col-span-2 lg:col-span-4 flex items-center justify-between gap-4 rounded-2xl border p-5 shadow-card ${stats?.safetyIncidents ? 'border-coral/30 bg-coral-light' : 'border-teal/30 bg-teal-light'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`flex size-10 items-center justify-center rounded-xl text-white ${stats?.safetyIncidents ? 'bg-coral' : 'bg-teal'}`}><ShieldAlert className="size-5" /></div>
+            <div>
+              <p className="font-display font-bold text-midnight">Safety</p>
+              <p className="text-sm text-muted-foreground">{stats?.safetyIncidents ? 'Open incidents need attention' : 'No reported incidents'}</p>
+            </div>
+          </div>
+          <p className="font-display text-3xl font-extrabold text-midnight">{loading ? <Skeleton className="h-8 w-10" /> : stats?.safetyIncidents ?? '-'}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Attendance Chart */}
-        <Card className="border-none shadow-md">
+        <Card className="border-border shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-bold">Attendance & Hours</CardTitle>
@@ -214,7 +234,7 @@ export default function ContractorDashboard() {
         </Card>
 
         {/* PO Status */}
-        <Card className="border-none shadow-md">
+        <Card className="border-border shadow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-bold">Purchase Orders</CardTitle>
@@ -231,7 +251,7 @@ export default function ContractorDashboard() {
                   <XAxis dataKey="status" axisLine={false} tickLine={false} tickMargin={8} fontSize={10} />
                   <YAxis axisLine={false} tickLine={false} fontSize={10} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#2A9D8F" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
             )}
@@ -241,7 +261,7 @@ export default function ContractorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Inventory Status */}
-        <Card className="border-none shadow-md">
+        <Card className="border-border shadow-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold">Inventory Status</CardTitle>
             <CardDescription>Stock levels by status</CardDescription>
@@ -255,9 +275,9 @@ export default function ContractorDashboard() {
                   const total = inventoryByStatus.reduce((s, i) => s + i.count, 0);
                   const pct = total > 0 ? (item.count / total) * 100 : 0;
                   const colorMap: Record<string, string> = {
-                    'in-stock': 'bg-emerald-500',
-                    'low-stock': 'bg-amber-500',
-                    'out-of-stock': 'bg-red-500',
+                    'in-stock': 'bg-teal',
+                    'low-stock': 'bg-[#F4A261]',
+                    'out-of-stock': 'bg-coral',
                   };
                   return (
                     <div key={item.status} className="space-y-1">
@@ -277,12 +297,12 @@ export default function ContractorDashboard() {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="lg:col-span-2 border-none shadow-md">
+        <Card className="lg:col-span-2 border-border shadow-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-primary" /> Recent Activity
+                  <Activity className="w-4 h-4 text-teal" /> Recent Activity
                 </CardTitle>
                 <CardDescription>Latest actions across your sites</CardDescription>
               </div>
@@ -320,7 +340,7 @@ export default function ContractorDashboard() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="p-3 bg-muted/20 border-t">
+          <CardFooter className="p-3 bg-cloud border-t">
             <Link href="/contractor/activity" className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
               View All Activity
             </Link>

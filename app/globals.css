@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -50,6 +51,159 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-midnight: #0F1F3D;
+  --color-midnight-light: #1A3260;
+  --color-midnight-50: #E8EDF5;
+  --color-sand: #E8D5B0;
+  --color-sand-light: #F4EAD5;
+  --color-sand-dark: #C8BFAE;
+  --color-coral: #E8634A;
+  --color-coral-light: #FDECEA;
+  --color-coral-dark: #C94E38;
+  --color-teal: #2A9D8F;
+  --color-teal-light: #E6F4F2;
+  --color-teal-dark: #1F7A6E;
+  --color-cloud: #F8F6F2;
+  --color-cloud-dark: #EDE9E1;
+
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+
+  --shadow-card: 0 1px 4px rgba(15, 31, 61, 0.06), 0 4px 16px rgba(15, 31, 61, 0.04);
+  --shadow-elevated: 0 4px 20px rgba(15, 31, 61, 0.1), 0 1px 4px rgba(15, 31, 61, 0.06);
+  --shadow-modal: 0 20px 60px rgba(15, 31, 61, 0.18);
+
+  /* Remap Tailwind's stock palettes onto the MosaicMove palette so every
+     legacy utility (gray/emerald/green/red/orange/blue/indigo/purple/cyan)
+     follows the theme. Purple = template accent #7C5CBF, cyan = #3B82C4. */
+  --color-amber: #F4A261;
+  --color-amber-light: #FEF3E8;
+
+  --color-gray-50: #F8F6F2;
+  --color-gray-100: #EDE9E1;
+  --color-gray-200: #E2DACE;
+  --color-gray-300: #C8BFAE;
+  --color-gray-400: #8A96A8;
+  --color-gray-500: #6B778A;
+  --color-gray-600: #4A5568;
+  --color-gray-700: #36435A;
+  --color-gray-800: #1A3260;
+  --color-gray-900: #0F1F3D;
+  --color-gray-950: #0A1630;
+
+  --color-slate-50: #F8F6F2;
+  --color-slate-100: #EDE9E1;
+  --color-slate-200: #E2DACE;
+  --color-slate-300: #C8BFAE;
+  --color-slate-400: #8A96A8;
+  --color-slate-500: #6B778A;
+  --color-slate-600: #4A5568;
+  --color-slate-700: #36435A;
+  --color-slate-800: #1A3260;
+  --color-slate-900: #0F1F3D;
+  --color-slate-950: #0A1630;
+
+  --color-emerald-50: #E6F4F2;
+  --color-emerald-100: #CCE9E5;
+  --color-emerald-200: #A3D7D0;
+  --color-emerald-300: #72C0B6;
+  --color-emerald-400: #46AC9F;
+  --color-emerald-500: #2A9D8F;
+  --color-emerald-600: #1F7A6E;
+  --color-emerald-700: #1A665C;
+  --color-emerald-800: #15524A;
+  --color-emerald-900: #103E38;
+  --color-emerald-950: #0A2925;
+
+  --color-green-50: #E6F4F2;
+  --color-green-100: #CCE9E5;
+  --color-green-200: #A3D7D0;
+  --color-green-300: #72C0B6;
+  --color-green-400: #46AC9F;
+  --color-green-500: #2A9D8F;
+  --color-green-600: #1F7A6E;
+  --color-green-700: #1A665C;
+  --color-green-800: #15524A;
+  --color-green-900: #103E38;
+  --color-green-950: #0A2925;
+
+  --color-red-50: #FDECEA;
+  --color-red-100: #FBD9D3;
+  --color-red-200: #F6B4A7;
+  --color-red-300: #F08E7B;
+  --color-red-400: #EC7862;
+  --color-red-500: #E8634A;
+  --color-red-600: #C94E38;
+  --color-red-700: #A63E2C;
+  --color-red-800: #823022;
+  --color-red-900: #5E2318;
+  --color-red-950: #3D160F;
+
+  --color-orange-50: #FDECEA;
+  --color-orange-100: #FBD9D3;
+  --color-orange-200: #F6B4A7;
+  --color-orange-300: #F08E7B;
+  --color-orange-400: #EC7862;
+  --color-orange-500: #E8634A;
+  --color-orange-600: #C94E38;
+  --color-orange-700: #A63E2C;
+  --color-orange-800: #823022;
+  --color-orange-900: #5E2318;
+  --color-orange-950: #3D160F;
+
+  --color-blue-50: #E8EDF5;
+  --color-blue-100: #D1DBEA;
+  --color-blue-200: #A9BAD5;
+  --color-blue-300: #9BB0D4;
+  --color-blue-400: #6F8BBF;
+  --color-blue-500: #2E4F85;
+  --color-blue-600: #1A3260;
+  --color-blue-700: #142950;
+  --color-blue-800: #0F1F3D;
+  --color-blue-900: #0A1630;
+  --color-blue-950: #060E20;
+
+  --color-indigo-50: #E8EDF5;
+  --color-indigo-100: #D1DBEA;
+  --color-indigo-200: #A9BAD5;
+  --color-indigo-300: #9BB0D4;
+  --color-indigo-400: #6F8BBF;
+  --color-indigo-500: #2E4F85;
+  --color-indigo-600: #1A3260;
+  --color-indigo-700: #142950;
+  --color-indigo-800: #0F1F3D;
+  --color-indigo-900: #0A1630;
+  --color-indigo-950: #060E20;
+
+  --color-purple-50: #F0EBFB;
+  --color-purple-100: #E1D8F7;
+  --color-purple-200: #C4B4EE;
+  --color-purple-300: #A791E4;
+  --color-purple-400: #9275DC;
+  --color-purple-500: #7C5CBF;
+  --color-purple-600: #6B4FA8;
+  --color-purple-700: #5A4392;
+  --color-purple-800: #49377B;
+  --color-purple-900: #382A64;
+  --color-purple-950: #241B41;
+
+  --color-cyan-50: #EBF3FB;
+  --color-cyan-100: #D7E7F7;
+  --color-cyan-200: #AFCEF0;
+  --color-cyan-300: #87B5E8;
+  --color-cyan-400: #629BDD;
+  --color-cyan-500: #3B82C4;
+  --color-cyan-600: #2E6DA8;
+  --color-cyan-700: #25598C;
+  --color-cyan-800: #1C4770;
+  --color-cyan-900: #133554;
+  --color-cyan-950: #0A2338;
 }
 
 @layer utilities {
@@ -82,83 +236,275 @@
 }
 
 :root {
-  /* Brown/Grey/White theme - Construction Hub */
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --card: #f8f8f8;
-  --card-foreground: #1a1a1a;
+  /* MosaicMove theme - midnight blue, teal, coral, sand on cloud */
+  --midnight: #0F1F3D;
+  --midnight-light: #1A3260;
+  --sand: #E8D5B0;
+  --sand-light: #F4EAD5;
+  --coral: #E8634A;
+  --coral-light: #FDECEA;
+  --teal: #2A9D8F;
+  --teal-light: #E6F4F2;
+  --cloud: #F8F6F2;
+  --cloud-dark: #EDE9E1;
+  --text-primary: #0F1F3D;
+  --text-secondary: #4A5568;
+  --text-muted: #8A96A8;
+
+  --background: #F8F6F2;
+  --foreground: #0F1F3D;
+  --card: #ffffff;
+  --card-foreground: #0F1F3D;
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #8B4513; /* Saddle brown */
+  --popover-foreground: #0F1F3D;
+  --primary: #0F1F3D;
   --primary-foreground: #ffffff;
-  --secondary: #e0e0e0; /* Light grey */
-  --secondary-foreground: #1a1a1a;
-  --muted: #d4d4d4; /* Muted grey */
-  --muted-foreground: #666666;
-  --accent: #A0522D; /* Sienna (lighter brown) */
-  --accent-foreground: #ffffff;
-  --destructive: #dc2626;
+  --secondary: #EDE9E1;
+  --secondary-foreground: #0F1F3D;
+  --muted: #EDE9E1;
+  --muted-foreground: #6B778A;
+  --accent: #E6F4F2;
+  --accent-foreground: #1F7A6E;
+  --destructive: #E8634A;
   --destructive-foreground: #ffffff;
-  --border: #d4d4d4;
-  --input: #f0f0f0;
-  --ring: #8B4513;
-  --chart-1: #8B4513;
-  --chart-2: #A0522D;
-  --chart-3: #CD853F;
-  --chart-4: #D2B48C;
-  --chart-5: #DEB887;
-  --radius: 0.625rem;
-  --sidebar: #f5f5f5;
-  --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #8B4513;
+  --border: #E2DACE;
+  --input: #E2DACE;
+  --ring: #0F1F3D;
+  --chart-1: #0F1F3D;
+  --chart-2: #2A9D8F;
+  --chart-3: #E8634A;
+  --chart-4: #F4A261;
+  --chart-5: #3B82C4;
+  --radius: 0.875rem;
+  --sidebar: #0F1F3D;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #2A9D8F;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e0e0e0;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: #d4d4d4;
-  --sidebar-ring: #8B4513;
+  --sidebar-accent: rgba(255, 255, 255, 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #2A9D8F;
 }
 
 .dark {
-  --background: #0f0f0f;
-  --foreground: #f5f5f5;
-  --card: #1a1a1a;
-  --card-foreground: #f5f5f5;
-  --popover: #1a1a1a;
-  --popover-foreground: #f5f5f5;
-  --primary: #a0522d;
-  --primary-foreground: #f5f5f5;
-  --secondary: #333333;
-  --secondary-foreground: #f5f5f5;
-  --muted: #404040;
-  --muted-foreground: #a0a0a0;
-  --accent: #cd853f;
-  --accent-foreground: #f5f5f5;
-  --destructive: #ef4444;
-  --destructive-foreground: #f5f5f5;
-  --border: #333333;
-  --input: #252525;
-  --ring: #a0522d;
-  --chart-1: #a0522d;
-  --chart-2: #cd853f;
-  --chart-3: #d2b48c;
-  --chart-4: #deb887;
-  --chart-5: #f5deb3;
-  --sidebar: #151515;
-  --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #a0522d;
-  --sidebar-primary-foreground: #f5f5f5;
-  --sidebar-accent: #333333;
-  --sidebar-accent-foreground: #f5f5f5;
-  --sidebar-border: #333333;
-  --sidebar-ring: #a0522d;
+  --background: #0A1630;
+  --foreground: #F8F6F2;
+  --card: #0F1F3D;
+  --card-foreground: #F8F6F2;
+  --popover: #0F1F3D;
+  --popover-foreground: #F8F6F2;
+  --primary: #F8F6F2;
+  --primary-foreground: #0F1F3D;
+  --secondary: #1A3260;
+  --secondary-foreground: #F8F6F2;
+  --muted: #1A3260;
+  --muted-foreground: #A3B0C4;
+  --accent: #1F7A6E;
+  --accent-foreground: #F8F6F2;
+  --destructive: #E8634A;
+  --destructive-foreground: #ffffff;
+  --border: #22396A;
+  --input: #22396A;
+  --ring: #2A9D8F;
+  --chart-1: #2A9D8F;
+  --chart-2: #E8D5B0;
+  --chart-3: #E8634A;
+  --chart-4: #F4A261;
+  --chart-5: #3B82C4;
+  --sidebar: #08142A;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #2A9D8F;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #2A9D8F;
 }
 
-* {
-  @apply border-border;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Mosaic table defaults for raw <table> markup; utility classes still override. */
+  table:not([data-slot]) thead {
+    background-color: color-mix(in oklab, var(--color-cloud) 60%, transparent);
+  }
+  .dark table:not([data-slot]) thead {
+    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+  }
+  table:not([data-slot]) th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+  }
+  table:not([data-slot]) tbody tr {
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    transition: background-color 100ms;
+  }
+  table:not([data-slot]) tbody tr:nth-child(even) {
+    background-color: color-mix(in oklab, var(--color-cloud) 20%, transparent);
+  }
+  table:not([data-slot]) tbody tr:hover {
+    background-color: color-mix(in oklab, var(--color-cloud) 60%, transparent);
+  }
+  .dark table:not([data-slot]) tbody tr:hover {
+    background-color: color-mix(in oklab, var(--muted) 40%, transparent);
+  }
+
+  /* Mosaic input-field defaults for raw form controls. */
+  input:not([data-slot]):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='hidden']),
+  select:not([data-slot]),
+  textarea:not([data-slot]) {
+    border-radius: 0.75rem;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  input:not([data-slot]):not([type='checkbox']):not([type='radio']):focus-visible,
+  select:not([data-slot]):focus-visible,
+  textarea:not([data-slot]):focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 30%, transparent);
+  }
 }
 
-body {
-  @apply bg-background text-foreground;
+@layer components {
+  .metric-card {
+    @apply bg-card rounded-2xl border border-border p-5 shadow-card transition-shadow duration-200 hover:shadow-elevated;
+  }
+
+  .card-section {
+    @apply bg-card rounded-2xl border border-border shadow-card overflow-hidden;
+  }
+
+  .font-mono-data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* MosaicMove template component vocabulary */
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-nav-item:hover {
+    @apply bg-white/10 text-white;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-white/15 text-white;
+  }
+
+  .sidebar-nav-item.inactive {
+    @apply text-blue-200/70;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-midnight text-white rounded-xl text-sm font-semibold hover:bg-midnight-light active:scale-95 transition-all duration-150;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-white text-midnight border border-border rounded-xl text-sm font-semibold hover:bg-cloud active:scale-95 transition-all duration-150;
+  }
+
+  .btn-teal {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-teal text-white rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95 transition-all duration-150;
+  }
+
+  .input-field {
+    @apply w-full px-3.5 py-2.5 bg-cloud border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary transition-all duration-150;
+  }
+
+  .phase-dot {
+    @apply w-3 h-3 rounded-full border-2 border-white shadow-sm;
+  }
+
+  .checkpoint-line {
+    @apply absolute top-5 left-0 right-0 h-0.5 bg-border;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.25s ease forwards;
+  }
+
+  .animate-pulse-highlight {
+    animation: pulseHighlight 1s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseHighlight {
+  0% {
+    background-color: var(--teal-light);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* Keep badge/status colors and borders when printing report documents. */

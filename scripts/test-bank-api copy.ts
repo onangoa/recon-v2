@@ -383,7 +383,7 @@ async function testPesalinkSend(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: amount,
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST PESALINK',
+      Narration: 'CalCite TEST PESALINK',
     },
     Destinations: [
       {
@@ -392,7 +392,7 @@ async function testPesalinkSend(): Promise<string | null> {
         BankCode: TEST_BANK_CODE,
         Amount: String(amount),
         TransactionCurrency: 'KES',
-        Narration: 'RECONSMI TEST PESALINK',
+        Narration: 'CalCite TEST PESALINK',
       },
     ],
   };
@@ -427,7 +427,7 @@ async function testIftSend(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: amount,
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST IFT',
+      Narration: 'CalCite TEST IFT',
     },
     Destinations: [
       {
@@ -435,7 +435,7 @@ async function testIftSend(): Promise<string | null> {
         AccountNumber: TEST_DEST_ACCOUNT,
         Amount: amount,
         TransactionCurrency: 'KES',
-        Narration: 'RECONSMI TEST IFT',
+        Narration: 'CalCite TEST IFT',
       },
     ],
   };
@@ -470,14 +470,14 @@ async function testB2CMpesa(): Promise<string | null> {
       AccountNumber: ACCOUNT,
       Amount: String(amount),
       TransactionCurrency: 'KES',
-      Narration: 'RECONSMI TEST B2C MPESA',
+      Narration: 'CalCite TEST B2C MPESA',
     },
     Destinations: [
       {
         ReferenceNumber: `${messageReference}_1`,
         MobileNumber: TEST_MOBILE,
         Amount: String(amount),
-        Narration: 'RECONSMI TEST B2C MPESA',
+        Narration: 'CalCite TEST B2C MPESA',
       },
     ],
   };

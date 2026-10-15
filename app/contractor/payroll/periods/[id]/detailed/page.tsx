@@ -76,11 +76,11 @@ const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
 
 // Brand palette + logo (matches the transaction mini report PDF)
-const BRAND_BROWN: [number, number, number] = [139, 69, 19]; // #8B4513 saddle brown (primary)
-const BRAND_SIENNA: [number, number, number] = [160, 82, 45]; // #A0522D sienna (accent)
-const BRAND_TINT: [number, number, number] = [249, 245, 240]; // light brown tint
+const BRAND_MIDNIGHT: [number, number, number] = [15, 31, 61]; // #0F1F3D midnight (primary)
+const BRAND_MIDNIGHT_LIGHT: [number, number, number] = [26, 50, 96]; // #1A3260 midnight light (accent)
+const BRAND_TINT: [number, number, number] = [232, 237, 245]; // light midnight tint
 const BRAND_ZEBRA: [number, number, number] = [252, 249, 246]; // zebra stripe tint
-const BRAND_LINE: [number, number, number] = [222, 205, 189]; // wheat/brown grid line
+const BRAND_LINE: [number, number, number] = [226, 218, 206]; // mosaic border line
 
 export default function DetailedViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -191,7 +191,7 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
     const right = pageWidth - 14;
 
     // Header/footer chrome drawn on every page by the autoTable hook below.
-    const companyName = contractor?.companyName?.trim() || 'ReconSMI';
+    const companyName = contractor?.companyName?.trim() || 'CalCite';
     const drawChrome = () => {
       doc.setFont('helvetica', 'bold');
       let nameSize = 13;
@@ -200,11 +200,11 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
         nameSize -= 0.5;
         doc.setFontSize(nameSize);
       }
-      doc.setTextColor(...BRAND_BROWN);
+      doc.setTextColor(...BRAND_MIDNIGHT);
       doc.text(companyName, 14, 18);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
-      doc.setTextColor(...BRAND_BROWN);
+      doc.setTextColor(...BRAND_MIDNIGHT);
       doc.text(`DETAILED VIEW — ${data.period.name}`, right, 16, { align: 'right' });
 
       doc.setFont('helvetica', 'normal');
@@ -212,23 +212,23 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       doc.setTextColor(102, 102, 102);
       doc.text(`Generated: ${new Date().toLocaleString()}`, right, 21.5, { align: 'right' });
 
-      // Brand brown divider rules
-      doc.setDrawColor(...BRAND_BROWN);
+      // Brand midnight divider rules
+      doc.setDrawColor(...BRAND_MIDNIGHT);
       doc.setLineWidth(0.8);
       doc.line(14, 27, right, 27);
-      doc.setDrawColor(...BRAND_SIENNA);
+      doc.setDrawColor(...BRAND_MIDNIGHT_LIGHT);
       doc.setLineWidth(0.25);
       doc.line(14, 28.5, right, 28.5);
 
       // Footer: brand rule + tagline
-      doc.setDrawColor(...BRAND_SIENNA);
+      doc.setDrawColor(...BRAND_MIDNIGHT_LIGHT);
       doc.setLineWidth(0.4);
       doc.line(14, pageHeight - 14, right, pageHeight - 14);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.setTextColor(...BRAND_BROWN);
+      doc.setTextColor(...BRAND_MIDNIGHT);
       doc.text('P = Present (1/0)  ·  OT = Overtime hrs', 14, pageHeight - 8);
-      doc.text('ReconSMI — Construction Hub', pageWidth / 2, pageHeight - 8, { align: 'center' });
+      doc.text('CalCite — Construction Hub', pageWidth / 2, pageHeight - 8, { align: 'center' });
     };
 
     // Totals row aligned under the summary columns.
@@ -293,8 +293,8 @@ export default function DetailedViewPage({ params }: { params: Promise<{ id: str
       foot: [foot],
       theme: 'grid',
       styles: { fontSize: 6, cellPadding: 1.5, lineColor: BRAND_LINE, lineWidth: 0.1, textColor: [26, 26, 26] },
-      headStyles: { fillColor: BRAND_BROWN, textColor: 255, fontStyle: 'bold', fontSize: 6 },
-      footStyles: { fillColor: BRAND_TINT, textColor: BRAND_BROWN, fontStyle: 'bold', fontSize: 6 },
+      headStyles: { fillColor: BRAND_MIDNIGHT, textColor: 255, fontStyle: 'bold', fontSize: 6 },
+      footStyles: { fillColor: BRAND_TINT, textColor: BRAND_MIDNIGHT, fontStyle: 'bold', fontSize: 6 },
       alternateRowStyles: { fillColor: BRAND_ZEBRA },
       columnStyles,
       margin: { top: 34, bottom: 20, left: 14, right: 14 },

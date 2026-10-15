@@ -1,15 +1,7 @@
 'use client';
 
 import { ForgotPasswordPage } from '@/components/forgot-password-page';
-import { AuthNavbar } from '@/components/auth-navbar';
 
 export default function ForgotPassword() {
-  return (
-    <div className="min-h-screen bg-[#FFF8DC]">
-      <AuthNavbar />
-      <div className="pt-20">
-        <ForgotPasswordPage />
-      </div>
-    </div>
-  );
+  return <ForgotPasswordPage />;
 }

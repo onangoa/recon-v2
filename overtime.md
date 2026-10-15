@@ -1,4 +1,4 @@
-# Overtime Calculation Options — ReconSMI
+# Overtime Calculation Options — CalcSite
 
 Per-designation overtime calculation. **Option #3 is implemented** (see
 "Implementation notes" at the bottom). This catalog captures the options,

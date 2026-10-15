@@ -17,7 +17,7 @@ export class EmailService {
       const smtpPort = parseInt(process.env.SMTP_PORT || '465');
       const smtpUser = process.env.SMTP_USER;
       const smtpPassword = process.env.SMTP_PASSWORD;
-      const smtpFrom = process.env.SMTP_FROM || 'notifications@reconsmi.com';
+      const smtpFrom = process.env.SMTP_FROM || 'notifications@CalCite.com';
 
       if (!smtpUser || !smtpPassword) {
         throw new Error('SMTP_USER and SMTP_PASSWORD environment variables are required');
@@ -53,10 +53,10 @@ export class EmailService {
   static async send(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
       const transporter = this.getTransporter();
-      const smtpFrom = process.env.SMTP_FROM || 'notifications@reconsmi.com';
+      const smtpFrom = process.env.SMTP_FROM || 'notifications@CalCite.com';
 
       await transporter.sendMail({
-        from: `"ReconSMI" <${smtpFrom}>`,
+        from: `"CalCite" <${smtpFrom}>`,
         to: options.to,
         subject: options.subject,
         text: options.text || options.html.replace(/<[^>]*>/g, ''),

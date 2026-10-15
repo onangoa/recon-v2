@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  allowedDevOrigins: ['84.247.180.142', 'd1ed-41-139-244-209.ngrok-free.app'],
+  allowedDevOrigins: ['174.138.191.60', 'calcite.sandb.space'],
 }
 
 export default nextConfig

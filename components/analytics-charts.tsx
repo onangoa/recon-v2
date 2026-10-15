@@ -12,9 +12,9 @@ const revenueData = [
 ];
 
 const projectStatusData = [
-  { name: 'Active', value: 3, fill: '#8B4513' },
-  { name: 'Completed', value: 2, fill: '#A0522D' },
-  { name: 'Paused', value: 1, fill: '#D2B48C' },
+  { name: 'Active', value: 3, fill: '#0F1F3D' },
+  { name: 'Completed', value: 2, fill: '#1A3260' },
+  { name: 'Paused', value: 1, fill: '#E8D5B0' },
 ];
 
 const contractorPerformanceData = [

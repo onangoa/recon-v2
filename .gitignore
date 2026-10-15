@@ -22,3 +22,5 @@ mobileapp
 
 # IPN logs
 logs/
+
+mosaicmove_template/

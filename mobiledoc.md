@@ -1,10 +1,10 @@
-# ReconSMI — Mobile API Reference (`/mobile/api`) opencode -s ses_02f374714ffecNfca4RxgjAPDe
+# CalcSite — Mobile API Reference (`/mobile/api`) opencode -s ses_02f374714ffecNfca4RxgjAPDe
 
 Generated from the route handlers in `app/mobile/api/**`. Use this to update the old mobile app.
 
 ## Conventions
 
-- **Base URL**: `https://reconsmi.com` (production). All paths below are appended to this base.
+- **Base URL**: `https://CalCite.com` (production). All paths below are appended to this base.
 - **Auth**: Except where marked "none", every endpoint requires a Bearer access token in the `Authorization` header:
   ```
   Authorization: Bearer <accessToken>

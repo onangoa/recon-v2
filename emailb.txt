@@ -4,7 +4,7 @@ Attachment: bank-api-test-2026-07-10T08-29-11-371Z.log
 
 Dear Co-op Bank OpenAPI Support Team,
 
-We are integrating with the Co-op Bank OpenAPI for our application (RECONSMI) and have completed an initial round of integration testing against the live API environment. We have attached the full test log (bank-api-test-2026-07-10T08-29-11-371Z.log) for your reference.
+We are integrating with the Co-op Bank OpenAPI for our application (CalCite) and have completed an initial round of integration testing against the live API environment. We have attached the full test log (bank-api-test-2026-07-10T08-29-11-371Z.log) for your reference.
 
 Below is a summary of the results.
 
@@ -17,7 +17,7 @@ TEST ENVIRONMENT
 - Source Account  : 01192588813000
 - Destination     : 01100006870001 (Bank Code 11)
 - Mobile          : 2547<redacted>
-- Callback URL    : https://reconsmi.com/v1/ext/ipn
+- Callback URL    : https://CalCite.com/v1/ext/ipn
 - Test Date       : 2026-07-10
 
 ==================================================
@@ -95,6 +95,6 @@ Thank you for your support.
 
 Best regards,
 
-RECONSMI Integration Team
+CalCite Integration Team
 Email: [your-email@example.com]
 Phone: [your-phone-number]

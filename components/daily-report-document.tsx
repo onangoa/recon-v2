@@ -683,7 +683,7 @@ export function DailyReportDocument({
             : ''}
         </span>
         <span className="flex items-center gap-1">
-          <DoorOpen className="h-3 w-3" /> ReconSMI
+          <DoorOpen className="h-3 w-3" /> CalcSite
         </span>
       </div>
     </div>

@@ -221,7 +221,7 @@ function DailyReportPrintView() {
         {/* ---------------- Cover page ---------------- */}
         <div className="rounded-lg border border-border bg-white shadow-sm print:shadow-none print:rounded-none print:break-after-page min-h-[1000px] flex flex-col">
           <div className="border-b-2 border-primary px-8 py-8 flex items-center justify-between gap-6">
-            <img src="/default_full_logo.png" alt="ReconSMI" className="h-12 w-auto" />
+            <img src="/default_full_logo.png" alt="CalCite" className="h-12 w-auto" />
             <div className="text-right">
               <p className="text-xs text-muted-foreground">
                 {contractorName || 'Construction Site Management'}
@@ -235,7 +235,7 @@ function DailyReportPrintView() {
 
           <div className="flex-1 px-8 py-10 flex flex-col items-center justify-center text-center">
             <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground mb-3">
-              ReconSMI Site Reporting
+              CalcSite Site Reporting
             </p>
             <h1 className="text-4xl font-black uppercase tracking-tight text-primary leading-tight">
               {isSingleDay ? 'Daily Report' : 'Merged Daily Reports'}

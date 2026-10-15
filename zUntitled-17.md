@@ -15,9 +15,10 @@ tsx scripts/test-bank-api.ts -i --
 npm install
 npx prisma migrate dev --name init
 npx prisma db seed
-PORT=4030 pm2 start npm --name "dev-reconsmi" -- run start
+PORT=4030 pm2 start npm --name "dev-CalCite" -- run start
 
 v1/ext/ipn
 2E25DINdYYEV5c0vPp0kaAzl
+oc_sk_4139099019f6_s-DowuL0RPUpaV3eF0GVVrgFxVdjKN9N
 
 Note: The IPN route at app/v1/ext/ipn/route.ts currently just logs and forwards the payload to a webhook — it doesn't call handleBankFundsTransferCallback. If the bank calls back to this new URL, transferred funds won't be processed. Want me to wire the IPN route to call handleBankFundsTransferCallback?

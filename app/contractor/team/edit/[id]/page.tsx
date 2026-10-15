@@ -257,7 +257,7 @@ export default function EditTeamMemberPage({ params }: { params: Promise<{ id: s
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="e.g. john@reconsmi.ke"
+                placeholder="e.g. john@CalCite.ke"
                 disabled={isSubmitting}
                 className="w-full rounded-lg border-muted-foreground/20 bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary shadow-sm"
               />
