@@ -219,7 +219,7 @@ model Attendance {
   lateHours     Float           @default(0)
   lateDays      Int             @default(0)
   status        String          @default("Present")
-  notes         String?
+  notes         String?         @db.Text
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   contractor    Contractor      @relation(fields: [contractorId], references: [id], onDelete: Cascade)
