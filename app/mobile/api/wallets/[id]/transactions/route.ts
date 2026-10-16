@@ -4,6 +4,7 @@ import { initiateSTKPush } from '@/lib/mpesa';
 import { initiateBankTopup, createBankPayout } from '@/lib/bank-service';
 import { getPayoutFee, chargePayoutFee } from '@/lib/payout-fee';
 import { notifyPayoutSentToRecipient } from '@/lib/sms-notifications';
+import { formatTxnRef } from '@/lib/txn-ref';
 import {
   mobileRequireContractorPermission,
   mobileSuccess,
@@ -54,7 +55,14 @@ export async function GET(
       prisma.transaction.count({ where: whereCondition }),
     ]);
 
-    return mobileList(transactions, total, {
+    // Attach the friendly TXN- reference (same encoding as the web UI) so the
+    // mobile list can always show a readable Ref column.
+    const rows = transactions.map((t) => ({
+      ...t,
+      txnRef: t.seq != null ? formatTxnRef(t.seq) : t.reference,
+    }));
+
+    return mobileList(rows, total, {
       page,
       limit,
       pages: Math.ceil(total / limit),

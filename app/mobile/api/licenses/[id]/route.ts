@@ -58,12 +58,15 @@ export async function PATCH(
         name: body.name,
         licenseNumber: body.licenseNumber,
         issuingAuthority: body.issuingAuthority,
+        site: body.siteId ? { connect: { id: body.siteId } } : undefined,
         issueDate: body.issueDate ? new Date(body.issueDate) : undefined,
         expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined,
         type: body.type,
         category: body.category,
         status: body.status,
         notes: body.notes,
+        fileName: body.fileName !== undefined ? body.fileName : undefined,
+        fileData: body.fileData !== undefined ? body.fileData : undefined,
       },
       include: { site: true }
     });
@@ -89,7 +92,11 @@ export async function PATCH(
     }
 
     return mobileSuccess(license, 'License updated');
-  } catch (error) {
+  } catch (error: any) {
+    // Surface duplicate license numbers as a validation error instead of a 500.
+    if (error?.code === 'P2002' && error?.meta?.target?.includes('licenseNumber')) {
+      return mobileError('A license with this license number already exists', 400);
+    }
     console.error('Failed to update license:', error);
     return mobileError('Failed to update license', 500);
   }

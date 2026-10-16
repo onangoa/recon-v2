@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
         status: body.status || 'active',
         fileName: body.fileName || null,
         fileData: body.fileData || null,
+        notes: body.notes || null,
       },
     });
 
@@ -122,7 +123,11 @@ export async function POST(request: NextRequest) {
     }
 
     return mobileSuccess(license, 'License created');
-  } catch (error) {
+  } catch (error: any) {
+    // Surface duplicate license numbers as a validation error instead of a 500.
+    if (error?.code === 'P2002' && error?.meta?.target?.includes('licenseNumber')) {
+      return mobileError('A license with this license number already exists', 400);
+    }
     console.error('Failed to create license:', error);
     return mobileError('Failed to create license', 500);
   }
