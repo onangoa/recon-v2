@@ -242,6 +242,108 @@ function buildSession(records: BiometricRecord[], shift: ShiftShape | null): Bui
   };
 }
 
+/** One present worker on a given day, categorised by labour designation. */
+export interface SiteAttendanceEntry {
+  date: Date;
+  category: string | null;
+}
+
+/**
+ * Attendance entries for a site over a date range, fetched the same way the
+ * attendance page (GET /web/api/attendance) fetches its list: pulled live
+ * from every active biometric device via the device API and transformed into
+ * sessions — falling back to the Attendance table only when no biometric API
+ * is configured or the contractor has no active devices. This keeps the
+ * daily report's workforce counts in sync with the attendance page even when
+ * the database hasn't been synced from the devices yet.
+ */
+export async function getSiteAttendanceEntries(
+  contractorId: string,
+  siteId: string,
+  fromDay: Date,
+  toDay: Date,
+): Promise<SiteAttendanceEntry[]> {
+  const rangeStart = startOfDay(fromDay);
+  const rangeEnd = endOfDay(toDay);
+
+  if (process.env.BIOMETRIC_API_BASE_URL) {
+    const devices = await prisma.biometricDevice.findMany({
+      where: { contractorId, isActive: true },
+      select: { sn: true },
+    });
+
+    if (devices.length > 0) {
+      const workers = await prisma.worker.findMany({
+        where: { contractorId },
+        select: {
+          id: true,
+          name: true,
+          enrollId: true,
+          siteId: true,
+          shiftId: true,
+          designation: { select: { title: true } },
+          shift: true,
+          workerShifts: { select: { shift: true } },
+        },
+      });
+
+      // Pull a generous window of records newest-first from each configured
+      // device (the /api/getRecords endpoint has no date filter); date
+      // filtering happens after transformation, exactly like the
+      // attendance page. A single offline device shouldn't blank the list.
+      const pageSize = 500;
+      const collected: BiometricRecord[] = [];
+
+      for (const device of devices) {
+        let pn = 1;
+        for (let i = 0; i < 5; i++) {
+          try {
+            const page = await getRecords(device.sn, { pn, pageSize });
+            if (!page.records || page.records.length === 0) break;
+            collected.push(...page.records);
+            if (page.records.length < pageSize || collected.length >= page.total) break;
+            pn++;
+          } catch (err) {
+            console.error(`Failed to fetch records from device ${device.sn}:`, err);
+            break;
+          }
+        }
+      }
+
+      const views = transformRecordsToAttendance(
+        collected,
+        workers.map(toWorkerForTransform),
+      );
+
+      const workerById = new Map(workers.map((w) => [w.id, w]));
+      return views
+        .filter((v) => {
+          const worker = workerById.get(v.worker.id);
+          return (
+            worker?.siteId === siteId &&
+            isWithinInterval(new Date(v.date), { start: rangeStart, end: rangeEnd })
+          );
+        })
+        .map((v) => ({
+          date: new Date(v.date),
+          category: workerById.get(v.worker.id)?.designation?.title ?? null,
+        }));
+    }
+  }
+
+  // ---- Database fallback (no biometric API / no devices configured) ----
+  const rows = await prisma.attendance.findMany({
+    where: {
+      contractorId,
+      worker: { siteId },
+      date: { gte: rangeStart, lte: rangeEnd },
+      status: 'Present',
+    },
+    select: { date: true, worker: { select: { designation: { select: { title: true } } } } },
+  });
+  return rows.map((r) => ({ date: r.date, category: r.worker?.designation?.title || null }));
+}
+
 /**
  * Pull attendance records from all active biometric devices for a contractor
  * and persist them to the Attendance table so downstream processes (payroll)

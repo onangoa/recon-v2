@@ -5,6 +5,7 @@ import { startOfDay, endOfDay, subDays, format, isAfter } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { verifySiteOwnership } from '@/lib/contractor-isolation';
 import { DAILY_REPORT_FULL_INCLUDE, getRangeReports } from '@/lib/daily-report-data';
+import { getSiteAttendanceEntries } from '@/lib/biometric-attendance';
 import { isTitleWithinWordLimit, MAX_TITLE_WORDS } from '@/lib/daily-report';
 
 // ---------------------------------------------------------------------------
@@ -59,9 +60,11 @@ function normalizeFiles(value: unknown, max: number): FileEntry[] {
 
 /**
  * Form/print meta for a given day: labour categories (designations), total
- * workforce on site from attendance records (grouped per category), the
- * previous day's targets (activity title dropdown + planned workforce
- * source), the day's visitors, safety incidents and material deliveries.
+ * workforce on site from attendance records (grouped per category — fetched
+ * the same way the attendance page fetches it: live from the biometric
+ * devices, database fallback), the previous day's targets (activity title
+ * dropdown + planned workforce source), the day's visitors, safety incidents
+ * and material deliveries.
  */
 async function buildDayMeta(contractorId: string, siteId: string, day: Date) {
   const dayStart = startOfDay(day);
@@ -75,15 +78,7 @@ async function buildDayMeta(contractorId: string, siteId: string, day: Date) {
         orderBy: { title: 'asc' },
         select: { id: true, title: true, salary: true },
       }),
-      prisma.attendance.findMany({
-        where: {
-          contractorId,
-          worker: { siteId },
-          date: { gte: dayStart, lte: dayEnd },
-          status: 'Present',
-        },
-        select: { worker: { select: { designation: { select: { title: true } } } } },
-      }),
+      getSiteAttendanceEntries(contractorId, siteId, day, day),
       prisma.visitor.findMany({
         where: { siteId, checkInTime: { gte: dayStart, lte: dayEnd } },
         orderBy: { checkInTime: 'asc' },
@@ -114,7 +109,7 @@ async function buildDayMeta(contractorId: string, siteId: string, day: Date) {
 
   const workforceMap = new Map<string, number>();
   for (const record of attendance) {
-    const category = record.worker?.designation?.title || 'Uncategorised';
+    const category = record.category || 'Uncategorised';
     workforceMap.set(category, (workforceMap.get(category) || 0) + 1);
   }
 

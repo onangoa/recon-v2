@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { format, isBefore, isAfter, startOfDay, endOfDay } from 'date-fns';
+import { getSiteAttendanceEntries } from './biometric-attendance';
 
 // Shared relation include for a full DailyReport payload. Used by the CRUD
 // routes and the PDF export route.
@@ -20,10 +21,12 @@ export const DAILY_REPORT_FULL_INCLUDE = {
 
 /**
  * Full daily reports for a date range (ascending), each enriched with the
- * day's context pulled from live records: workforce on site (attendance
- * grouped per labour category), visitors, safety incidents and received
- * purchase orders. Shared by the merged JSON range endpoint and the PDF
- * export so both always render the same data.
+ * day's context pulled from live records: workforce on site (attendance —
+ * fetched the same way the attendance page fetches it, live from the
+ * biometric devices with a database fallback, grouped per labour category),
+ * visitors, safety incidents and received purchase orders. Shared by the
+ * merged JSON range endpoint and the PDF export so both always render the
+ * same data.
  */
 export async function getRangeReports(siteId: string, fromDay: Date, toDay: Date) {
   const site = await prisma.site.findUnique({
@@ -47,18 +50,7 @@ export async function getRangeReports(siteId: string, fromDay: Date, toDay: Date
   const rangeStart = startOfDay(fromDay);
   const rangeEnd = endOfDay(toDay);
   const [attendance, visitors, incidents, deliveries] = await Promise.all([
-    prisma.attendance.findMany({
-      where: {
-        contractorId,
-        worker: { siteId },
-        date: { gte: rangeStart, lte: rangeEnd },
-        status: 'Present',
-      },
-      select: {
-        date: true,
-        worker: { select: { designation: { select: { title: true } } } },
-      },
-    }),
+    getSiteAttendanceEntries(contractorId, siteId, fromDay, toDay),
     prisma.visitor.findMany({
       where: { siteId, checkInTime: { gte: rangeStart, lte: rangeEnd } },
       orderBy: { checkInTime: 'asc' },
@@ -86,7 +78,7 @@ export async function getRangeReports(siteId: string, fromDay: Date, toDay: Date
   const workforceByDay = new Map<string, Map<string, number>>();
   for (const record of attendance) {
     const key = format(record.date, 'yyyy-MM-dd');
-    const category = record.worker?.designation?.title || 'Uncategorised';
+    const category = record.category || 'Uncategorised';
     let dayMap = workforceByDay.get(key);
     if (!dayMap) {
       dayMap = new Map<string, number>();

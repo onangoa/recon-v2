@@ -4,6 +4,7 @@ import { ActivityLogger } from '@/lib/activity-logger';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 import { requireContractorPermission } from '@/lib/require-permission';
 import { DAILY_REPORT_FULL_INCLUDE } from '@/lib/daily-report-data';
+import { getSiteAttendanceEntries } from '@/lib/biometric-attendance';
 import { isTitleWithinWordLimit, MAX_TITLE_WORDS } from '@/lib/daily-report';
 
 // ---------------------------------------------------------------------------
@@ -81,15 +82,7 @@ export async function GET(
           orderBy: { title: 'asc' },
           select: { id: true, title: true, salary: true },
         }),
-        prisma.attendance.findMany({
-          where: {
-            contractorId,
-            worker: { siteId: report.siteId },
-            date: { gte: dayStart, lte: dayEnd },
-            status: 'Present',
-          },
-          select: { worker: { select: { designation: { select: { title: true } } } } },
-        }),
+        getSiteAttendanceEntries(contractorId, report.siteId, report.reportDate, report.reportDate),
         prisma.visitor.findMany({
           where: {
             siteId: report.siteId,
@@ -130,7 +123,7 @@ export async function GET(
 
     const workforceMap = new Map<string, number>();
     for (const record of attendance) {
-      const category = record.worker?.designation?.title || 'Uncategorised';
+      const category = record.category || 'Uncategorised';
       workforceMap.set(category, (workforceMap.get(category) || 0) + 1);
     }
 
