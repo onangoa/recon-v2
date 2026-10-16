@@ -11,6 +11,7 @@ import {
   Building2, 
   MoreVertical,
   ExternalLink,
+  Eye,
   Pencil,
   Trash2,
   Calendar,
@@ -299,7 +300,9 @@ export default function SitesManagementPage() {
                           {site.name.includes('Road') ? <Construction className="size-4" /> : <Building2 className="size-4" />}
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-sm text-foreground">{site.name}</span>
+                          <Link href={`/contractor/sites/${site.id}`} className="font-bold text-sm text-foreground hover:text-primary hover:underline">
+                            {site.name}
+                          </Link>
                           <div className="flex items-center gap-1">
                             {site.isPrimary && <Badge variant="secondary" className="text-[9px] font-black bg-primary/10 text-primary border-primary/20 uppercase px-1 h-3.5">Primary</Badge>}
                             {activeSite?.id === site.id && <span className="text-[9px] font-black text-emerald-600 uppercase">Active</span>}
@@ -333,6 +336,12 @@ export default function SitesManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={() => router.push(`/contractor/sites/${site.id}`)}
+                            >
+                              <Eye className="size-4" /> View Details
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="gap-2 cursor-pointer"
                               onClick={() => router.push(`/contractor/sites/edit/${site.id}`)}

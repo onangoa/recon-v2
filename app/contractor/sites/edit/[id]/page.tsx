@@ -21,6 +21,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
+import { SiteReportFieldsSection } from '@/components/site-report-fields';
+import {
+  EMPTY_SITE_REPORT_FIELDS,
+  reportFieldsToPayload,
+  siteToReportFields,
+  type SiteReportFieldsState,
+} from '@/lib/site-report';
 
 interface Site {
   id: string;
@@ -44,6 +51,9 @@ export default function EditSitePage() {
     category: '',
     isPrimary: false,
   });
+  const [reportFields, setReportFields] = useState<SiteReportFieldsState>(
+    EMPTY_SITE_REPORT_FIELDS
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,6 +70,7 @@ export default function EditSitePage() {
             category: site.category || '',
             isPrimary: site.isPrimary || false,
           });
+          setReportFields(siteToReportFields(site as unknown as Record<string, unknown>));
         } else {
           const errorData = await response.json();
           toast({
@@ -121,6 +132,7 @@ export default function EditSitePage() {
           description: formData.description,
           category: formData.category,
           isPrimary: formData.isPrimary,
+          ...reportFieldsToPayload(reportFields),
         }),
       });
 
@@ -273,6 +285,13 @@ export default function EditSitePage() {
               <span className="block text-xs font-normal text-gray-500 mt-0.5">This site will be selected by default when you log in.</span>
             </label>
           </div>
+
+          {/* Weekly Progress Report Details */}
+          <SiteReportFieldsSection
+            fields={reportFields}
+            onChange={(patch) => setReportFields({ ...reportFields, ...patch })}
+            disabled={isSubmitting}
+          />
 
           {/* Buttons */}
           <div className="flex gap-4 pt-4 border-t border-gray-100">

@@ -436,6 +436,28 @@ model Site {
   category        String?
   status          String           @default("Active")
   isPrimary       Boolean          @default(false)
+  // ---- Weekly Progress Report data (the contractor's SAMPLE REPORT.docx
+  // template). All optional so existing sites keep working; the weekly
+  // report PDF falls back to name/contractor data when a field is blank.
+  // The report title comes from the site name, the occupancy/category row
+  // from `category`, and the PROJECT TEAM section from the staff
+  // (TeamMember) assigned to this site.
+  /// Site/project image shown on the weekly progress report header.
+  image                  String?
+  /// Plot land-reference number, e.g. "1870/I/330".
+  plotNumber             String?
+  /// Built-up area, free text, e.g. "12,000 m²".
+  builtUpArea            String?
+  numberOfFloors         Int?
+  /// Actual project commencement date (drives the time-elapsed stats).
+  commencementDate       DateTime?
+  expectedCompletionDate DateTime?
+  /// Contract duration in months; computed from the dates when blank.
+  contractPeriodMonths   Int?
+  /// Overall construction progress percentage (0 - 100).
+  overallProgress        Float?
+  /// One-line description of the works status shown on the report.
+  progressDescription    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   documents       Document[]

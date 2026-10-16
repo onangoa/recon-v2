@@ -24,6 +24,12 @@ import { useToast } from '@/hooks/use-toast';
 import { getApiError, getErrorMessage } from '@/lib/toast-utils';
 import { useSite } from '@/hooks/use-site';
 import { useAuth } from '@/context/auth-context';
+import { SiteReportFieldsSection } from '@/components/site-report-fields';
+import {
+  EMPTY_SITE_REPORT_FIELDS,
+  reportFieldsToPayload,
+  type SiteReportFieldsState,
+} from '@/lib/site-report';
 
 export default function CreateSitePage() {
   const router = useRouter();
@@ -39,6 +45,9 @@ export default function CreateSitePage() {
     category: '',
     isPrimary: false,
   });
+  const [reportFields, setReportFields] = useState<SiteReportFieldsState>(
+    EMPTY_SITE_REPORT_FIELDS
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,6 +85,7 @@ export default function CreateSitePage() {
           description: formData.description,
           category: formData.category,
           isPrimary: formData.isPrimary,
+          ...reportFieldsToPayload(reportFields),
         }),
       });
 
@@ -276,6 +286,13 @@ export default function CreateSitePage() {
               <span className="block text-xs font-normal text-gray-500 mt-0.5">This site will be selected by default when you log in.</span>
             </label>
           </div>
+
+          {/* Weekly Progress Report Details */}
+          <SiteReportFieldsSection
+            fields={reportFields}
+            onChange={(patch) => setReportFields({ ...reportFields, ...patch })}
+            disabled={isSubmitting}
+          />
 
           {/* Buttons */}
           <div className="flex gap-4 pt-4 border-t border-gray-100">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requireContractorPermission } from '@/lib/require-permission';
+import { parseSiteReportFields } from '@/lib/site-report';
 
 export async function GET(
   request: NextRequest,
@@ -64,6 +65,7 @@ export async function PUT(
           description: body.description,
           category: body.category,
           isPrimary: body.isPrimary,
+          ...parseSiteReportFields(body),
         },
       });
     });

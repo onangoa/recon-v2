@@ -64,6 +64,7 @@ import {
   VERDICT_BADGE_CLASSES,
   VERDICT_LABELS,
 } from '@/lib/daily-report';
+import { downloadWeeklyReportPdf } from '@/lib/site-report';
 
 interface ReportSummary {
   id: string;
@@ -151,11 +152,35 @@ export default function DailyReportsPage() {
     }
   };
 
+  const exportWeeklyReport = async (key: string, from: Date, to: Date) => {
+    if (!activeSite || exporting) return;
+    setExporting(key);
+    try {
+      await downloadWeeklyReportPdf({
+        siteId: activeSite.id,
+        from: toDateKey(from),
+        to: toDateKey(to),
+      });
+      toast({
+        title: 'Weekly progress report exported',
+        description: 'The weekly progress report PDF has been downloaded.',
+        variant: 'success',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Export failed',
+        description: getErrorMessage(err, 'Could not export the weekly progress report. Please try again.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const today = new Date();
   const todayKey = toDateKey(today);
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
   const weekReportCount = weekDays.filter((day) => reportsByKey.has(toDateKey(day))).length;
-  const monthReportCount = reports.length;
 
   const monthWeeks = useMemo(() => {
     const weeks: { start: Date; end: Date }[] = [];
@@ -221,21 +246,6 @@ export default function DailyReportsPage() {
                 <Download className="w-4 h-4" />
               )}
               <span>Export Week PDF</span>
-            </Button>
-          )}
-          {tab === 'weekly' && monthReportCount > 0 && (
-            <Button
-              variant="outline"
-              className="gap-2"
-              disabled={exporting !== null}
-              onClick={() => exportPdf(`month-${toDateKey(monthStart)}-${toDateKey(monthEnd)}`, monthStart, monthEnd)}
-            >
-              {exporting?.startsWith('month-') ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span>Export Merged Weekly PDF</span>
             </Button>
           )}
           <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-white">
@@ -523,8 +533,9 @@ export default function DailyReportsPage() {
                   Weekly Reports
                 </CardTitle>
                 <CardDescription className="text-sm italic">
-                  Each week merges its daily reports. Export one week, or all
-                  weeks of {format(monthStart, 'MMMM yyyy')} merged into one PDF.
+                  Generate the weekly progress report (project data, project
+                  team &amp; activity summary) for any week of{' '}
+                  {format(monthStart, 'MMMM yyyy')}.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -638,20 +649,20 @@ export default function DailyReportsPage() {
                                 className="gap-1 text-primary"
                                 disabled={exporting !== null}
                                 onClick={() =>
-                                  exportPdf(
-                                    `week-${toDateKey(week.start)}-${toDateKey(week.end)}`,
+                                  exportWeeklyReport(
+                                    `wpr-${toDateKey(week.start)}-${toDateKey(week.end)}`,
                                     week.start,
                                     week.end
                                   )
                                 }
                               >
                                 {exporting ===
-                                `week-${toDateKey(week.start)}-${toDateKey(week.end)}` ? (
+                                `wpr-${toDateKey(week.start)}-${toDateKey(week.end)}` ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                  <Download className="w-4 h-4" />
+                                  <FileText className="w-4 h-4" />
                                 )}
-                                <span className="text-xs font-bold">Export Week PDF</span>
+                                <span className="text-xs font-bold">Weekly Report</span>
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground/50 italic">

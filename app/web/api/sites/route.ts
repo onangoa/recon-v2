@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { requirePermission } from '@/lib/require-permission';
 import { withContractorFilter } from '@/lib/contractor-isolation';
+import { parseSiteReportFields } from '@/lib/site-report';
 
 export async function GET(request: NextRequest) {
   const permCheck = await requirePermission(request, 'sites:read');
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
           description: body.description,
           category: body.category,
           isPrimary: shouldBePrimary,
+          ...parseSiteReportFields(body),
         },
       });
     });
