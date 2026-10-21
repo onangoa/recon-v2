@@ -391,10 +391,10 @@ export default function SiteDetailPage() {
         <CardHeader className="p-4 md:p-6 border-b bg-muted/20">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <CalendarCheck className="w-5 h-5 text-primary" />
-            Weekly Progress Report Data
+            Progress Report Data
           </CardTitle>
           <CardDescription className="text-sm italic">
-            Project data printed on the generated weekly progress report.
+            Project data printed on the generated Progress Report.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 md:p-6">
@@ -440,7 +440,7 @@ export default function SiteDetailPage() {
           </CardTitle>
           <CardDescription className="text-sm italic">
             Staff assigned to this project — listed as the PROJECT TEAM on the
-            weekly progress report.
+            Progress Report.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">

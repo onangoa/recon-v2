@@ -11,7 +11,7 @@ ALTER TABLE `site` DROP COLUMN `architect`,
     DROP COLUMN `subcontractors`,
     ADD COLUMN `image` VARCHAR(191) NULL;
 
--- Site image (weekly progress report header) replaces the unused report-title,
+-- Site image (Progress Report header) replaces the unused report-title,
 -- occupancy and project-team columns: the report title now comes from the
 -- site name, the category row from Site.category, and the PROJECT TEAM
 -- section from the staff (TeamMember) assigned to the site.

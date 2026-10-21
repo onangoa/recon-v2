@@ -286,7 +286,7 @@ export default function EditSitePage() {
             </label>
           </div>
 
-          {/* Weekly Progress Report Details */}
+          {/* Progress Report Details */}
           <SiteReportFieldsSection
             fields={reportFields}
             onChange={(patch) => setReportFields({ ...reportFields, ...patch })}

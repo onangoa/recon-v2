@@ -168,7 +168,7 @@ export function SiteReportFieldsSection({
             )}
             <p className="text-xs text-gray-400">
               <ImagePlus className="mr-1 inline h-3.5 w-3.5" />
-              Shown on the generated weekly progress report header.
+              Shown on the generated Progress Report header.
             </p>
           </div>
         </div>

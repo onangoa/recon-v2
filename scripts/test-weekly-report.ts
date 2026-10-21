@@ -1,5 +1,5 @@
 /**
- * End-to-end sanity test for the Weekly Progress Report (SAMPLE REPORT.docx
+ * End-to-end sanity test for the Progress Report (SAMPLE REPORT.docx
  * format) against the local dev DB. Runs the site + weekly-report route
  * handlers directly with a signed contractor token:
  *
@@ -196,7 +196,7 @@ async function main() {
       throw new Error('Site fields round-trip failed');
     }
 
-    // Generate the weekly progress report PDF.
+    // Generate the Progress Report PDF.
     const pdfRes = await getWeeklyReportPdf(
       request(
         `http://localhost/web/api/weekly-report/pdf?siteId=${site.id}&from=${fromKey}&to=${toKey}`
@@ -211,7 +211,7 @@ async function main() {
     const pdfText = pdfBuffer.toString('latin1');
     const imageObjects = (pdfText.match(/\/Subtype[\s]*\/Image/g) || []).length;
     const markers = [
-      'WEEKLY PROGRESS REPORT NO.',
+      'Progress Report NO.',
       'PROJECT DATA',
       'PROJECT TEAM',
       'CONSTRUCTION STATUS',

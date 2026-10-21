@@ -6,6 +6,7 @@ import {
   mobileSuccess,
   mobileError,
 } from '@/lib/mobile-auth';
+import { parseSiteReportFields } from '@/lib/site-report';
 
 export async function GET(
   request: NextRequest,
@@ -67,6 +68,7 @@ export async function PUT(
           description: body.description,
           category: body.category,
           isPrimary: body.isPrimary,
+          ...parseSiteReportFields(body),
         },
       });
     });

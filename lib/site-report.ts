@@ -1,4 +1,4 @@
-// Shared types + helpers for the Weekly Progress Report (the contractor's
+// Shared types + helpers for the Progress Report (the contractor's
 // SAMPLE REPORT.docx template). The site-level report data lives on the Site
 // model (title comes from the site name, the category row from
 // Site.category); the PROJECT TEAM section is sourced from the staff
@@ -146,7 +146,7 @@ export function parseSiteReportFields(body: Record<string, unknown>) {
 }
 
 /**
- * Download the Weekly Progress Report PDF (the SAMPLE REPORT.docx format)
+ * Download the Progress Report PDF (the SAMPLE REPORT.docx format)
  * for one week of a site's daily reports as a file.
  */
 export async function downloadWeeklyReportPdf(params: {

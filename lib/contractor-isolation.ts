@@ -175,14 +175,6 @@ export async function verifyContractorAccess(
         return order?.site?.contractorId === contractorId;
       }
 
-      case 'task': {
-        const task = await prisma.task.findUnique({
-          where: { id: resourceId },
-          select: { site: { select: { contractorId: true } } }
-        });
-        return task?.site?.contractorId === contractorId;
-      }
-
       case 'visitor': {
         const visitor = await prisma.visitor.findUnique({
           where: { id: resourceId },

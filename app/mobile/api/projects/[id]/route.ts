@@ -19,7 +19,6 @@ export async function GET(
       include: {
         contractor: true,
         sites: true,
-        tasks: true,
         materials: true,
         equipment: true,
         documents: true,

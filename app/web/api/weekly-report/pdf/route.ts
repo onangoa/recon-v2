@@ -11,7 +11,7 @@ import { basename, extname, join } from 'path';
 import jsPDF from 'jspdf';
 
 // ---------------------------------------------------------------------------
-// Weekly Progress Report - PDF export (the contractor's SAMPLE REPORT.docx
+// Progress Report - PDF export (the contractor's SAMPLE REPORT.docx
 // template).
 //
 // GET /web/api/weekly-report/pdf?siteId=&from=&to=
@@ -295,7 +295,7 @@ export async function GET(request: NextRequest) {
     ensureSpace(doc, cursor, 8);
     doc.setFontSize(13);
     doc.setTextColor(...PRIMARY);
-    doc.text(`WEEKLY PROGRESS REPORT NO. ${reportNo}`, PAGE_W / 2, cursor.y, {
+    doc.text(`Progress Report NO. ${reportNo}`, PAGE_W / 2, cursor.y, {
       align: 'center',
     });
     cursor.y += 6;
@@ -497,7 +497,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Failed to generate weekly progress report PDF:', error);
+    console.error('Failed to generate Progress Report PDF:', error);
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
 }

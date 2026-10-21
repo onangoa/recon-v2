@@ -162,14 +162,14 @@ export default function DailyReportsPage() {
         to: toDateKey(to),
       });
       toast({
-        title: 'Weekly progress report exported',
-        description: 'The weekly progress report PDF has been downloaded.',
+        title: 'Progress Report exported',
+        description: 'The Progress Report PDF has been downloaded.',
         variant: 'success',
       });
     } catch (err: any) {
       toast({
         title: 'Export failed',
-        description: getErrorMessage(err, 'Could not export the weekly progress report. Please try again.'),
+        description: getErrorMessage(err, 'Could not export the Progress Report. Please try again.'),
         variant: 'destructive',
       });
     } finally {
@@ -533,7 +533,7 @@ export default function DailyReportsPage() {
                   Weekly Reports
                 </CardTitle>
                 <CardDescription className="text-sm italic">
-                  Generate the weekly progress report (project data, project
+                  Generate the Progress Report (project data, project
                   team &amp; activity summary) for any week of{' '}
                   {format(monthStart, 'MMMM yyyy')}.
                 </CardDescription>

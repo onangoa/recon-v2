@@ -215,34 +215,6 @@ export async function getContractorSafetyIncidents(request: NextRequest, options
 }
 
 /**
- * Get contractor-specific tasks (through sites)
- */
-export async function getContractorTasks(request: NextRequest, options?: any) {
-  const contractorId = await getContractorIdFromRequest(request);
-  if (!contractorId) {
-    throw new Error('Unauthorized - No contractor found');
-  }
-
-  // Tasks are linked to sites, so we need to filter by site's contractor
-  const siteQuery = withContractorFilter({ select: { id: true } }, contractorId);
-  const sites = await prisma.site.findMany(siteQuery);
-
-  const siteIds = sites.map(site => site.id);
-
-  const taskQuery = {
-    ...options,
-    where: {
-      ...options?.where,
-      siteId: {
-        in: siteIds
-      }
-    }
-  };
-
-  return prisma.task.findMany(taskQuery);
-}
-
-/**
  * Get contractor-specific visitors (through sites)
  */
 export async function getContractorVisitors(request: NextRequest, options?: any) {

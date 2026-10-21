@@ -8,6 +8,7 @@ import {
   mobileList,
 } from '@/lib/mobile-auth';
 import { withContractorFilter } from '@/lib/contractor-isolation';
+import { parseSiteReportFields } from '@/lib/site-report';
 
 export async function GET(request: NextRequest) {
   const permCheck = await mobileRequirePermission(request, 'sites:read');
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
           description: body.description,
           category: body.category,
           isPrimary: shouldBePrimary,
+          ...parseSiteReportFields(body),
         },
       });
     });

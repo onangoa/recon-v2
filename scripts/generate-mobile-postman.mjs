@@ -60,16 +60,6 @@ const folders = [
     ],
   },
   {
-    name: 'Tasks',
-    items: [
-      { name: 'List Tasks', method: 'GET', segs: ['tasks'], query: [{ k: 'page', v: '1' }, { k: 'limit', v: '20' }], body: null, auth: true, perm: 'tasks:read' },
-      { name: 'Create Task', method: 'POST', segs: ['tasks'], query: [], body: { title: 'Pour concrete', siteId: '{{siteId}}', status: 'pending', priority: 'high' }, auth: true, perm: 'tasks:create' },
-      { name: 'Get Task', method: 'GET', segs: ['tasks','{{id}}'], query: [], body: null, auth: true, perm: 'tasks:read' },
-      { name: 'Update Task', method: 'PUT', segs: ['tasks','{{id}}'], query: [], body: { status: 'in_progress', priority: 'medium' }, auth: true, perm: 'tasks:update' },
-      { name: 'Delete Task', method: 'DELETE', segs: ['tasks','{{id}}'], query: [], body: null, auth: true, perm: 'tasks:delete' },
-    ],
-  },
-  {
     name: 'Team',
     items: [
       { name: 'List Team', method: 'GET', segs: ['team'], query: [], body: null, auth: true, perm: 'team:read' },
