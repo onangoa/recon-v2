@@ -7,10 +7,14 @@ export {
   initiateB2C,
   initiateB2B,
   initiateB2Pochi,
+  initiateWorkingToUtilityTransfer,
+  initiateUtilityToWorkingTransfer,
   resolveB2BDestination,
   checkTransactionStatus,
   checkAccountBalance,
   initiateReversal,
+  parseDarajaAccountBalance,
+  isAccountTransfer,
   
   // Callback handler functions
   handleSTKPushCallback,

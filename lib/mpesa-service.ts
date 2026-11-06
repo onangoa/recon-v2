@@ -32,8 +32,24 @@ export enum TransactionType {
   B2POCHI = 'B2POCHI',
   ACCOUNT_BALANCE = 'ACCOUNT_BALANCE',
   TRANSACTION_STATUS = 'TRANSACTION_STATUS',
-  REVERSAL = 'REVERSAL'
+  REVERSAL = 'REVERSAL',
+  WORKING_TO_UTILITY = 'WORKING_TO_UTILITY',
+  UTILITY_TO_WORKING = 'UTILITY_TO_WORKING'
 }
+
+// Daraja B2B CommandIDs for moving funds between the organization's own
+// M-Pesa accounts (MMF/working <-> utility). Both parties are the same
+// shortcode, so this is an internal transfer — not a payout.
+const ACCOUNT_TRANSFER_COMMAND_IDS = {
+  workingToUtility: 'BusinessTransferFromMMFToUtility',
+  utilityToWorking: 'BusinessTransferFromUtilityToMMF'
+} as const;
+
+// True when the transaction is an internal working <-> utility account
+// transfer (callback handling must NOT debit the wallet or charge a fee).
+export const isAccountTransfer = (transaction: { transactionType?: string | null }) =>
+  transaction.transactionType === TransactionType.WORKING_TO_UTILITY ||
+  transaction.transactionType === TransactionType.UTILITY_TO_WORKING;
 
 // Initialize M-Pesa package
 const mpesa = new MpesaPackage({
@@ -171,6 +187,10 @@ const findTransaction = async (identifier: string, type: TransactionType) => {
     case TransactionType.B2B:
     case TransactionType.B2POCHI:
     case TransactionType.REVERSAL:
+    case TransactionType.WORKING_TO_UTILITY:
+    case TransactionType.UTILITY_TO_WORKING:
+    case TransactionType.ACCOUNT_BALANCE:
+    case TransactionType.TRANSACTION_STATUS:
       return await prisma.transaction.findFirst({
         where: {
           OR: [
@@ -191,6 +211,34 @@ const extractParameterValue = (parameters: any[], key: string) => {
   const value = parameter ? parameter.Value : null;
   console.log(`Parameter ${key}:`, JSON.stringify(parameter), `Value: ${value}`);
   return value;
+};
+
+/**
+ * Parse the Daraja AccountBalance result parameter. The raw value is a
+ * comma-separated list of accounts, each pipe-delimited:
+ *   "Working Account|KES|481000.00|481000.00|1648377559000, Utility Account|KES|91428.00|..."
+ * The first numeric field after the currency is the available balance.
+ */
+export const parseDarajaAccountBalance = (raw: string): Array<{
+  name: string;
+  currency: string | null;
+  balance: number | null;
+  raw: string;
+}> => {
+  return String(raw)
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) => {
+      const parts = segment.split('|').map((p) => p.trim());
+      const name = parts[0] || segment;
+      const currency = parts[1] && /^[A-Z]{3}$/i.test(parts[1]) ? parts[1].toUpperCase() : null;
+      const numeric = parts
+        .slice(currency ? 2 : 1)
+        .map((p) => parseFloat(p.replace(/,/g, '')))
+        .filter((n) => !isNaN(n));
+      return { name, currency, balance: numeric.length ? numeric[0] : null, raw: segment };
+    });
 };
 
 // ============ STK PUSH OPERATIONS ============
@@ -1225,6 +1273,22 @@ export const handleB2BCallback = async (callbackData: any) => {
       // charging the fee, so money only moves on a settled transaction.
       await updateTransaction(transaction.id, updateData);
 
+      // Internal working <-> utility transfer: the money stays within the
+      // organization's own M-Pesa accounts, so the wallet balance and the
+      // payout fee are untouched.
+      if (isAccountTransfer(transaction)) {
+        console.log('Internal account transfer successful — wallet balance and payout fee untouched:', {
+          transactionId: transaction.id,
+          transactionType: transaction.transactionType,
+          receiptNo
+        });
+        return {
+          success: true,
+          transactionId: transaction.id,
+          status: updateData.status
+        };
+      }
+
       // The Daraja B2B success callback carries no TransactionAmount (it
       // only sends Currency + account balance parameters), so fall back to
       // the amount stored on the transaction — the exact rounded amount
@@ -1287,6 +1351,138 @@ export const handleB2BCallback = async (callbackData: any) => {
     console.error('B2B callback processing error:', error);
     throw new Error(error.message || 'Failed to process B2B callback');
   }
+};
+
+// ============ ACCOUNT TRANSFER OPERATIONS (working <-> utility) ============
+
+const initiateAccountTransfer = async (
+  commandID: (typeof ACCOUNT_TRANSFER_COMMAND_IDS)['workingToUtility' | 'utilityToWorking'],
+  type: TransactionType,
+  amount: number,
+  walletId: string,
+  remarks: string
+) => {
+  if (!amount || amount <= 0) {
+    throw new Error('Transfer amount must be a positive number');
+  }
+
+  await ensureInitialized();
+  let transaction: any = null;
+
+  try {
+    transaction = await createTransaction({
+      walletId,
+      amount,
+      type,
+      accountReference: MPESA_SHORTCODE,
+      transactionDesc: remarks,
+      remarks
+    });
+
+    // Both accounts belong to the same organization shortcode, so PartyA and
+    // PartyB are the shortcode and both identifier types are organization (4).
+    const result = await mpesa.b2b({
+      commandID,
+      amount: Math.round(amount),
+      partyA: MPESA_SHORTCODE,
+      partyB: MPESA_SHORTCODE,
+      accountReference: MPESA_SHORTCODE,
+      remarks,
+      senderIdentifierType: '4',
+      receiverIdentifierType: '4'
+    });
+
+    if (result.ResponseCode === '0') {
+      await updateTransaction(transaction.id, {
+        conversationId: result.ConversationID,
+        originatorConversationId: result.OriginatorConversationID,
+        status: TransactionStatus.PENDING,
+        rawApiResponse: JSON.stringify(result)
+      });
+
+      return {
+        success: true,
+        transactionId: transaction.id,
+        conversationId: result.ConversationID,
+        originatorConversationId: result.OriginatorConversationID,
+        responseCode: result.ResponseCode,
+        responseDescription: result.responseDescription || result.ResponseDescription,
+        commandID
+      };
+    } else {
+      await updateTransaction(transaction.id, {
+        status: TransactionStatus.FAILED,
+        resultCode: parseInt(result.ResponseCode),
+        resultDesc: result.ResponseDescription,
+        rawApiResponse: JSON.stringify(result)
+      });
+
+      return {
+        success: false,
+        transactionId: transaction.id,
+        error: result.ResponseDescription,
+        responseCode: result.ResponseCode,
+        commandID
+      };
+    }
+  } catch (error: any) {
+    console.error('Account Transfer Error:', error);
+
+    if (transaction) {
+      try {
+        await updateTransaction(transaction.id, {
+          status: TransactionStatus.FAILED,
+          resultDesc: error.message || 'Failed to initiate account transfer',
+          rawApiResponse: JSON.stringify({
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            response: error.response?.data
+          })
+        });
+      } catch (updateError) {
+        console.error('Failed to update transaction status:', updateError);
+      }
+    }
+
+    throw new Error(error.message || 'Failed to initiate account transfer');
+  }
+};
+
+/**
+ * Move funds from the M-Pesa working (MMF) account to the utility account
+ * using the B2B BusinessTransferFromMMFToUtility CommandID.
+ */
+export const initiateWorkingToUtilityTransfer = async (
+  amount: number,
+  walletId: string,
+  remarks: string = 'Transfer from working to utility account'
+) => {
+  return initiateAccountTransfer(
+    ACCOUNT_TRANSFER_COMMAND_IDS.workingToUtility,
+    TransactionType.WORKING_TO_UTILITY,
+    amount,
+    walletId,
+    remarks
+  );
+};
+
+/**
+ * Move funds from the M-Pesa utility account back to the working (MMF)
+ * account using the B2B BusinessTransferFromUtilityToMMF CommandID.
+ */
+export const initiateUtilityToWorkingTransfer = async (
+  amount: number,
+  walletId: string,
+  remarks: string = 'Transfer from utility to working account'
+) => {
+  return initiateAccountTransfer(
+    ACCOUNT_TRANSFER_COMMAND_IDS.utilityToWorking,
+    TransactionType.UTILITY_TO_WORKING,
+    amount,
+    walletId,
+    remarks
+  );
 };
 
 // ============ B2POCHI OPERATIONS ============
@@ -1827,6 +2023,13 @@ export const checkAccountBalance = async (
         originatorConversationId: result.OriginatorConversationID,
         rawApiResponse: JSON.stringify(result)
       });
+    } else if (transaction) {
+      await updateTransaction(transaction.id, {
+        status: TransactionStatus.FAILED,
+        resultCode: parseInt(result.ResponseCode),
+        resultDesc: result.ResponseDescription,
+        rawApiResponse: JSON.stringify(result)
+      });
     }
 
     return {
@@ -1878,6 +2081,7 @@ export const handleAccountBalanceCallback = async (callbackData: any) => {
       originatorConversationId: OriginatorConversationID,
       resultCode: ResultCode,
       resultDesc: ResultDesc,
+      status: ResultCode === 0 ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
       rawCallbackData: JSON.stringify(callbackData),
       callbackReceivedAt: new Date()
     };
@@ -1886,15 +2090,29 @@ export const handleAccountBalanceCallback = async (callbackData: any) => {
     if (Result.ResultParameters?.ResultParameter) {
       const parameters = Result.ResultParameters.ResultParameter;
       const accountStatus = extractParameterValue(parameters, 'AccountStatus');
-      const workingAccountBalance = extractParameterValue(parameters, 'WorkingAccountBalance');
-      const utilityAccountBalance = extractParameterValue(parameters, 'UtilityAccountBalance');
+      let workingAccountBalance = extractParameterValue(parameters, 'WorkingAccountBalance');
+      let utilityAccountBalance = extractParameterValue(parameters, 'UtilityAccountBalance');
 
-      if (accountStatus || workingAccountBalance || utilityAccountBalance) {
-        const balanceInfo = {
+      // Real Daraja payloads carry a single pipe-delimited AccountBalance
+      // parameter holding every account, e.g.
+      // "Working Account|KES|481000.00|..., Utility Account|KES|91428.00|..."
+      const accountBalanceRaw = extractParameterValue(parameters, 'AccountBalance');
+      let accounts: ReturnType<typeof parseDarajaAccountBalance> | null = null;
+      if (accountBalanceRaw) {
+        accounts = parseDarajaAccountBalance(accountBalanceRaw);
+        const working = accounts.find((a) => /working/i.test(a.name));
+        const utility = accounts.find((a) => /utility/i.test(a.name));
+        if (working && working.balance != null) workingAccountBalance = working.balance;
+        if (utility && utility.balance != null) utilityAccountBalance = utility.balance;
+      }
+
+      if (accountStatus || workingAccountBalance || utilityAccountBalance || accounts) {
+        const balanceInfo: any = {
           accountStatus,
           workingAccountBalance,
           utilityAccountBalance
         };
+        if (accounts) balanceInfo.accounts = accounts;
         updateData.metadata = JSON.stringify(balanceInfo);
       }
     }

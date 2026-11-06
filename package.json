@@ -10,13 +10,18 @@
     "prisma:seed": "prisma db seed",
     "devices:assign-sites": "tsx scripts/assign-devices-to-sites.ts",
     "workers:assign-sites": "tsx scripts/assign-workers-to-sites.ts",
+    "demo:seed-site": "tsx scripts/seed-site-demo-data.ts",
     "shifts:backfill": "tsx scripts/backfill-worker-shifts.ts",
     "permissions:sync": "tsx scripts/sync-permissions.ts",
     "test:bank": "tsx scripts/test-bank-api.ts",
     "test:bank:live": "tsx scripts/test-bank-api.ts --live",
     "test:bank:live:filtered": "tsx scripts/test-bank-api.ts --live --only token,balance,statement.full",
     "test:wallet-transfer": "tsx scripts/test-wallet-transfer.ts",
-    "test:b2b-partyb": "tsx scripts/test-b2b-partyb.ts"
+    "test:b2b-partyb": "tsx scripts/test-b2b-partyb.ts",
+    "test:account-transfer": "tsx scripts/test-account-transfer.ts",
+    "mpesa:balance": "tsx scripts/mpesa-accounts.ts balance",
+    "mpesa:transfer:to-utility": "tsx scripts/mpesa-accounts.ts transfer to-utility",
+    "mpesa:transfer:to-working": "tsx scripts/mpesa-accounts.ts transfer to-working"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
