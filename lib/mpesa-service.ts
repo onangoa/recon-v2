@@ -213,6 +213,14 @@ const extractParameterValue = (parameters: any[], key: string) => {
   return value;
 };
 
+// Extract every value sent for a parameter key (Daraja occasionally sends
+// one parameter per account instead of a single combined value).
+const extractParameterValues = (parameters: any[], key: string) =>
+  parameters
+    .filter((p: any) => p.Key === key || p.Name === key)
+    .map((p: any) => p.Value)
+    .filter((v) => v != null);
+
 /**
  * Parse the Daraja AccountBalance result parameter. The raw value is a
  * comma-separated list of accounts, each pipe-delimited:
@@ -2093,13 +2101,15 @@ export const handleAccountBalanceCallback = async (callbackData: any) => {
       let workingAccountBalance = extractParameterValue(parameters, 'WorkingAccountBalance');
       let utilityAccountBalance = extractParameterValue(parameters, 'UtilityAccountBalance');
 
-      // Real Daraja payloads carry a single pipe-delimited AccountBalance
-      // parameter holding every account, e.g.
+      // Real Daraja payloads carry the balances as pipe-delimited
+      // AccountBalance parameter(s), e.g.
       // "Working Account|KES|481000.00|..., Utility Account|KES|91428.00|..."
-      const accountBalanceRaw = extractParameterValue(parameters, 'AccountBalance');
+      // Some payloads send one AccountBalance parameter per account instead
+      // of a single combined value, so collect them all.
+      const accountBalanceValues = extractParameterValues(parameters, 'AccountBalance');
       let accounts: ReturnType<typeof parseDarajaAccountBalance> | null = null;
-      if (accountBalanceRaw) {
-        accounts = parseDarajaAccountBalance(accountBalanceRaw);
+      if (accountBalanceValues.length) {
+        accounts = parseDarajaAccountBalance(accountBalanceValues.join(', '));
         const working = accounts.find((a) => /working/i.test(a.name));
         const utility = accounts.find((a) => /utility/i.test(a.name));
         if (working && working.balance != null) workingAccountBalance = working.balance;

@@ -171,6 +171,14 @@ const waitForTransaction = async (transactionId: string, waitSeconds: number) =>
 const fmtBalance = (value: unknown) =>
   value == null || value === '' ? '(not reported)' : `KES ${value}`;
 
+// Pull the raw AccountBalance value(s) straight out of a stored callback.
+const extractRawAccountBalanceValues = (parameters: any[]): string | null => {
+  const values = (parameters || [])
+    .filter((p: any) => p.Key === 'AccountBalance' || p.Name === 'AccountBalance')
+    .map((p: any) => String(p.Value));
+  return values.length ? values.join(' , ') : null;
+};
+
 // ============ BALANCE ============
 
 const runBalance = async (options: CliOptions) => {
@@ -217,8 +225,9 @@ const runBalance = async (options: CliOptions) => {
   }
 
   console.log('\n=== M-PESA ACCOUNT BALANCES ===');
-  if (balanceInfo?.accounts?.length) {
-    for (const account of balanceInfo.accounts) {
+  const accounts: any[] = balanceInfo?.accounts?.length ? balanceInfo.accounts : [];
+  if (accounts.length) {
+    for (const account of accounts) {
       console.log(`${account.name.padEnd(20)} ${account.balance == null ? account.raw : `KES ${account.balance}`}`);
     }
   } else {
@@ -229,6 +238,23 @@ const runBalance = async (options: CliOptions) => {
     console.log(`Account status  : ${balanceInfo.accountStatus}`);
   }
   console.log(`M-Pesa Ref      : ${tx.mpesaTransactionId || '(none)'}`);
+
+  if (!accounts.some((a) => /utility/i.test(a.name)) && balanceInfo?.utilityAccountBalance == null) {
+    // Surface exactly what Daraja sent so missing accounts are obvious.
+    let rawBalance: string | null = null;
+    try {
+      const raw = tx.rawCallbackData ? JSON.parse(tx.rawCallbackData) : null;
+      rawBalance = extractRawAccountBalanceValues(raw?.Result?.ResultParameters?.ResultParameter);
+    } catch {
+      rawBalance = null;
+    }
+    console.log('\nNOTE: Daraja did NOT report a utility account for this shortcode.');
+    if (rawBalance) console.log(`Raw AccountBalance value: ${rawBalance}`);
+    console.log(
+      'Some shortcodes (e.g. tills) only expose the working account via the AccountBalance API.\n' +
+        'Confirm the account structure on the M-Pesa business portal or with apisupport@safaricom.co.ke.'
+    );
+  }
 };
 
 // ============ TRANSFER ============

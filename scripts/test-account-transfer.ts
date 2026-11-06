@@ -99,6 +99,19 @@ async function testBalanceParsing() {
   assertEqual(parsed[1].name, 'Utility Account', 'utility account name');
   assertEqual(parsed[1].balance, 91428.5, 'utility account balance');
 
+  // Some payloads send one AccountBalance parameter per account — joining
+  // the values (as handleAccountBalanceCallback does) must parse both.
+  const joined = parseDarajaAccountBalance(
+    'Working Account|KES|17.00|17.00|1648377559000 , Utility Account|KES|91428.50|91428.50|1648377559000'
+  );
+  assertEqual(joined.length, 2, 'joined multi-parameter values parse to two accounts');
+  assertEqual(joined[0].balance, 17, 'joined working account balance');
+  assertEqual(joined[1].balance, 91428.5, 'joined utility account balance');
+
+  // Single-account payloads (till-style shortcodes) must not invent accounts.
+  const single = parseDarajaAccountBalance('Working Account|KES|17.00|17.00|1648377559000');
+  assertEqual(single.length, 1, 'single-account payload stays single');
+
   const wallet = await prisma.wallet.create({
     data: { name: `TEST balance ${Date.now()}`, balance: 0 },
   });
