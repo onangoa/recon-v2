@@ -29,9 +29,9 @@ import {
   checkAccountBalance,
   initiateWorkingToUtilityTransfer,
   initiateUtilityToWorkingTransfer,
+  resolveMpesaSystemWallet,
 } from '../lib/mpesa-service';
 
-const SYSTEM_WALLET_NAME = 'M-Pesa Operating';
 const POLL_INTERVAL_MS = 3000;
 
 type CliOptions = {
@@ -112,8 +112,8 @@ const checkEnvironment = () => {
   console.log(`M-Pesa shortcode   : ${process.env.MPESA_SHORTCODE}`);
 };
 
-// Transactions need a wallet; use (or create) a system-level wallet for
-// platform M-Pesa account operations, mirroring the "System Fees" pattern.
+// Transactions need a wallet; use (or create) the shared system-level wallet
+// for platform M-Pesa account operations (same one the superadmin page uses).
 const resolveWalletId = async (walletIdOverride?: string): Promise<string> => {
   if (walletIdOverride) {
     const wallet = await prisma.wallet.findUnique({ where: { id: walletIdOverride } });
@@ -122,23 +122,7 @@ const resolveWalletId = async (walletIdOverride?: string): Promise<string> => {
     return wallet.id;
   }
 
-  let wallet = await prisma.wallet.findFirst({
-    where: { OR: [{ name: SYSTEM_WALLET_NAME }, { name: 'System Fees', contractorId: null }] },
-  });
-  if (!wallet) {
-    wallet = await prisma.wallet.findFirst({ where: { contractorId: null } });
-  }
-  if (!wallet) {
-    wallet = await prisma.wallet.create({
-      data: {
-        name: SYSTEM_WALLET_NAME,
-        description:
-          'Platform M-Pesa account operations: balance queries and working <-> utility transfers',
-        currency: 'KES',
-      },
-    });
-    console.log(`Created system wallet "${SYSTEM_WALLET_NAME}" (${wallet.id})`);
-  }
+  const wallet = await resolveMpesaSystemWallet();
   console.log(`Recording against wallet: ${wallet.name} (${wallet.id})`);
   return wallet.id;
 };
@@ -176,7 +160,7 @@ const extractRawAccountBalanceValues = (parameters: any[]): string | null => {
   const values = (parameters || [])
     .filter((p: any) => p.Key === 'AccountBalance' || p.Name === 'AccountBalance')
     .map((p: any) => String(p.Value));
-  return values.length ? values.join(' , ') : null;
+  return values.length ? values.join(' & ') : null;
 };
 
 // ============ BALANCE ============

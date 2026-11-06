@@ -23,7 +23,8 @@ import {
   MapPin,
   UserCircle,
   SearchCheck,
-  Scale
+  Scale,
+  Landmark
 } from 'lucide-react';
 import { 
   Sidebar, 
@@ -67,6 +68,7 @@ function SidebarNav({ children }: { children: React.ReactNode }) {
     { label: 'Transactions', href: '/superadmin/transactions', icon: Wallet },
     { label: 'Payment Review', href: '/superadmin/transactions/review', icon: SearchCheck },
     { label: 'Wallet Ledger', href: '/superadmin/transactions/wallets', icon: Scale },
+    { label: 'M-Pesa Accounts', href: '/superadmin/mpesa-accounts', icon: Landmark },
     { label: 'Admins', href: '/superadmin/admins', icon: ShieldCheck },
     { label: 'Profile', href: '/superadmin/profile', icon: UserCircle },
     { label: 'Settings', href: '/superadmin/settings', icon: Settings },

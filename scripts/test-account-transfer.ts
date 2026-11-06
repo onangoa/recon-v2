@@ -90,26 +90,39 @@ async function testTransferCallback(direction: 'working' | 'utility') {
 async function testBalanceParsing() {
   console.log('\n--- AccountBalance parsing + balance callback ---');
 
+  // Exact AccountBalance value from a real production callback (shortcode
+  // 5687514): accounts are "&"-separated, six pipe-delimited fields each.
+  const productionRaw =
+    'Working Account|KES|17.00|17.00|0.00|0.00&Utility Account|KES|26261.00|26261.00|0.00|0.00&Charges Paid Account|KES|0.00|0.00|0.00|0.00&Merchant Account|KES|0.00|0.00|0.00|0.00&Airtime Purchase Account|KES|0.00|0.00|0.00|0.00&Organization Settlement Account|KES|0.00|0.00|0.00|0.00&Loan Disbursement Account|KES|0.00|0.00|0.00|0.00&Loan Repayment Account|KES|0.00|0.00|0.00|0.00&Advanced Deduction Account|KES|0.00|0.00|0.00|0.00&Savings Deduction Account|KES|0.00|0.00|0.00|0.00&SFC Device Insurance Claims Disbursement Account|KES|0.00|0.00|0.00|0.00';
+  const prod = parseDarajaAccountBalance(productionRaw);
+  assertEqual(prod.length, 11, 'production payload parses to eleven accounts');
+  assertEqual(prod[0].name, 'Working Account', 'production working account name');
+  assertEqual(prod[0].balance, 17, 'production working account balance');
+  assertEqual(prod[1].name, 'Utility Account', 'production utility account name');
+  assertEqual(prod[1].balance, 26261, 'production utility account balance');
+  assertEqual(prod[10].name, 'SFC Device Insurance Claims Disbursement Account', 'last account name');
+
+  // Legacy documented shape (comma-separated) stays supported.
   const parsed = parseDarajaAccountBalance(
     'Working Account|KES|481000.00|481000.00|1648377559000, Utility Account|KES|91428.50|91428.50|1648377559000'
   );
-  assertEqual(parsed.length, 2, 'two accounts parsed');
+  assertEqual(parsed.length, 2, 'two accounts parsed (comma format)');
   assertEqual(parsed[0].name, 'Working Account', 'working account name');
   assertEqual(parsed[0].balance, 481000, 'working account balance');
   assertEqual(parsed[1].name, 'Utility Account', 'utility account name');
   assertEqual(parsed[1].balance, 91428.5, 'utility account balance');
 
   // Some payloads send one AccountBalance parameter per account — joining
-  // the values (as handleAccountBalanceCallback does) must parse both.
+  // the values with "&" (as handleAccountBalanceCallback does) must parse both.
   const joined = parseDarajaAccountBalance(
-    'Working Account|KES|17.00|17.00|1648377559000 , Utility Account|KES|91428.50|91428.50|1648377559000'
+    'Working Account|KES|17.00|17.00|0.00|0.00&Utility Account|KES|91428.50|91428.50|0.00|0.00'
   );
   assertEqual(joined.length, 2, 'joined multi-parameter values parse to two accounts');
   assertEqual(joined[0].balance, 17, 'joined working account balance');
   assertEqual(joined[1].balance, 91428.5, 'joined utility account balance');
 
-  // Single-account payloads (till-style shortcodes) must not invent accounts.
-  const single = parseDarajaAccountBalance('Working Account|KES|17.00|17.00|1648377559000');
+  // Single-account payloads must not invent accounts.
+  const single = parseDarajaAccountBalance('Working Account|KES|17.00|17.00|0.00|0.00');
   assertEqual(single.length, 1, 'single-account payload stays single');
 
   const wallet = await prisma.wallet.create({
@@ -142,7 +155,7 @@ async function testBalanceParsing() {
           ResultParameter: [
             {
               Key: 'AccountBalance',
-              Value: 'Working Account|KES|481000.00|481000.00|1648377559000, Utility Account|KES|91428.50|91428.50|1648377559000',
+              Value: 'Working Account|KES|481000.00|481000.00|0.00|0.00&Utility Account|KES|91428.50|91428.50|0.00|0.00',
             },
             { Key: 'BOCompletedTime', Value: 1648377559000 },
           ],

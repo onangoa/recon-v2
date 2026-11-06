@@ -222,9 +222,10 @@ const extractParameterValues = (parameters: any[], key: string) =>
     .filter((v) => v != null);
 
 /**
- * Parse the Daraja AccountBalance result parameter. The raw value is a
- * comma-separated list of accounts, each pipe-delimited:
- *   "Working Account|KES|481000.00|481000.00|1648377559000, Utility Account|KES|91428.00|..."
+ * Parse the Daraja AccountBalance result parameter. Real production payloads
+ * separate accounts with "&", each account pipe-delimited:
+ *   "Working Account|KES|17.00|17.00|0.00|0.00&Utility Account|KES|26261.00|...&..."
+ * (documented samples show "," as the separator — supported as a fallback).
  * The first numeric field after the currency is the available balance.
  */
 export const parseDarajaAccountBalance = (raw: string): Array<{
@@ -233,20 +234,20 @@ export const parseDarajaAccountBalance = (raw: string): Array<{
   balance: number | null;
   raw: string;
 }> => {
-  return String(raw)
-    .split(',')
+  const text = String(raw);
+  const segments = (text.includes('&') ? text.split('&') : text.split(','))
     .map((segment) => segment.trim())
-    .filter(Boolean)
-    .map((segment) => {
-      const parts = segment.split('|').map((p) => p.trim());
-      const name = parts[0] || segment;
-      const currency = parts[1] && /^[A-Z]{3}$/i.test(parts[1]) ? parts[1].toUpperCase() : null;
-      const numeric = parts
-        .slice(currency ? 2 : 1)
-        .map((p) => parseFloat(p.replace(/,/g, '')))
-        .filter((n) => !isNaN(n));
-      return { name, currency, balance: numeric.length ? numeric[0] : null, raw: segment };
-    });
+    .filter(Boolean);
+  return segments.map((segment) => {
+    const parts = segment.split('|').map((p) => p.trim());
+    const name = parts[0] || segment;
+    const currency = parts[1] && /^[A-Z]{3}$/i.test(parts[1]) ? parts[1].toUpperCase() : null;
+    const numeric = parts
+      .slice(currency ? 2 : 1)
+      .map((p) => parseFloat(p.replace(/,/g, '')))
+      .filter((n) => !isNaN(n));
+    return { name, currency, balance: numeric.length ? numeric[0] : null, raw: segment };
+  });
 };
 
 // ============ STK PUSH OPERATIONS ============
@@ -2001,6 +2002,86 @@ export const handleTransactionStatusCallback = async (callbackData: any) => {
 
 // ============ ACCOUNT BALANCE OPERATIONS ============
 
+// Find (or create) the system-level wallet used to record platform M-Pesa
+// account operations (balance queries, working <-> utility transfers).
+// Mirrors the "System Fees" system-wallet convention used by bank IPNs.
+export const resolveMpesaSystemWallet = async () => {
+  let wallet = await prisma.wallet.findFirst({
+    where: {
+      OR: [
+        { name: 'M-Pesa Operating', contractorId: null },
+        { name: 'System Fees', contractorId: null },
+      ],
+    },
+  });
+  if (!wallet) {
+    wallet = await prisma.wallet.findFirst({ where: { contractorId: null } });
+  }
+  if (!wallet) {
+    wallet = await prisma.wallet.create({
+      data: {
+        name: 'M-Pesa Operating',
+        description:
+          'Platform M-Pesa account operations: balance queries and working <-> utility transfers',
+        currency: 'KES',
+      },
+    });
+    console.log(`Created system wallet "M-Pesa Operating" (${wallet.id})`);
+  }
+  return wallet;
+};
+
+// Latest stored account-balance query. Accounts are re-parsed straight from
+// the raw Daraja callback (source of truth) so the result is immune to
+// metadata format drift between handler versions.
+export const getLatestAccountBalanceQuery = async () => {
+  const tx = await prisma.transaction.findFirst({
+    where: { transactionType: TransactionType.ACCOUNT_BALANCE },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!tx) return null;
+
+  let accounts: ReturnType<typeof parseDarajaAccountBalance> = [];
+  let rawAccountBalance: string | null = null;
+  try {
+    if (tx.rawCallbackData) {
+      const raw = JSON.parse(tx.rawCallbackData);
+      const parameters = raw?.Result?.ResultParameters?.ResultParameter || [];
+      const values = parameters
+        .filter((p: any) => p.Key === 'AccountBalance' || p.Name === 'AccountBalance')
+        .map((p: any) => String(p.Value));
+      if (values.length) {
+        rawAccountBalance = values.join(' & ');
+        accounts = parseDarajaAccountBalance(values.join('&'));
+      }
+    }
+  } catch (error) {
+    console.error('Failed to parse account balance rawCallbackData:', error);
+  }
+
+  let accountStatus: string | null = null;
+  if (tx.metadata) {
+    try {
+      accountStatus = JSON.parse(tx.metadata)?.accountStatus ?? null;
+    } catch {
+      accountStatus = null;
+    }
+  }
+
+  return {
+    transactionId: tx.id,
+    status: tx.status,
+    resultCode: tx.resultCode,
+    resultDesc: tx.resultDesc,
+    queriedAt: tx.createdAt,
+    callbackReceivedAt: tx.callbackReceivedAt,
+    mpesaTransactionId: tx.mpesaTransactionId,
+    accounts,
+    accountStatus,
+    rawAccountBalance,
+  };
+};
+
 export const checkAccountBalance = async (
   remarks: string = 'Balance Query',
   walletId?: string
@@ -2109,7 +2190,7 @@ export const handleAccountBalanceCallback = async (callbackData: any) => {
       const accountBalanceValues = extractParameterValues(parameters, 'AccountBalance');
       let accounts: ReturnType<typeof parseDarajaAccountBalance> | null = null;
       if (accountBalanceValues.length) {
-        accounts = parseDarajaAccountBalance(accountBalanceValues.join(', '));
+        accounts = parseDarajaAccountBalance(accountBalanceValues.join('&'));
         const working = accounts.find((a) => /working/i.test(a.name));
         const utility = accounts.find((a) => /utility/i.test(a.name));
         if (working && working.balance != null) workingAccountBalance = working.balance;
